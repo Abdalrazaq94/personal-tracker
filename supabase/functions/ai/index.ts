@@ -4,6 +4,8 @@
 //   kind: "tasks"     – analyse tasks + plans            → { text }
 //   kind: "spending"  – analyse spending                 → { text }
 //   kind: "habits"    – analyse good/bad habits (30 days) → { text }
+//   kind: "today"     – short summary of the user's day    → { text }
+//   kind: "parse"     – turn "buy milk tomorrow, coffee 3.40" into actions → { actions: [...] }
 //   kind: "translate" – English word → chosen language    → { translation }
 //   kind: "explain"   – explain a word                    → { text }
 //   kind: "practice"  – fill-the-gap sentences for words  → { items: [{ word, sentence, answer, arabic }] }
@@ -41,6 +43,8 @@ type Body = {
   words?: { word?: string; translation?: string }[]
   lang?: string
   habitKind?: string
+  text?: string
+  hour?: number
 }
 
 Deno.serve(async (req) => {
@@ -78,6 +82,10 @@ Deno.serve(async (req) => {
       case 'tasks':
       case 'habits':
         return json(await analyse(db, body))
+      case 'today':
+        return json(await brief(db, body))
+      case 'parse':
+        return json(await parse(db, body))
       default:
         return json({ error: 'Unknown request.' }, 400)
     }
@@ -178,6 +186,131 @@ async function check(b: Body) {
     feedback: clip(out.feedback, 600),
     feedback_ar: clip(out.feedback_ar, 800),
   }
+}
+
+/* ------------------------------ today screen ----------------------------- */
+
+const isoDay = (d: Date) => d.toISOString().slice(0, 10)
+const shiftDay = (day: string, n: number) => {
+  const d = new Date(day + 'T00:00:00Z')
+  d.setUTCDate(d.getUTCDate() + n)
+  return isoDay(d)
+}
+const WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+// deno-lint-ignore no-explicit-any
+async function brief(db: any, b: Body) {
+  const today = /^\d{4}-\d{2}-\d{2}$/.test(b.today ?? '') ? b.today! : isoDay(new Date())
+  const currency = clip(b.currency, 5) || 'GBP'
+  const hour = Number.isFinite(b.hour) ? Number(b.hour) : 9
+  const [tasks, plans, habits, logs, spend, words] = await Promise.all([
+    db.from('tasks').select('title, priority, status').neq('status', 'done').limit(40),
+    db.from('plans').select('title, plan_date, done').gte('plan_date', shiftDay(today, -7)).lte('plan_date', shiftDay(today, 1)),
+    db.from('habits').select('*'),
+    db.from('habit_logs').select('*').gte('day', shiftDay(today, -6)),
+    db.from('expenses').select('amount, note, spent_on').gte('spent_on', shiftDay(today, -30)),
+    db.from('words').select('status'),
+  ])
+  for (const r of [tasks, plans, habits, logs, spend, words]) if (r.error) throw new Error(r.error.message)
+
+  const last7 = Array.from({ length: 7 }, (_, i) => shiftDay(today, i - 6))
+  // deno-lint-ignore no-explicit-any
+  const habitLines = habits.data.map((h: any) => {
+    // deno-lint-ignore no-explicit-any
+    const c = last7.map((d) => String(logs.data.find((l: any) => l.habit_id === h.id && l.day === d)?.count ?? 0))
+    return `${h.name} (${h.kind === 'bad' ? 'bad, max' : 'good, target'} ${h.target}/day): last 7 days ${c.join(',')} (last = today)`
+  })
+  // deno-lint-ignore no-explicit-any
+  const sum = (rows: any[]) => rows.reduce((a, r) => a + Number(r.amount), 0)
+  // deno-lint-ignore no-explicit-any
+  const todaySpend = sum(spend.data.filter((r: any) => r.spent_on === today))
+  // deno-lint-ignore no-explicit-any
+  const monthSpend = sum(spend.data.filter((r: any) => r.spent_on.slice(0, 7) === today.slice(0, 7)))
+  // deno-lint-ignore no-explicit-any
+  const avgDay = sum(spend.data.filter((r: any) => r.spent_on < today)) / 30
+  // deno-lint-ignore no-explicit-any
+  const wordCounts = words.data.reduce((a: Record<string, number>, w: any) => ((a[w.status] = (a[w.status] ?? 0) + 1), a), {})
+
+  const data = [
+    `Today is ${WEEK[new Date(today + 'T00:00:00Z').getUTCDay()]} ${today}, local time about ${hour}:00.`,
+    // deno-lint-ignore no-explicit-any
+    'OPEN TASKS: ' + (tasks.data.map((t: any) => `${t.title}${t.priority === 'important' ? ' [important]' : ''}${t.status === 'doing' ? ' [doing]' : ''}`).join('; ') || 'none'),
+    // deno-lint-ignore no-explicit-any
+    'OVERDUE PLANS: ' + (plans.data.filter((p: any) => !p.done && p.plan_date < today).map((p: any) => `${p.title} (${p.plan_date})`).join('; ') || 'none'),
+    // deno-lint-ignore no-explicit-any
+    'PLANNED TODAY: ' + (plans.data.filter((p: any) => p.plan_date === today).map((p: any) => `${p.title}${p.done ? ' [done]' : ''}`).join('; ') || 'none'),
+    // deno-lint-ignore no-explicit-any
+    'PLANNED TOMORROW: ' + (plans.data.filter((p: any) => p.plan_date === shiftDay(today, 1)).map((p: any) => p.title).join('; ') || 'none'),
+    'HABITS: ' + (habitLines.join(' | ') || 'none'),
+    `SPENDING (${currency}): today ${todaySpend.toFixed(2)}, this month ${monthSpend.toFixed(2)}, usual per day ${avgDay.toFixed(2)}`,
+    `WORDS: ${wordCounts.new ?? 0} not yet, ${wordCounts.learning ?? 0} learning, ${wordCounts.memorized ?? 0} memorized`,
+  ].join('\n')
+
+  const part = hour < 12 ? 'morning briefing' : hour < 18 ? 'afternoon check-in' : 'evening recap (what got done, what is left, and what to prepare for tomorrow)'
+  const text = await askText(
+    'You are a warm, practical personal assistant inside a tracker app. Write in simple English, second person ("you"). ' +
+      'No headings, no lists, no greeting line. 2–4 short sentences, max 70 words. Use **bold** for the 1–3 most important items. ' +
+      'Prioritise: overdue or important items, habits at risk today, unusual spending. Never invent data.',
+    `Write a ${part} from this data:\n${data}`,
+    true
+  )
+  return { text }
+}
+
+// deno-lint-ignore no-explicit-any
+async function parse(db: any, b: Body) {
+  const text = clip(b.text, 400)
+  if (!text) throw new Error('Type or say something first.')
+  const today = /^\d{4}-\d{2}-\d{2}$/.test(b.today ?? '') ? b.today! : isoDay(new Date())
+  const { data: habits, error } = await db.from('habits').select('id, name, kind')
+  if (error) throw new Error(error.message)
+  // deno-lint-ignore no-explicit-any
+  const habitList = habits.map((h: any, i: number) => `${i + 1}. ${h.name} (${h.kind === 'bad' ? 'bad' : 'good'})`).join('\n') || '(none)'
+
+  const out = await askJson(
+    'You turn a short note from the user of a personal tracker app into actions. The note may be in any language and may contain several things.',
+    `Today is ${WEEK[new Date(today + 'T00:00:00Z').getUTCDay()]} ${today}.\n` +
+      `The user's habits:\n${habitList}\n\n` +
+      `Note: "${text}"\n\n` +
+      'Action types:\n' +
+      '- {"type":"task","title":"...","important":true|false}  — something to do with no specific date (or today)\n' +
+      '- {"type":"plan","title":"...","date":"YYYY-MM-DD"}  — something to do on a future date (tomorrow, Friday, next week…)\n' +
+      '- {"type":"expense","amount":3.4,"note":"coffee","date":"YYYY-MM-DD"}  — money spent (date = today unless said)\n' +
+      '- {"type":"word","word":"..."}  — a new English word or phrase to learn\n' +
+      '- {"type":"habit","habit":<number from the habit list>,"count":1}  — the user did one of their listed habits (count = how many times)\n' +
+      '- {"type":"note","text":"..."}  — a thought or information to remember\n' +
+      'Rules: keep titles short and in the user\'s words; split several things into several actions; ' +
+      'only use "habit" when it clearly matches a listed habit; if nothing fits, use "note".\n' +
+      'Return JSON: {"actions":[...]}'
+  )
+
+  const ok = (d: unknown) => (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : today)
+  // deno-lint-ignore no-explicit-any
+  const actions = (Array.isArray(out.actions) ? out.actions : []).slice(0, 8).map((a: any) => {
+    switch (a?.type) {
+      case 'task':
+        return clip(a.title, 200) ? { type: 'task', title: clip(a.title, 200), important: Boolean(a.important) } : null
+      case 'plan':
+        return clip(a.title, 200) ? { type: 'plan', title: clip(a.title, 200), date: ok(a.date) } : null
+      case 'expense': {
+        const amount = Math.round(Number(a.amount) * 100) / 100
+        return amount > 0 && amount < 1e7 ? { type: 'expense', amount, note: clip(a.note, 120), date: ok(a.date) } : null
+      }
+      case 'word':
+        return clip(a.word, 80) ? { type: 'word', word: clip(a.word, 80) } : null
+      case 'habit': {
+        const h = habits[Number(a.habit) - 1]
+        const count = Math.max(1, Math.min(50, Math.round(Number(a.count) || 1)))
+        return h ? { type: 'habit', habit_id: h.id, name: h.name, count } : null
+      }
+      case 'note':
+        return clip(a.text, 2000) ? { type: 'note', text: clip(a.text, 2000) } : null
+      default:
+        return null
+    }
+  }).filter(Boolean)
+
+  return { actions: actions.length ? actions : [{ type: 'note', text }] }
 }
 
 /* --------------------------- tasks / spending ---------------------------- */

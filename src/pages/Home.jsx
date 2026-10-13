@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { money, parseYmd, startOfMonth, today, ymd } from '../lib/dates'
 import { dayState, isBad, logOn, planned } from '../lib/habits'
 import { SpeakButton } from '../lib/speech'
+import { DayBrief, QuickAddAll } from '../components/TodayAI'
 
 const PRIORITY = { doing: 0, todo: 1 }
 
@@ -22,6 +23,7 @@ export default function Home({ session }) {
   const [error, setError] = useState(null)
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
+  const [reload, setReload] = useState(0)
 
   useEffect(() => {
     const t = today()
@@ -56,7 +58,7 @@ export default function Home({ session }) {
       })
     }
     load()
-  }, [])
+  }, [reload])
 
   // ---- actions (update the screen immediately, then save) ----
   const doneTask = async (task) => {
@@ -131,6 +133,9 @@ export default function Home({ session }) {
         <p className="muted">{date}</p>
         <h1 className="display">{greet}.</h1>
       </header>
+
+      <QuickAddAll onChanged={() => setReload((n) => n + 1)} />
+      <DayBrief />
 
       {error && (
         <div className="error-bar" role="alert">
