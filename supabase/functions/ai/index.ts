@@ -254,19 +254,42 @@ async function askModel(system: string, prompt: string, wantJson: boolean): Prom
   }
 
   if (geminiKey) {
-    const model = Deno.env.get('GEMINI_MODEL') || 'gemini-flash-latest'
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: 'POST',
-      headers: { 'x-goog-api-key': geminiKey, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        ...(wantJson ? { generationConfig: { responseMimeType: 'application/json' } } : {}),
-      }),
+    // Try the main model, retry once if Google is busy, then fall back to lighter models.
+    const models = [
+      Deno.env.get('GEMINI_MODEL') || 'gemini-flash-latest',
+      'gemini-flash-lite-latest',
+      'gemini-2.5-flash',
+    ].filter((m, i, all) => all.indexOf(m) === i)
+    const payload = JSON.stringify({
+      systemInstruction: { parts: [{ text: system }] },
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      ...(wantJson ? { generationConfig: { responseMimeType: 'application/json' } } : {}),
     })
-    const out = await res.json()
-    if (!res.ok) throw new Error(out?.error?.message ?? `AI error ${res.status}`)
-    return out.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? ''
+    let lastError = 'The AI is busy right now. Please try again in a minute.'
+    for (const model of models) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: 'POST',
+          headers: { 'x-goog-api-key': geminiKey, 'content-type': 'application/json' },
+          body: payload,
+        })
+        const out = await res.json().catch(() => ({}))
+        if (res.ok) {
+          const text = out.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? ''
+          if (text) return text
+          lastError = 'The AI returned an empty answer. Please try again.'
+          break
+        }
+        lastError = out?.error?.message ?? `AI error ${res.status}`
+        if (res.status === 400 || res.status === 401 || res.status === 403) throw new Error(lastError) // bad key/request: don't retry
+        if ((res.status === 503 || res.status === 500 || res.status === 429) && attempt === 0) {
+          await new Promise((r) => setTimeout(r, 1500)) // busy: wait a moment and retry the same model
+          continue
+        }
+        break // busy again, or model not found (404): try the next model
+      }
+    }
+    throw new Error(/high demand|overloaded|unavailable|quota|rate/i.test(lastError) ? 'The AI is busy right now. Please try again in a minute.' : lastError)
   }
 
   throw new Error('AI is not set up yet: add GEMINI_API_KEY or ANTHROPIC_API_KEY in Supabase → Edge Functions → Secrets.')
