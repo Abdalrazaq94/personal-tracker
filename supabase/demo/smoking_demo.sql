@@ -1,11 +1,11 @@
 -- DEMO: "Smoking (demo)" bad habit with 30 realistic days (needs 002 + 003 migrations).
 -- Improving from ~8 a day to 0–2, worse on Fri/Sat, triggers, urges resisted, £0.75 each, 10 a day before.
--- Added to the first account in the project. Running it again replaces the demo.
+-- Added to the account that signed in most recently (you). Running it again replaces the demo.
 
 delete from public.habits where name = 'Smoking (demo)';
 
 with u as (
-  select id from auth.users order by created_at limit 1
+  select id from auth.users order by last_sign_in_at desc nulls last limit 1
 ),
 h as (
   insert into public.habits (user_id, name, kind, target, cost, baseline, created_at)
