@@ -27,7 +27,7 @@ const norm = (s) =>
  *  - "Fill the gap": AI writes a sentence with a blank, you type or say the missing word.
  *  - "Make a sentence": you write or say your own sentence with the word, the AI corrects it.
  */
-export default function Practice({ words, onStatus, onClose }) {
+export default function Practice({ words, onStatus, onClose, lang = 'Arabic' }) {
   const [mode, setMode] = useState('gap')
   const [pool, setPool] = useState(words.some((w) => w.status !== 'memorized') ? 'learning' : 'all')
   const [count, setCount] = useState(5)
@@ -56,6 +56,7 @@ export default function Practice({ words, onStatus, onClose }) {
     try {
       const { items } = await callAi({
         kind: 'practice',
+        lang,
         words: picked.map((w) => ({ word: w.word, translation: w.translation })),
       })
       const r = items.map((item, i) => ({
@@ -133,7 +134,7 @@ export default function Practice({ words, onStatus, onClose }) {
             {index + 1} / {rounds.length}
           </p>
           {mode === 'gap' ? (
-            <GapRound key={index} round={rounds[index]} onResult={finish} onNext={next} last={index + 1 === rounds.length} />
+            <GapRound key={index} lang={lang} round={rounds[index]} onResult={finish} onNext={next} last={index + 1 === rounds.length} />
           ) : (
             <SentenceRound key={index} round={rounds[index]} onResult={finish} onNext={next} last={index + 1 === rounds.length} />
           )}
@@ -179,7 +180,7 @@ export default function Practice({ words, onStatus, onClose }) {
 
 /* ------------------------------ fill the gap ----------------------------- */
 
-function GapRound({ round, onResult, onNext, last }) {
+function GapRound({ round, onResult, onNext, last, lang }) {
   const { item, w } = round
   const [answer, setAnswer] = useState('')
   const [checked, setChecked] = useState(null) // null | true | false
@@ -216,11 +217,11 @@ function GapRound({ round, onResult, onNext, last }) {
       <div className="row-actions">
         <SpeakButton text={checked === null ? item.sentence : full} label="Hear the sentence" />
         <button type="button" className="link small" onClick={() => setShowAr(!showAr)}>
-          {showAr ? 'Hide Arabic' : 'Show Arabic hint'}
+          {showAr ? `Hide ${lang}` : `Show ${lang} hint`}
         </button>
       </div>
       {showAr && (
-        <p className="arabic-hint" dir="rtl">
+        <p className="arabic-hint" dir="auto">
           {item.arabic}
         </p>
       )}
@@ -261,7 +262,7 @@ function GapRound({ round, onResult, onNext, last }) {
         <>
           <div className={`verdict ${checked ? 'verdict--ok' : ''}`}>
             <strong>{checked ? 'Correct!' : answer ? `Not quite — the answer is “${item.answer}”.` : `The answer is “${item.answer}”.`}</strong>
-            <p dir="rtl" className="small">
+            <p dir="auto" className="small">
               {item.arabic}
             </p>
           </div>
@@ -297,7 +298,7 @@ function SentenceRound({ round, onResult, onNext, last }) {
     setBusy(true)
     setError(null)
     try {
-      const r = await callAi({ kind: 'check', word: w.word, sentence: text.trim() })
+      const r = await callAi({ kind: 'check', word: w.word, sentence: text.trim(), lang })
       setRes(r)
       if (!recorded) {
         onResult(r.correct) // first attempt counts for the score
@@ -368,7 +369,7 @@ function SentenceRound({ round, onResult, onNext, last }) {
             )}
             {res.feedback && <p className="small">{res.feedback}</p>}
             {res.feedback_ar && (
-              <p className="small" dir="rtl">
+              <p className="small" dir="auto">
                 {res.feedback_ar}
               </p>
             )}

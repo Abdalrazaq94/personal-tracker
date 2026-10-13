@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRows } from '../lib/useRows'
 import { callAi } from '../lib/ai'
+import { LANGUAGES, useTranslateTo } from '../lib/lang'
 import { MicButton, SpeakButton, useListen } from '../lib/speech'
 import { Markdown } from '../components/AiPanel'
 import { Sheet } from '../components/Collections'
@@ -19,6 +20,7 @@ export default function Words() {
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState('all')
   const [word, setWord] = useState('')
+  const [lang, setLang] = useTranslateTo()
   const [editing, setEditing] = useState(null)
   const [translating, setTranslating] = useState(() => new Set()) // ids being translated
   const [explain, setExplain] = useState(null)
@@ -31,11 +33,11 @@ export default function Words() {
       return next
     })
 
-  // Runs in the background: the word card is already on screen while the Arabic is fetched.
+  // Runs in the background: the word card is already on screen while the translation is fetched.
   const translate = async (row) => {
     mark(row.id, true)
     try {
-      const r = await callAi({ kind: 'translate', word: row.word })
+      const r = await callAi({ kind: 'translate', word: row.word, lang })
       if (r?.translation) await update(row.id, { translation: r.translation })
     } catch (e) {
       setError(`Couldn’t translate “${row.word}”: ${e.message}`)
@@ -93,6 +95,16 @@ export default function Words() {
           )
         }
       />
+      <label className="lang-pick">
+        <span>Translate to</span>
+        <select value={lang} onChange={(e) => setLang(e.target.value)}>
+          {LANGUAGES.map((l) => (
+            <option key={l.name} value={l.name}>
+              {l.name} · {l.native}
+            </option>
+          ))}
+        </select>
+      </label>
       <ErrorBar error={error || listen.error} onClose={() => (setError(null), listen.setError(null))} />
 
       <form
@@ -153,7 +165,7 @@ export default function Words() {
                     {translating.has(w.id) ? (
                       <span className="word__tr word__tr--pending">Translating…</span>
                     ) : w.translation ? (
-                      <span className="word__tr" dir="rtl">
+                      <span className="word__tr" dir="auto">
                         {w.translation}
                       </span>
                     ) : (
@@ -180,25 +192,25 @@ export default function Words() {
         </div>
       )}
 
-      {explain && <ExplainSheet word={explain} onClose={() => setExplain(null)} />}
+      {explain && <ExplainSheet word={explain} lang={lang} onClose={() => setExplain(null)} />}
       {practising && (
-        <Practice words={rows} onStatus={(id, s) => update(id, { status: s })} onClose={() => setPractising(false)} />
+        <Practice lang={lang} words={rows} onStatus={(id, s) => update(id, { status: s })} onClose={() => setPractising(false)} />
       )}
     </div>
   )
 }
 
-function ExplainSheet({ word, onClose }) {
+function ExplainSheet({ word, lang, onClose }) {
   const [state, setState] = useState({ loading: true })
   useEffect(() => {
     let live = true
-    callAi({ kind: 'explain', word: word.word, translation: word.translation })
+    callAi({ kind: 'explain', word: word.word, translation: word.translation, lang })
       .then((r) => live && setState({ text: r.text }))
       .catch((e) => live && setState({ error: e.message }))
     return () => {
       live = false
     }
-  }, [word])
+  }, [word, lang])
   return (
     <Sheet title={word.word} onClose={onClose}>
       <div className="explain-head">
@@ -228,7 +240,7 @@ function EditWord({ w, onSave, onCancel }) {
       }}
     >
       <input className="input-plain" value={word} onChange={(e) => setWord(e.target.value)} autoFocus />
-      <input className="input-plain" dir="auto" value={tr} onChange={(e) => setTr(e.target.value)} placeholder="Arabic" />
+      <input className="input-plain" dir="auto" value={tr} onChange={(e) => setTr(e.target.value)} placeholder="Translation" />
       <div className="form-foot">
         <button type="button" className="btn btn--ghost btn--sm" onClick={onCancel}>
           Cancel

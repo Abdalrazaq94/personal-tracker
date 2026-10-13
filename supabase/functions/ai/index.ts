@@ -3,10 +3,12 @@
 //
 //   kind: "tasks"     – analyse tasks + plans            → { text }
 //   kind: "spending"  – analyse spending                 → { text }
-//   kind: "translate" – English word → Arabic            → { translation }
-//   kind: "explain"   – explain a word (Arabic + English) → { text }
+//   kind: "translate" – English word → chosen language    → { translation }
+//   kind: "explain"   – explain a word                    → { text }
 //   kind: "practice"  – fill-the-gap sentences for words  → { items: [{ word, sentence, answer, arabic }] }
 //   kind: "check"     – correct the user's own sentence   → { correct, corrected, feedback, feedback_ar }
+// Word features take `lang` (the learner's language, default Arabic). The fields named
+// `arabic` / `feedback_ar` hold text in that chosen language (names kept for compatibility).
 //
 // Secrets (Supabase → Edge Functions → Secrets) — set ONE of these:
 //   GEMINI_API_KEY      free key from https://aistudio.google.com/apikey
@@ -36,6 +38,7 @@ type Body = {
   translation?: string
   sentence?: string
   words?: { word?: string; translation?: string }[]
+  lang?: string
 }
 
 Deno.serve(async (req) => {
@@ -82,19 +85,29 @@ Deno.serve(async (req) => {
 
 /* ------------------------------- words ---------------------------------- */
 
-const TEACHER =
-  'You are a kind, encouraging English teacher for an Arabic-speaking learner (intermediate level). ' +
-  'Use simple English. Arabic must be Modern Standard Arabic.'
+// Languages the app offers in "Translate to" (anything else falls back to Arabic).
+const LANGS = [
+  'Arabic', 'Urdu', 'Persian', 'Turkish', 'Kurdish (Sorani)', 'Hindi', 'Bengali', 'French', 'Spanish', 'German',
+  'Italian', 'Portuguese', 'Russian', 'Polish', 'Romanian', 'Dutch', 'Chinese (Simplified)', 'Japanese', 'Korean',
+  'Indonesian', 'Malay', 'Somali',
+]
+const langOf = (b: Body) => (LANGS.includes(b.lang ?? '') ? b.lang! : 'Arabic')
+
+const teacher = (lang: string) =>
+  `You are a kind, encouraging English teacher for a ${lang}-speaking learner (intermediate level). ` +
+  'Use simple English.' +
+  (lang === 'Arabic' ? ' Arabic must be Modern Standard Arabic.' : '')
 
 async function translate(b: Body) {
   const word = clip(b.word, 80)
   if (!word) throw new Error('No word given.')
+  const lang = langOf(b)
   const out = await askJson(
-    TEACHER,
-    `Translate the English word or phrase "${word}" into Arabic.\n` +
+    teacher(lang),
+    `Translate the English word or phrase "${word}" into ${lang}.\n` +
       'Give the most common meaning first; if it has 2–3 very different common meanings, give them separated by "، ". ' +
-      'Keep it short (max 6 Arabic words). Fix obvious spelling mistakes in the English.\n' +
-      'Return JSON: {"word": "<English, spelling fixed, lowercase unless a proper noun>", "translation": "<Arabic>"}'
+      `Keep it short (max 6 ${lang} words). Fix obvious spelling mistakes in the English.\n` +
+      `Return JSON: {"word": "<English, spelling fixed, lowercase unless a proper noun>", "translation": "<${lang}>"}`
   )
   return { word: clip(out.word, 80) || word, translation: clip(out.translation, 120) }
 }
@@ -102,11 +115,12 @@ async function translate(b: Body) {
 async function explain(b: Body) {
   const word = clip(b.word, 80)
   if (!word) throw new Error('No word given.')
+  const lang = langOf(b)
   const text = await askText(
-    TEACHER + ' Format: "## " headings, "- " bullets, **bold** the word. No tables. Max ~180 words.',
-    `Explain the English word "${word}"${b.translation ? ` (the learner noted the Arabic: ${clip(b.translation, 120)})` : ''}.\n` +
-      'Sections: ## Meaning (simple English + Arabic), ## Examples (3 short everyday sentences, each followed by its Arabic translation), ' +
-      '## Similar words (2–4 synonyms), ## Tip (pronunciation or common mistake for Arabic speakers).'
+    teacher(lang) + ' Format: "## " headings, "- " bullets, **bold** the word. No tables. Max ~180 words.',
+    `Explain the English word "${word}"${b.translation ? ` (the learner noted the ${lang}: ${clip(b.translation, 120)})` : ''}.\n` +
+      `Sections: ## Meaning (simple English + ${lang}), ## Examples (3 short everyday sentences, each followed by its ${lang} translation), ` +
+      `## Similar words (2–4 synonyms), ## Tip (pronunciation or common mistake for ${lang} speakers).`
   )
   return { text }
 }
@@ -117,14 +131,15 @@ async function practice(b: Body) {
     .map((w) => ({ word: clip(w.word, 60), translation: clip(w.translation, 120) }))
     .filter((w) => w.word)
   if (!list.length) throw new Error('No words to practise.')
+  const lang = langOf(b)
   const out = await askJson(
-    TEACHER,
+    teacher(lang),
     'Create one fill-in-the-gap practice sentence for EACH of these words:\n' +
       list.map((w) => `- ${w.word}${w.translation ? ` (${w.translation})` : ''}`).join('\n') +
       '\n\nRules: natural everyday sentence, 8–16 words, the gap is written as "____" and replaces exactly the word ' +
       '(use the form that fits the sentence, e.g. plural or past tense). Keep the same order as the list.\n' +
       'Return JSON: {"items": [{"word": "<word from the list>", "sentence": "<sentence with ____>", ' +
-      '"answer": "<exact text that fills the gap>", "arabic": "<Arabic translation of the full sentence>"}]}'
+      `"answer": "<exact text that fills the gap>", "arabic": "<${lang} translation of the full sentence>"}]}`
   )
   const items = (Array.isArray(out.items) ? out.items : [])
     .map((i: Record<string, unknown>) => ({
@@ -142,15 +157,16 @@ async function check(b: Body) {
   const word = clip(b.word, 60)
   const sentence = clip(b.sentence, 500)
   if (!word || !sentence) throw new Error('Write or say a sentence first.')
+  const lang = langOf(b)
   const out = await askJson(
-    TEACHER,
+    teacher(lang),
     `The learner is practising the word "${word}". They wrote or said this sentence:\n"${sentence}"\n\n` +
       'Check: does it use the word (or a form of it) correctly, and is the grammar correct? ' +
       'Speech-to-text may have dropped punctuation or capitals — ignore those.\n' +
       'Return JSON: {"correct": true|false, "used_word": true|false, ' +
       '"corrected": "<the corrected sentence, or the same sentence if already correct>", ' +
       '"feedback": "<1–3 short sentences in simple English: what was good, what to fix and why>", ' +
-      '"feedback_ar": "<the same feedback in Arabic>"}'
+      `"feedback_ar": "<the same feedback in ${lang}>"}`
   )
   return {
     correct: Boolean(out.correct) && out.used_word !== false,
