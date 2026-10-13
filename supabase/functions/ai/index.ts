@@ -44,7 +44,9 @@ Deno.serve(async (req) => {
 
   // --- only signed-in users may use the AI ---
   const auth = req.headers.get('Authorization') ?? ''
-  const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
+  // the public key: Supabase provides SUPABASE_ANON_KEY; fall back to the key the app sent (newer projects)
+  const publicKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY') || req.headers.get('apikey') || ''
+  const db = createClient(Deno.env.get('SUPABASE_URL')!, publicKey, {
     global: { headers: { Authorization: auth } },
   })
   const { data: userData, error: userErr } = await db.auth.getUser(auth.replace(/^Bearer\s+/i, ''))
