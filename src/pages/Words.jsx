@@ -19,36 +19,41 @@ export default function Words() {
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState('all')
   const [word, setWord] = useState('')
-  const [translation, setTranslation] = useState('')
-  const [status, setStatus] = useState('new')
   const [editing, setEditing] = useState(null)
-  const [busy, setBusy] = useState('') // '', 'translating', 'saving'
+  const [translating, setTranslating] = useState(() => new Set()) // ids being translated
   const [explain, setExplain] = useState(null)
   const [practising, setPractising] = useState(false)
 
-  const autoTranslate = async (w) => {
-    setBusy('translating')
+  const mark = (id, on) =>
+    setTranslating((prev) => {
+      const next = new Set(prev)
+      on ? next.add(id) : next.delete(id)
+      return next
+    })
+
+  // Runs in the background: the word card is already on screen while the Arabic is fetched.
+  const translate = async (row) => {
+    mark(row.id, true)
     try {
-      const r = await callAi({ kind: 'translate', word: w })
-      return r
+      const r = await callAi({ kind: 'translate', word: row.word })
+      if (r?.translation) await update(row.id, { translation: r.translation })
     } catch (e) {
-      setError(`Saved without translation: ${e.message}`)
-      return null
+      setError(`Couldn’t translate “${row.word}”: ${e.message}`)
     } finally {
-      setBusy('')
+      mark(row.id, false)
     }
   }
 
-  const listen = useListen({
-    onResult: async (text) => {
-      const w = cleanSpoken(text)
-      setWord(w)
-      if (!translation.trim()) {
-        const r = await autoTranslate(w)
-        if (r?.translation) setTranslation(r.translation)
-      }
-    },
-  })
+  const addWord = async (raw) => {
+    const w = raw.trim()
+    if (!w) return
+    setWord('')
+    const row = await insert({ word: w, translation: '', status: 'new' })
+    if (row) translate(row)
+    else setWord(w)
+  }
+
+  const listen = useListen({ onResult: (text) => addWord(cleanSpoken(text)) })
 
   const counts = useMemo(() => {
     const c = { all: rows.length, new: 0, learning: 0, memorized: 0 }
@@ -64,33 +69,6 @@ export default function Words() {
         (!s || r.word.toLowerCase().includes(s) || r.translation.toLowerCase().includes(s))
     )
   }, [rows, q, filter])
-
-  const add = async (e) => {
-    e.preventDefault()
-    let w = word.trim()
-    if (!w) return
-    let tr = translation.trim()
-    if (!tr) {
-      const r = await autoTranslate(w)
-      if (r) {
-        tr = r.translation || ''
-        if (r.word && r.word.toLowerCase() !== w.toLowerCase()) w = r.word // AI fixed the spelling
-      }
-    }
-    setBusy('saving')
-    const ok = await insert({ word: w, translation: tr, status })
-    setBusy('')
-    if (ok) {
-      setWord('')
-      setTranslation('')
-      setStatus('new')
-    }
-  }
-
-  const translateExisting = async (w) => {
-    const r = await autoTranslate(w.word)
-    if (r?.translation) update(w.id, { translation: r.translation })
-  }
 
   return (
     <div className="page">
@@ -117,37 +95,26 @@ export default function Words() {
       />
       <ErrorBar error={error || listen.error} onClose={() => (setError(null), listen.setError(null))} />
 
-      <form className="card form" onSubmit={add}>
-        <div className="word-form">
-          <div className="field">
-            <span>New word</span>
-            <div className="input-row">
-              <input
-                value={listen.listening ? listen.interim || word : word}
-                onChange={(e) => setWord(e.target.value)}
-                placeholder={listen.listening ? 'Listening…' : 'Type or say it'}
-                autoCapitalize="none"
-                required
-              />
-              <MicButton listen={listen} label="Say the word" />
-            </div>
-          </div>
-          <label className="field">
-            <span>Arabic</span>
-            <input
-              dir="auto"
-              value={translation}
-              onChange={(e) => setTranslation(e.target.value)}
-              placeholder={busy === 'translating' ? 'Translating…' : 'Auto-translated'}
-            />
-          </label>
-        </div>
-        <div className="form-foot">
-          <StatusPicker value={status} onChange={setStatus} />
-          <button className="btn" disabled={!!busy}>
-            {busy === 'translating' ? 'Translating…' : busy === 'saving' ? 'Saving…' : 'Add word'}
-          </button>
-        </div>
+      <form
+        className="card add-word"
+        onSubmit={(e) => {
+          e.preventDefault()
+          addWord(word)
+        }}
+      >
+        <input
+          aria-label="New word"
+          value={listen.listening ? listen.interim || word : word}
+          onChange={(e) => setWord(e.target.value)}
+          placeholder={listen.listening ? 'Listening…' : 'Type or say a new word'}
+          autoCapitalize="none"
+          autoComplete="off"
+          enterKeyHint="done"
+        />
+        <MicButton listen={listen} label="Say the word" />
+        <button className="btn" disabled={!word.trim()}>
+          Add
+        </button>
       </form>
 
       <div className="scroll-x">
@@ -181,7 +148,20 @@ export default function Words() {
             ) : (
               <article key={w.id} className={`word word--${w.status}`}>
                 <div className="word__top">
-                  <h3 className="word__word">{w.word}</h3>
+                  <div className="word__line">
+                    <h3 className="word__word">{w.word}</h3>
+                    {translating.has(w.id) ? (
+                      <span className="word__tr word__tr--pending">Translating…</span>
+                    ) : w.translation ? (
+                      <span className="word__tr" dir="rtl">
+                        {w.translation}
+                      </span>
+                    ) : (
+                      <button type="button" className="link word__translate" onClick={() => translate(w)}>
+                        Translate
+                      </button>
+                    )}
+                  </div>
                   <div className="word__actions">
                     <SpeakButton text={w.word} label={`Hear "${w.word}"`} />
                     <button type="button" className="icon-btn" aria-label="Explain with AI" title="Explain with AI" onClick={() => setExplain(w)}>
@@ -193,15 +173,6 @@ export default function Words() {
                     <DeleteButton label={`Delete "${w.word}"`} onClick={() => remove(w.id)} />
                   </div>
                 </div>
-                {w.translation ? (
-                  <p className="word__tr" dir="auto">
-                    {w.translation}
-                  </p>
-                ) : (
-                  <button type="button" className="link word__translate" onClick={() => translateExisting(w)}>
-                    Translate to Arabic
-                  </button>
-                )}
                 <StatusPicker value={w.status} onChange={(s) => update(w.id, { status: s })} />
               </article>
             )

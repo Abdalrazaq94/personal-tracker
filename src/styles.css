@@ -546,3 +546,13 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .word-form { display: grid; grid-template-columns: 1fr; gap: 10px; }
 @media (min-width: 560px) { .word-form { grid-template-columns: 1.2fr 1fr; } }
 .target-word > div > span, .explain-head span { align-self: flex-start; }
+
+/* v4: one-box word adding, Arabic beside the word */
+.add-word { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 999px; }
+.add-word input { flex: 1; border-color: transparent !important; box-shadow: none !important; background: transparent; padding-left: 12px; }
+.add-word:focus-within { border-color: var(--fg); }
+.add-word .btn { flex: none; }
+.word__line { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 12px; row-gap: 2px; min-width: 0; }
+.word__line .word__tr { font-size: 18px; color: #333; }
+.word__tr--pending { font-size: 14px !important; color: var(--muted) !important; animation: pulse 1.2s ease-in-out infinite; }
+.word__line .word__translate { font-size: 14px; }
