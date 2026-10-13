@@ -1,8 +1,11 @@
 import { supabase } from './supabase'
 
 /** Calls the "ai" Edge Function. Returns the JSON result or throws an Error with a friendly message. */
-export async function callAi(body) {
-  const { data, error } = await supabase.functions.invoke('ai', { body })
+export async function callAi(body, { timeoutMs = 45000 } = {}) {
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('The AI took too long. Please try again.')), timeoutMs)
+  )
+  const { data, error } = await Promise.race([supabase.functions.invoke('ai', { body }), timeout])
   if (error) {
     let msg = error.message
     try {

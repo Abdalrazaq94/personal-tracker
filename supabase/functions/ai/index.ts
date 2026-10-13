@@ -121,7 +121,7 @@ async function explain(b: Body) {
     `Explain the English word "${word}"${b.translation ? ` (the learner noted the ${lang}: ${clip(b.translation, 120)})` : ''}.\n` +
       `Sections: ## Meaning (simple English + ${lang}), ## Examples (3 short everyday sentences, each followed by its ${lang} translation), ` +
       `## Similar words (2–4 synonyms), ## Tip (pronunciation or common mistake for ${lang} speakers).`
-  )
+  , true)
   return { text }
 }
 
@@ -233,13 +233,14 @@ async function analyse(db: any, b: Body) {
 
 /* ------------------------------ AI models -------------------------------- */
 
-async function askText(system: string, prompt: string) {
-  return await askModel(system, prompt, false)
+// fast = word features (translate, explain, practice, check): use Google's quick "lite" model first.
+async function askText(system: string, prompt: string, fast = false) {
+  return await askModel(system, prompt, false, fast)
 }
 
 // deno-lint-ignore no-explicit-any
-async function askJson(system: string, prompt: string): Promise<any> {
-  const raw = await askModel(system + ' Reply with ONLY valid JSON, no extra text.', prompt, true)
+async function askJson(system: string, prompt: string, fast = true): Promise<any> {
+  const raw = await askModel(system + ' Reply with ONLY valid JSON, no extra text.', prompt, true, fast)
   const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
   const start = cleaned.search(/[[{]/)
   try {
@@ -249,7 +250,7 @@ async function askJson(system: string, prompt: string): Promise<any> {
   }
 }
 
-async function askModel(system: string, prompt: string, wantJson: boolean): Promise<string> {
+async function askModel(system: string, prompt: string, wantJson: boolean, fast = false): Promise<string> {
   const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY')
   const geminiKey = Deno.env.get('GEMINI_API_KEY')
 
@@ -271,11 +272,11 @@ async function askModel(system: string, prompt: string, wantJson: boolean): Prom
 
   if (geminiKey) {
     // Try the main model, retry once if Google is busy, then fall back to lighter models.
-    const models = [
-      Deno.env.get('GEMINI_MODEL') || 'gemini-flash-latest',
-      'gemini-flash-lite-latest',
-      'gemini-2.5-flash',
-    ].filter((m, i, all) => all.indexOf(m) === i)
+    const main = Deno.env.get('GEMINI_MODEL') || 'gemini-flash-latest'
+    const lite = Deno.env.get('GEMINI_FAST_MODEL') || 'gemini-flash-lite-latest'
+    const models = (fast ? [lite, main, 'gemini-2.5-flash'] : [main, lite, 'gemini-2.5-flash']).filter(
+      (m, i, all) => all.indexOf(m) === i
+    )
     const payload = JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -284,11 +285,18 @@ async function askModel(system: string, prompt: string, wantJson: boolean): Prom
     let lastError = 'The AI is busy right now. Please try again in a minute.'
     for (const model of models) {
       for (let attempt = 0; attempt < 2; attempt++) {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-          method: 'POST',
-          headers: { 'x-goog-api-key': geminiKey, 'content-type': 'application/json' },
-          body: payload,
-        })
+        let res: Response
+        try {
+          res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+            method: 'POST',
+            headers: { 'x-goog-api-key': geminiKey, 'content-type': 'application/json' },
+            body: payload,
+            signal: AbortSignal.timeout(fast ? 20000 : 40000), // don't wait forever on a stuck model
+          })
+        } catch {
+          lastError = 'The AI took too long to answer.'
+          break // try the next model
+        }
         const out = await res.json().catch(() => ({}))
         if (res.ok) {
           const text = out.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? ''

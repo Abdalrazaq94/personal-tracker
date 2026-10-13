@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { callAi } from '../lib/ai'
 import { MicButton, SpeakButton, useListen } from '../lib/speech'
 import { Sheet } from './Collections'
@@ -36,6 +36,7 @@ export default function Practice({ words, onStatus, onClose, lang = 'Arabic' }) 
   const [index, setIndex] = useState(0)
   const [results, setResults] = useState({}) // index -> true/false
   const [error, setError] = useState(null)
+  const runId = useRef(0) // ignores late answers after Cancel
 
   const poolWords = useMemo(
     () => (pool === 'learning' ? words.filter((w) => w.status !== 'memorized') : words),
@@ -53,12 +54,14 @@ export default function Practice({ words, onStatus, onClose, lang = 'Arabic' }) 
       return
     }
     setStage('loading')
+    const id = ++runId.current
     try {
       const { items } = await callAi({
         kind: 'practice',
         lang,
         words: picked.map((w) => ({ word: w.word, translation: w.translation })),
       })
+      if (id !== runId.current) return
       const r = items.map((item, i) => ({
         item,
         w: picked.find((w) => norm(w.word) === norm(item.word)) || picked[i] || picked[0],
@@ -66,6 +69,7 @@ export default function Practice({ words, onStatus, onClose, lang = 'Arabic' }) 
       setRounds(r)
       setStage('run')
     } catch (e) {
+      if (id !== runId.current) return
       setError(e.message)
       setStage('setup')
     }
@@ -123,7 +127,20 @@ export default function Practice({ words, onStatus, onClose, lang = 'Arabic' }) 
         </div>
       )}
 
-      {stage === 'loading' && <div className="ai-loading">Writing sentences for your words…</div>}
+      {stage === 'loading' && (
+        <>
+          <div className="ai-loading">Writing sentences for your words… (usually 5–15 seconds)</div>
+          <button
+            className="btn btn--ghost btn--block"
+            onClick={() => {
+              runId.current++
+              setStage('setup')
+            }}
+          >
+            Cancel
+          </button>
+        </>
+      )}
 
       {stage === 'run' && rounds[index] && (
         <>
