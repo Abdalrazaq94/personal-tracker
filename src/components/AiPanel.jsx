@@ -5,7 +5,7 @@ import { today } from '../lib/dates'
 const CURRENCY = import.meta.env.VITE_CURRENCY || 'GBP'
 
 /** "Analyse with AI" box used on the Tasks and Spending pages. */
-export default function AiPanel({ kind, examples = [] }) {
+export default function AiPanel({ kind, examples = [], children }) {
   const [open, setOpen] = useState(false)
   const [question, setQuestion] = useState('')
   const [busy, setBusy] = useState(false)
@@ -30,7 +30,7 @@ export default function AiPanel({ kind, examples = [] }) {
         <span className="ai-spark" aria-hidden>✦</span>
         <span>
           <strong>Analyse with AI</strong>
-          <span className="muted small"> · {kind === 'tasks' ? 'how your tasks are going' : 'where your money goes'}</span>
+          <span className="muted small"> · {kind === 'tasks' ? 'how your tasks are going' : kind === 'habits' ? 'graphs + how your habits are going' : 'where your money goes'}</span>
         </span>
       </button>
     )
@@ -45,6 +45,8 @@ export default function AiPanel({ kind, examples = [] }) {
           ×
         </button>
       </div>
+
+      {children}
 
       <form
         className="ai-ask"

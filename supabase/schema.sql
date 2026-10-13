@@ -29,7 +29,8 @@ create table if not exists public.habits (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
   name       text not null,
-  target     int  not null default 1 check (target > 0),   -- times per day
+  kind       text not null default 'good' check (kind in ('good', 'bad')),
+  target     int  not null default 1 check (target >= 0),  -- good: times per day · bad: max allowed per day
   created_at timestamptz not null default now()
 );
 

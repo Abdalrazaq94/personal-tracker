@@ -3,6 +3,7 @@
 //
 //   kind: "tasks"     – analyse tasks + plans            → { text }
 //   kind: "spending"  – analyse spending                 → { text }
+//   kind: "habits"    – analyse good/bad habits (30 days) → { text }
 //   kind: "translate" – English word → chosen language    → { translation }
 //   kind: "explain"   – explain a word                    → { text }
 //   kind: "practice"  – fill-the-gap sentences for words  → { items: [{ word, sentence, answer, arabic }] }
@@ -74,6 +75,7 @@ Deno.serve(async (req) => {
         return json(await check(body))
       case 'spending':
       case 'tasks':
+      case 'habits':
         return json(await analyse(db, body))
       default:
         return json({ error: 'Unknown request.' }, 400)
@@ -181,7 +183,7 @@ async function check(b: Body) {
 
 // deno-lint-ignore no-explicit-any
 async function analyse(db: any, b: Body) {
-  const kind = b.kind === 'spending' ? 'spending' : 'tasks'
+  const kind = b.kind === 'spending' ? 'spending' : b.kind === 'habits' ? 'habits' : 'tasks'
   const question = clip(b.question, 500)
   const today = /^\d{4}-\d{2}-\d{2}$/.test(b.today ?? '') ? b.today! : new Date().toISOString().slice(0, 10)
   const currency = clip(b.currency, 5) || 'GBP'
@@ -200,6 +202,36 @@ async function analyse(db: any, b: Body) {
       '\n\nPLANNED TASKS (title | date | done):\n' +
       // deno-lint-ignore no-explicit-any
       (plans.data.map((p: any) => `${p.title} | ${p.plan_date} | ${p.done ? 'done' : 'not done'}`).join('\n') || '(none)')
+  } else if (kind === 'habits') {
+    const since = new Date(today)
+    since.setDate(since.getDate() - 29)
+    const sinceKey = since.toISOString().slice(0, 10)
+    const [habits, logs] = await Promise.all([
+      db.from('habits').select('*').order('created_at', { ascending: true }),
+      db.from('habit_logs').select('habit_id, day, count').gte('day', sinceKey),
+    ])
+    if (habits.error || logs.error) throw new Error((habits.error ?? logs.error).message)
+    const days: string[] = []
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(since)
+      d.setDate(d.getDate() + i)
+      days.push(d.toISOString().slice(0, 10))
+    }
+    data =
+      'HABITS. "good" = want to do it at least TARGET times a day. "bad" = want to do it at most TARGET times a day (0 = avoid).\n' +
+      'Daily counts are for the last 30 days, oldest first, ending today; "-" = before the habit was created.\n' +
+      // deno-lint-ignore no-explicit-any
+      (habits.data.map((h: any) => {
+        const kindOf = h.kind === 'bad' ? 'bad' : 'good'
+        const start = String(h.created_at).slice(0, 10)
+        const counts = days.map((d) => {
+          if (d < start) return '-'
+          // deno-lint-ignore no-explicit-any
+          const l = logs.data.find((x: any) => x.habit_id === h.id && x.day === d)
+          return String(l?.count ?? 0)
+        })
+        return `${h.name} | ${kindOf} | target ${h.target} | ${counts.join(',')}`
+      }).join('\n') || '(none)')
   } else {
     const since = new Date(today)
     since.setDate(since.getDate() - 180)
@@ -223,7 +255,10 @@ async function analyse(db: any, b: Body) {
     'If there is too little data, say so briefly and suggest what to track.'
 
   const task =
-    kind === 'tasks'
+    kind === 'habits'
+      ? 'Analyse my habits: for each habit say if it is improving, steady or slipping (compare the last 7 days with the week before), current streaks, ' +
+        'my best and worst days of the week, and give 3 concrete tips. For bad habits, fewer is better and clean days are wins. Be encouraging.'
+      : kind === 'tasks'
       ? 'Analyse my tasks: how I am doing, what is overdue or stuck in "doing", whether important tasks get done, patterns, and 3 concrete suggestions for tomorrow.'
       : 'Analyse my spending: totals this week and month vs earlier, biggest categories (group similar notes), unusual spends, trends, and 3 concrete money-saving suggestions.'
 

@@ -559,3 +559,22 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .lang-pick { display: flex; align-items: center; gap: 10px; margin-top: -6px; }
 .lang-pick span { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
 .lang-pick select { height: 38px; font-size: 15px; font-weight: 600; border-radius: 999px; flex: 1; max-width: 280px; }
+
+/* v5: good / bad habits + line charts */
+.habit__title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.day__box.is-over { background: var(--bg); border: 2px solid var(--fg); position: relative; }
+.day__box.is-over::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, transparent 0 4px, rgba(0,0,0,.18) 4px 5px); border-radius: 8px; }
+.habit-charts { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 640px) { .habit-charts { grid-template-columns: 1fr 1fr; } }
+.habit-chart { margin: 0; padding: 12px 12px 6px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.habit-chart figcaption { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.habit-chart__name { font-weight: 700; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.habit-chart__info { font-size: 13px; color: var(--muted); margin: 2px 0 4px; min-height: 18px; font-variant-numeric: tabular-nums; }
+.habit-chart svg { display: block; width: 100%; height: auto; touch-action: pan-y; cursor: crosshair; overflow: visible; }
+.hc-axis { stroke: var(--line); stroke-width: 1; }
+.hc-target { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; }
+.hc-line { fill: none; stroke: var(--fg); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.hc-dot { fill: var(--fg); stroke: var(--bg); stroke-width: 2; }
+.hc-cross { stroke: var(--muted); stroke-width: 1; }
+.hc-hover { fill: var(--bg); stroke: var(--fg); stroke-width: 2; }
+.hc-tick { font-size: 10px; fill: var(--muted); font-variant-numeric: tabular-nums; }
