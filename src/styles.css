@@ -596,3 +596,13 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .day__box.is-off { background: var(--soft); border-color: transparent; }
 .habit__insights { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #333; padding: 10px 12px; background: var(--soft); border-radius: var(--radius-sm); }
 .habit__insights b { color: var(--fg); }
+
+/* v7: Good / Bad habit views */
+.habit-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--soft); border-radius: 14px; }
+.habit-tabs button {
+  height: 44px; border: 0; border-radius: 10px; background: transparent;
+  font-weight: 700; font-size: 15px; color: var(--muted);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.habit-tabs button.is-active { background: var(--fg); color: var(--bg); }
+.habit-tabs .count { font-size: 12px; opacity: .7; font-variant-numeric: tabular-nums; }

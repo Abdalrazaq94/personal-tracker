@@ -40,6 +40,7 @@ type Body = {
   sentence?: string
   words?: { word?: string; translation?: string }[]
   lang?: string
+  habitKind?: string
 }
 
 Deno.serve(async (req) => {
@@ -222,7 +223,11 @@ async function analyse(db: any, b: Body) {
       `Daily counts are for the last 30 days, oldest first (first day is a ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date(days[0] + 'T00:00:00Z').getUTCDay()]}), ending today; ` +
       '"-" = before the habit was created, "S" = skipped day (sick/travel, not a failure). Days outside "planned days" are rest days.\n' +
       // deno-lint-ignore no-explicit-any
-      (habits.data.map((h: any) => {
+      (habits.data
+        // deno-lint-ignore no-explicit-any
+        .filter((h: any) => !b.habitKind || (b.habitKind === 'bad') === (h.kind === 'bad'))
+        // deno-lint-ignore no-explicit-any
+        .map((h: any) => {
         const kindOf = h.kind === 'bad' ? 'bad' : 'good'
         const start = String(h.created_at).slice(0, 10)
         const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']

@@ -5,7 +5,7 @@ import { today } from '../lib/dates'
 const CURRENCY = import.meta.env.VITE_CURRENCY || 'GBP'
 
 /** "Analyse with AI" box used on the Tasks and Spending pages. */
-export default function AiPanel({ kind, examples = [], children }) {
+export default function AiPanel({ kind, examples = [], children, extra = {}, label }) {
   const [open, setOpen] = useState(false)
   const [question, setQuestion] = useState('')
   const [busy, setBusy] = useState(false)
@@ -16,7 +16,7 @@ export default function AiPanel({ kind, examples = [], children }) {
     setBusy(true)
     setError(null)
     try {
-      const data = await callAi({ kind, question: q, today: today(), currency: CURRENCY })
+      const data = await callAi({ kind, question: q, today: today(), currency: CURRENCY, ...extra })
       setText(data?.text || 'No answer.')
     } catch (e) {
       setError(e.message)
@@ -30,7 +30,7 @@ export default function AiPanel({ kind, examples = [], children }) {
         <span className="ai-spark" aria-hidden>✦</span>
         <span>
           <strong>Analyse with AI</strong>
-          <span className="muted small"> · {kind === 'tasks' ? 'how your tasks are going' : kind === 'habits' ? 'graphs + how your habits are going' : 'where your money goes'}</span>
+          <span className="muted small"> · {label || (kind === 'tasks' ? 'how your tasks are going' : kind === 'habits' ? 'graphs + how your habits are going' : 'where your money goes')}</span>
         </span>
       </button>
     )

@@ -15,7 +15,19 @@ const needsUpdate = (msg) => /column|schema cache|habits_kind_check|habits_targe
 export default function Habits() {
   const habits = useRows('habits', { ascending: true })
   const [logs, setLogs] = useState([])
-  const [filter, setFilter] = useState('all')
+  const [view, setViewState] = useState(() => {
+    try {
+      return localStorage.getItem('habits.view') === 'bad' ? 'bad' : 'good'
+    } catch {
+      return 'good'
+    }
+  })
+  const setView = (v) => {
+    setViewState(v)
+    try {
+      localStorage.setItem('habits.view', v)
+    } catch {}
+  }
   const [error, setError] = useState(null)
   const [editing, setEditing] = useState(null) // habit being edited
   const [slip, setSlip] = useState(null) // bad habit waiting for a trigger
@@ -57,44 +69,66 @@ export default function Habits() {
     saveLog(h, { count: cur.count - 1, reasons: isBad(h) ? cur.reasons.slice(0, -1) : cur.reasons })
   }
 
-  const shown = habits.rows.filter((h) => filter === 'all' || (filter === 'bad') === isBad(h))
-  const onTrack = habits.rows.filter((h) => dayState(h, logs, new Date()) === 'ok').length
+  const shown = habits.rows.filter((h) => (view === 'bad') === isBad(h))
+  const onTrack = shown.filter((h) => dayState(h, logs, new Date()) === 'ok').length
   const counts = { good: habits.rows.filter((h) => !isBad(h)).length, bad: habits.rows.filter(isBad).length }
   const shownError = error || habits.error
 
   return (
     <div className="page">
-      <PageHeader title="Habits" subtitle={`${onTrack} of ${habits.rows.length} on track today`} />
+      <PageHeader
+        title={view === 'bad' ? 'Bad habits' : 'Good habits'}
+        subtitle={
+          shown.length
+            ? `${onTrack} of ${shown.length} ${view === 'bad' ? 'clean' : 'done'} today`
+            : view === 'bad'
+              ? 'Habits you want to break'
+              : 'Habits you want to build'
+        }
+      />
+      <div className="habit-tabs" role="tablist">
+        {[
+          { v: 'good', label: 'Good habits', n: counts.good },
+          { v: 'bad', label: 'Bad habits', n: counts.bad },
+        ].map((t) => (
+          <button key={t.v} type="button" role="tab" aria-selected={view === t.v} className={view === t.v ? 'is-active' : ''} onClick={() => setView(t.v)}>
+            {t.label}
+            <span className="count">{t.n}</span>
+          </button>
+        ))}
+      </div>
       <ErrorBar
         error={needsUpdate(shownError) ? NEEDS_UPDATE : shownError}
         onClose={() => (setError(null), habits.setError(null))}
       />
 
-      <QuickAdd onAdd={async (vals) => Boolean(await habits.insert(vals))} />
+      <QuickAdd key={`add-${view}`} kind={view} onAdd={async (vals) => Boolean(await habits.insert(vals))} />
 
-      {habits.rows.length > 0 && (
-        <AiPanel kind="habits" examples={['What triggers my bad habits?', 'Which habit needs the most attention?']}>
-          <HabitCharts habits={habits.rows} logs={logs} />
+      {shown.length > 0 && (
+        <AiPanel
+          key={`ai-${view}`}
+          kind="habits"
+          extra={{ habitKind: view }}
+          label={view === 'bad' ? 'graphs + how your bad habits are going' : 'graphs + how your good habits are going'}
+          examples={
+            view === 'bad'
+              ? ['What triggers my bad habits?', 'How can I avoid my weak days?']
+              : ['Which habit needs the most attention?', 'How can I keep my streaks going?']
+          }
+        >
+          <HabitCharts habits={shown} logs={logs} />
         </AiPanel>
       )}
 
-      {counts.good > 0 && counts.bad > 0 && (
-        <Segmented
-          small
-          value={filter}
-          onChange={setFilter}
-          options={[
-            { value: 'all', label: 'All', count: habits.rows.length },
-            { value: 'good', label: 'Good', count: counts.good },
-            { value: 'bad', label: 'Bad', count: counts.bad },
-          ]}
-        />
-      )}
 
       {habits.loading ? (
         <Loading />
-      ) : habits.rows.length === 0 ? (
-        <Empty>No habits yet. Add a good habit to build or a bad habit to break.</Empty>
+      ) : shown.length === 0 ? (
+        <Empty>
+          {view === 'bad'
+            ? 'No bad habits yet. Add one you want to break, e.g. Smoking or Sugar.'
+            : 'No good habits yet. Add one you want to build, e.g. Read 10 pages.'}
+        </Empty>
       ) : (
         <ul className="list">
           {shown.map((h) => (
@@ -147,13 +181,12 @@ export default function Habits() {
 
 /* ------------------------------- quick add ------------------------------- */
 
-function QuickAdd({ onAdd }) {
-  const [kind, setKind] = useState('good')
+function QuickAdd({ kind, onAdd }) {
   const [name, setName] = useState('')
   const bad = kind === 'bad'
   return (
     <form
-      className="card form quick-add"
+      className="card add-word"
       onSubmit={async (e) => {
         e.preventDefault()
         if (!name.trim()) return
@@ -161,26 +194,16 @@ function QuickAdd({ onAdd }) {
         if (await onAdd({ name: name.trim(), kind, target: bad ? 0 : 1 })) setName('')
       }}
     >
-      <Segmented
-        value={kind}
-        onChange={setKind}
-        options={[
-          { value: 'good', label: '＋ Good habit' },
-          { value: 'bad', label: '− Bad habit' },
-        ]}
+      <input
+        dir="auto"
+        aria-label="Habit name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder={bad ? 'Add a habit to break, e.g. Smoking' : 'Add a habit to build, e.g. Read 10 pages'}
       />
-      <div className="add-word">
-        <input
-          dir="auto"
-          aria-label="Habit name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={bad ? 'Habit to break, e.g. Smoking' : 'Habit to build, e.g. Read 10 pages'}
-        />
-        <button className="btn" disabled={!name.trim()}>
-          Add
-        </button>
-      </div>
+      <button className="btn" disabled={!name.trim()}>
+        Add
+      </button>
     </form>
   )
 }
