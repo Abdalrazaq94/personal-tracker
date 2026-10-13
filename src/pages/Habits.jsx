@@ -70,12 +70,7 @@ export default function Habits() {
         onClose={() => (setError(null), habits.setError(null))}
       />
 
-      <HabitForm
-        onSubmit={async (vals) => {
-          const ok = await habits.insert(vals)
-          return Boolean(ok)
-        }}
-      />
+      <QuickAdd onAdd={async (vals) => Boolean(await habits.insert(vals))} />
 
       {habits.rows.length > 0 && (
         <AiPanel kind="habits" examples={['What triggers my bad habits?', 'Which habit needs the most attention?']}>
@@ -147,6 +142,46 @@ export default function Habits() {
         />
       )}
     </div>
+  )
+}
+
+/* ------------------------------- quick add ------------------------------- */
+
+function QuickAdd({ onAdd }) {
+  const [kind, setKind] = useState('good')
+  const [name, setName] = useState('')
+  const bad = kind === 'bad'
+  return (
+    <form
+      className="card form quick-add"
+      onSubmit={async (e) => {
+        e.preventDefault()
+        if (!name.trim()) return
+        // good habits start at once a day, bad habits at 0 (avoid) — change anything later with ✎ Edit
+        if (await onAdd({ name: name.trim(), kind, target: bad ? 0 : 1 })) setName('')
+      }}
+    >
+      <Segmented
+        value={kind}
+        onChange={setKind}
+        options={[
+          { value: 'good', label: '＋ Good habit' },
+          { value: 'bad', label: '− Bad habit' },
+        ]}
+      />
+      <div className="add-word">
+        <input
+          dir="auto"
+          aria-label="Habit name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={bad ? 'Habit to break, e.g. Smoking' : 'Habit to build, e.g. Read 10 pages'}
+        />
+        <button className="btn" disabled={!name.trim()}>
+          Add
+        </button>
+      </div>
+    </form>
   )
 }
 
@@ -247,11 +282,11 @@ function HabitForm({ initial, onSubmit, bare }) {
           {bad && (
             <div className="row-2">
               <label className="field">
-                <span>Cost each time</span>
+                <span>Money each time (optional)</span>
                 <input inputMode="decimal" placeholder="e.g. 0.75" value={cost} onChange={(e) => setCost(e.target.value)} />
               </label>
               <label className="field">
-                <span>Per day before</span>
+                <span>How many a day before</span>
                 <input type="number" min="0" inputMode="numeric" placeholder="e.g. 10" value={baseline} onChange={(e) => setBaseline(e.target.value)} />
               </label>
             </div>
