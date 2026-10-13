@@ -67,6 +67,19 @@ Done inside the app — open **Jobs** and follow the 3 steps on screen:
 
 Your key and token are stored in your own row in the database (only your account can read it).
 
+## Google Wallet auto-add (Android, optional)
+
+Payments made with Google Wallet appear in Spending by themselves.
+
+1. **Database:** run `supabase/migrations/004_wallet_ingest.sql` in the SQL Editor.
+2. **Function:** Edge Functions → Deploy a new function → Via Editor → name it `ingest` → paste `supabase/functions/ingest/index.ts` → Deploy. Then open its settings and turn **Verify JWT off** (it is protected by your private key instead).
+3. **App:** Spend → **Google Wallet** → *Create my private key* → *Send test* (should say "It works!").
+4. **Phone:** install **MacroDroid** → allow Notification access → new macro:
+   - Trigger: *Notification received* → app **Google Wallet**
+   - Action: *HTTP Request* → **POST** to the URL shown in the app, content type `application/json`, body copied from the app.
+
+The key only lets someone **add** spending to your account, not read anything; use *New key* if it ever leaks.
+
 ## 5. Put it online (Vercel, free)
 
 1. Push this folder to GitHub.

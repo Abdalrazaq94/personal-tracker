@@ -3,3 +3,7 @@
 # This also makes it work with the newer "publishable" API keys.
 [functions.ai]
 verify_jwt = false
+
+# Google Wallet auto-add: protected by the user's private token, not a login.
+[functions.ingest]
+verify_jwt = false

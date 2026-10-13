@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react'
 import { useRows } from '../lib/useRows'
 import { dayLabel, money, startOfMonth, startOfWeek, today, ymd } from '../lib/dates'
 import AiPanel from '../components/AiPanel'
+import WalletSetup from '../components/WalletSetup'
 import { DeleteButton, Empty, ErrorBar, Loading, PageHeader } from '../components/ui'
 
 export default function Spend() {
-  const { rows, loading, error, setError, insert, remove } = useRows('expenses', { order: 'spent_on' })
+  const { rows, loading, error, setError, insert, remove, reload } = useRows('expenses', { order: 'spent_on' })
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [date, setDate] = useState(today())
@@ -69,6 +70,8 @@ export default function Spend() {
         </div>
       </div>
 
+      <WalletSetup onTestAdded={reload} />
+
       <AiPanel kind="spending" examples={['Where can I save money?', 'Compare this month to last month']} />
 
       <form className="card form" onSubmit={add}>
@@ -107,6 +110,7 @@ export default function Spend() {
                 <li key={x.id} className="item expense">
                   <span className="expense__note" dir="auto">
                     {x.note || <span className="muted">No note</span>}
+                    {x.source === 'wallet' && <span className="tag expense__tag">Wallet</span>}
                   </span>
                   <span className="expense__amt">{money(x.amount)}</span>
                   <DeleteButton label="Delete this spend" onClick={() => remove(x.id)} />

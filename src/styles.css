@@ -665,3 +665,14 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .day-brief .ai-result strong { color: #fff; }
 .day-brief .ai-loading { background: rgba(255,255,255,.08); color: #bdbdbd; }
 .day-brief .error-text { color: #fff; }
+
+/* v10: Google Wallet auto-add */
+.wallet .steps { gap: 12px; }
+.wallet-steps li { line-height: 1.5; }
+.copy-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; padding: 8px 8px 8px 10px; background: var(--soft); border-radius: var(--radius-sm); }
+.copy-row code { flex: 1; min-width: 0; background: none; padding: 0; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.copy-row code.wrap { white-space: normal; overflow-wrap: anywhere; }
+.copy-row .btn { flex: none; }
+.wallet-test { display: block; margin-top: 6px; font-size: 13px; font-weight: 600; }
+.wallet-test.is-ok::before { content: '✓ '; }
+.expense__tag { margin-left: 8px; font-size: 11px; vertical-align: middle; }

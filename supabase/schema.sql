@@ -57,6 +57,8 @@ create table if not exists public.expenses (
   amount     numeric(12, 2) not null check (amount > 0),
   note       text not null default '',
   spent_on   date not null default current_date,
+  source     text not null default '',            -- 'wallet' = added from Google Wallet
+  external_id text,                               -- skips duplicate notifications
   created_at timestamptz not null default now()
 );
 
@@ -113,6 +115,7 @@ create table if not exists public.user_settings (
   trello_key      text not null default '',
   trello_token    text not null default '',
   trello_board_id text not null default '',
+  ingest_token    text,                           -- private key for Google Wallet auto-add
   updated_at      timestamptz not null default now()
 );
 
@@ -129,3 +132,8 @@ begin
     execute format('create index if not exists %I on public.%I (user_id)', t || '_user_idx', t);
   end loop;
 end $$;
+
+create unique index if not exists user_settings_ingest_token_key
+  on public.user_settings (ingest_token) where ingest_token is not null and ingest_token <> '';
+create unique index if not exists expenses_external_id_key
+  on public.expenses (user_id, external_id) where external_id is not null;
