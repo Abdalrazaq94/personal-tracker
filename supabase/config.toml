@@ -1,0 +1,5 @@
+# Used only if you deploy with the Supabase CLI (npx supabase functions deploy ai).
+# The function checks the signed-in user itself, so the gateway JWT check is turned off.
+# This also makes it work with the newer "publishable" API keys.
+[functions.ai]
+verify_jwt = false
