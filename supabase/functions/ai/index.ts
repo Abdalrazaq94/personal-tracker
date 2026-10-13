@@ -208,7 +208,7 @@ async function analyse(db: any, b: Body) {
     const sinceKey = since.toISOString().slice(0, 10)
     const [habits, logs] = await Promise.all([
       db.from('habits').select('*').order('created_at', { ascending: true }),
-      db.from('habit_logs').select('habit_id, day, count').gte('day', sinceKey),
+      db.from('habit_logs').select('*').gte('day', sinceKey),
     ])
     if (habits.error || logs.error) throw new Error((habits.error ?? logs.error).message)
     const days: string[] = []
@@ -219,18 +219,34 @@ async function analyse(db: any, b: Body) {
     }
     data =
       'HABITS. "good" = want to do it at least TARGET times a day. "bad" = want to do it at most TARGET times a day (0 = avoid).\n' +
-      'Daily counts are for the last 30 days, oldest first, ending today; "-" = before the habit was created.\n' +
+      `Daily counts are for the last 30 days, oldest first (first day is a ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date(days[0] + 'T00:00:00Z').getUTCDay()]}), ending today; ` +
+      '"-" = before the habit was created, "S" = skipped day (sick/travel, not a failure). Days outside "planned days" are rest days.\n' +
       // deno-lint-ignore no-explicit-any
       (habits.data.map((h: any) => {
         const kindOf = h.kind === 'bad' ? 'bad' : 'good'
         const start = String(h.created_at).slice(0, 10)
+        const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        const planned: number[] = Array.isArray(h.days) && h.days.length ? h.days : [0, 1, 2, 3, 4, 5, 6]
+        const tally: Record<string, number> = {}
+        let resisted = 0
         const counts = days.map((d) => {
           if (d < start) return '-'
           // deno-lint-ignore no-explicit-any
           const l = logs.data.find((x: any) => x.habit_id === h.id && x.day === d)
+          ;(l?.reasons ?? []).forEach((r: string) => (tally[r] = (tally[r] ?? 0) + 1))
+          resisted += l?.resisted ?? 0
+          if (l?.skipped) return 'S'
           return String(l?.count ?? 0)
         })
-        return `${h.name} | ${kindOf} | target ${h.target} | ${counts.join(',')}`
+        const extras = [
+          planned.length < 7 ? `planned days: ${planned.map((n) => names[n]).join('/')}` : '',
+          Object.keys(tally).length
+            ? `triggers: ${Object.entries(tally).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', ')}`
+            : '',
+          resisted ? `urges resisted: ${resisted}` : '',
+          Number(h.cost) > 0 ? `cost each time: ${h.cost}, per day before: ${h.baseline ?? 0}` : '',
+        ].filter(Boolean)
+        return `${h.name} | ${kindOf} | target ${h.target} | ${counts.join(',')}${extras.length ? ' | ' + extras.join(' | ') : ''}`
       }).join('\n') || '(none)')
   } else {
     const since = new Date(today)
@@ -257,7 +273,8 @@ async function analyse(db: any, b: Body) {
   const task =
     kind === 'habits'
       ? 'Analyse my habits: for each habit say if it is improving, steady or slipping (compare the last 7 days with the week before), current streaks, ' +
-        'my best and worst days of the week, and give 3 concrete tips. For bad habits, fewer is better and clean days are wins. Be encouraging.'
+        'my best and worst days of the week, and give 3 concrete tips. For bad habits, fewer is better and clean days are wins; ' +
+        'if triggers are given, name the main triggers and give a specific plan for each; mention urges resisted and money saved when available. Be encouraging.'
       : kind === 'tasks'
       ? 'Analyse my tasks: how I am doing, what is overdue or stuck in "doing", whether important tasks get done, patterns, and 3 concrete suggestions for tomorrow.'
       : 'Analyse my spending: totals this week and month vs earlier, biggest categories (group similar notes), unusual spends, trends, and 3 concrete money-saving suggestions.'

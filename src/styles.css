@@ -578,3 +578,21 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .hc-cross { stroke: var(--muted); stroke-width: 1; }
 .hc-hover { fill: var(--bg); stroke: var(--fg); stroke-width: 2; }
 .hc-tick { font-size: 10px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* v6: habits v2 */
+.more-link { align-self: flex-start; color: var(--fg); }
+.weekday-pick { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.wd { height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); font-weight: 700; font-size: 14px; color: var(--muted); }
+.wd.is-on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.trigger-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.trigger { min-height: 48px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg); font-weight: 600; font-size: 15px; text-align: start; }
+.trigger:active { background: var(--fg); color: var(--bg); }
+.milestone { font-size: 13px; font-weight: 700; padding: 6px 10px; border: 1.5px solid var(--fg); border-radius: 999px; align-self: flex-start; }
+.habit__headtext { min-width: 0; }
+.habit__actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: -4px; }
+.habit__actions:empty { display: none; }
+.habit__counter.is-dim { opacity: .45; }
+.day__box.is-skip { border-style: dashed; color: var(--muted); }
+.day__box.is-off { background: var(--soft); border-color: transparent; }
+.habit__insights { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #333; padding: 10px 12px; background: var(--soft); border-radius: var(--radius-sm); }
+.habit__insights b { color: var(--fg); }

@@ -31,6 +31,9 @@ create table if not exists public.habits (
   name       text not null,
   kind       text not null default 'good' check (kind in ('good', 'bad')),
   target     int  not null default 1 check (target >= 0),  -- good: times per day · bad: max allowed per day
+  days       smallint[] not null default '{0,1,2,3,4,5,6}',  -- planned weekdays, 0 = Sunday
+  cost       numeric(10, 2) not null default 0,               -- bad habits: cost each time
+  baseline   int  not null default 0,                         -- bad habits: times per day before
   created_at timestamptz not null default now()
 );
 
@@ -40,6 +43,9 @@ create table if not exists public.habit_logs (
   habit_id   uuid not null references public.habits(id) on delete cascade,
   day        date not null,
   count      int  not null default 0 check (count >= 0),
+  skipped    boolean not null default false,
+  resisted   int  not null default 0,
+  reasons    text[] not null default '{}',
   created_at timestamptz not null default now(),
   unique (habit_id, day)
 );
