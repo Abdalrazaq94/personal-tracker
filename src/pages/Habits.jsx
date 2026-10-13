@@ -218,11 +218,14 @@ function HabitForm({ initial, onSubmit, bare }) {
       </div>
 
       {!more ? (
-        <button type="button" className="link small more-link" onClick={() => setMore(true)}>
-          + {bad ? 'Days, money saved' : 'Choose days'}
-        </button>
+        bad && (
+          <button type="button" className="link small more-link" onClick={() => setMore(true)}>
+            + Track money saved (optional)
+          </button>
+        )
       ) : (
         <>
+          {initial && (
           <div className="field">
             <span>Days · {daysLabel({ days })}</span>
             <div className="weekday-pick">
@@ -240,6 +243,7 @@ function HabitForm({ initial, onSubmit, bare }) {
               ))}
             </div>
           </div>
+          )}
           {bad && (
             <div className="row-2">
               <label className="field">
@@ -258,7 +262,7 @@ function HabitForm({ initial, onSubmit, bare }) {
       <p className="muted small">
         {bad
           ? 'Tap + each time it happens and pick what triggered it. The day stays clean while you stay at or under your max (0 = avoid).'
-          : 'Tap + each time you do it. The day counts when you reach your target. Days you don’t plan won’t break your streak.'}
+          : 'Tap + each time you do it. The day counts when you reach your target.'}
       </p>
       <div className="form-foot form-foot--end">
         <button className="btn">{initial ? 'Save' : 'Add habit'}</button>
