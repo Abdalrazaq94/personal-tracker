@@ -255,7 +255,7 @@ function PrayerWeek({ place, today, logs, onPick, picked }) {
 
   return (
     <section className="card">
-      <div className="phone-sec">
+      <div className="prayer-sec">
         <h2>Last 7 days</h2>
         <span className="muted small">
           {prayed} of {possible} prayed{late ? ` · ${late} late` : ''}

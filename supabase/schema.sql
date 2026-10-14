@@ -119,20 +119,6 @@ create table if not exists public.user_settings (
   updated_at      timestamptz not null default now()
 );
 
--- ---------- Phone time ----------
-create table if not exists public.screen_time (
-  id            uuid primary key default gen_random_uuid(),
-  user_id       uuid not null default auth.uid() references auth.users(id) on delete cascade,
-  day           date not null,
-  total_minutes integer not null default 0 check (total_minutes between 0 and 1440),
-  unlocks       integer,
-  apps          jsonb not null default '[]'::jsonb,   -- [{ "name": "WhatsApp", "minutes": 52 }, …]
-  source        text not null default '',            -- 'photo' = read from a screenshot
-  created_at    timestamptz not null default now(),
-  updated_at    timestamptz not null default now(),
-  unique (user_id, day)
-);
-
 -- ---------- Commitments: prayers ----------
 create table if not exists public.prayer_logs (
   id         uuid primary key default gen_random_uuid(),
@@ -149,7 +135,7 @@ do $$
 declare t text;
 begin
   foreach t in array array['words', 'tasks', 'habits', 'habit_logs', 'expenses', 'plans',
-                           'link_sections', 'links', 'notebooks', 'notes', 'user_settings', 'screen_time', 'prayer_logs'] loop
+                           'link_sections', 'links', 'notebooks', 'notes', 'user_settings', 'prayer_logs'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists "own rows" on public.%I', t);
     execute format(
