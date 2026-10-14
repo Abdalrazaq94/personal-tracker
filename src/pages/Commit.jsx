@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRows } from '../lib/useRows'
 import { ErrorBar, PageHeader } from '../components/ui'
-import AiPanel from '../components/AiPanel'
+import { Markdown } from '../components/AiPanel'
+import { callAi } from '../lib/ai'
 import PrayerChart from '../components/PrayerChart'
 import { METHODS, PRAYERS, clock, currentPrayer, findPlaces, hijri, inWords, nextPrayer, placeToday, timesFor } from '../lib/prayer'
 
@@ -83,6 +84,8 @@ export default function Commit() {
       <PageHeader title="Commitments" subtitle="Keep the promises you make to yourself" />
       <ErrorBar error={shownError} onClose={() => setError(null)} />
 
+      {place && !picking && <PrayerInsights logs={logs} today={today} />}
+
       {place === undefined ? (
         <div className="empty muted">Loading…</div>
       ) : !place || picking ? (
@@ -104,19 +107,68 @@ export default function Commit() {
 
       {place && !picking && <PrayerWeek place={place} today={today} logs={logs} onPick={(d) => setDay(d === today ? null : d)} picked={shown} />}
 
-      {place && !picking && (
-        <AiPanel
-          kind="prayers"
-          examples={['Which prayer do I miss most?', 'How can I pray Fajr on time?', 'Am I improving this month?']}
-        >
-          <PrayerChart logs={logs} today={today} />
-        </AiPanel>
-      )}
     </div>
   )
 }
 
 /* ------------------------------------------------------------------ */
+
+const QUESTIONS = [
+  { label: 'How am I doing?', q: '' },
+  { label: 'Which prayer do I miss most?', q: 'Which prayer do I miss or delay most, and why might that be?' },
+  { label: 'How can I pray Fajr on time?', q: 'Give me a simple plan to pray Fajr on time.' },
+  { label: 'Am I improving?', q: 'Am I improving this month? Compare the weeks.' },
+]
+
+/** Always at the top: the 30-day line chart, then four AI questions (no typing). */
+function PrayerInsights({ logs, today }) {
+  const [asked, setAsked] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [answer, setAnswer] = useState('')
+  const [err, setErr] = useState(null)
+
+  const ask = async (item) => {
+    setAsked(item.label)
+    setBusy(true)
+    setErr(null)
+    setAnswer('')
+    try {
+      const data = await callAi({ kind: 'prayers', question: item.q, today: today })
+      setAnswer(data?.text || 'No answer.')
+    } catch (e) {
+      setErr(e.message)
+    }
+    setBusy(false)
+  }
+
+  return (
+    <section className="card prayer-insights">
+      <div className="prayer-sec">
+        <h2>How it’s going</h2>
+        <span className="muted small">last 30 days</span>
+      </div>
+      <PrayerChart logs={logs} today={today} />
+      <div className="prayer-ask">
+        <p className="prayer-ask__title">
+          <span className="ai-spark" aria-hidden>
+            ✦
+          </span>{' '}
+          Ask the AI
+        </p>
+        <div className="prayer-ask__chips">
+          {QUESTIONS.map((item) => (
+            <button key={item.label} type="button" className={`chip${asked === item.label ? ' is-active' : ''}`} disabled={busy} onClick={() => ask(item)}>
+              {item.label}
+            </button>
+          ))}
+        </div>
+        {busy && <div className="ai-loading">Thinking…</div>}
+        {err && <p className="error-text">{err}</p>}
+        {answer && !busy && <Markdown text={answer} />}
+      </div>
+    </section>
+  )
+}
 
 function PrayerCard({ place, today, day, setDay, logs, mark, onChangePlace, showSettings, setShowSettings, savePlace }) {
   const times = timesFor(place, day)

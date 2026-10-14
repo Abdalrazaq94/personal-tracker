@@ -754,3 +754,10 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .prayer-rates__bar .is-ontime { background: #2f7a3f; border-radius: 999px 0 0 999px; }
 .prayer-rates__bar .is-late { background: repeating-linear-gradient(135deg, #2f7a3f 0 3px, #cfe6d3 3px 6px); }
 .prayer-rates__num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.prayer-insights { display: flex; flex-direction: column; gap: 6px; }
+.prayer-insights .prayer-sec { margin-bottom: 4px; }
+.prayer-ask { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; padding-top: 14px; border-top: 1px solid var(--line); }
+.prayer-ask__title { font-weight: 800; font-size: 15px; display: flex; align-items: center; gap: 6px; }
+.prayer-ask__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.prayer-ask__chips .chip { cursor: pointer; }
+.prayer-ask__chips .chip.is-active { color: var(--fg); border-color: var(--fg); }
