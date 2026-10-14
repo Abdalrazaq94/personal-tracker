@@ -750,3 +750,62 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; text
 .phone-key img { border: 1px solid var(--line); border-radius: 12px; flex: none; }
 .phone-key__side { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; flex: 1 1 200px; }
 .phone-key__text { font-size: 12px; word-break: break-all; }
+
+/* ---------- Commitments: prayer ---------- */
+.prayer { display: flex; flex-direction: column; gap: 14px; }
+.prayer__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.prayer__head h2, .prayer-pick h2 { font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+.prayer__count { font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.prayer__count strong { font-size: 30px; font-weight: 800; color: var(--fg); letter-spacing: -.03em; }
+.prayer__days { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 4px; background: var(--soft); border-radius: 12px; }
+.prayer__days .icon-btn { font-size: 24px; color: var(--fg); }
+.prayer__days .icon-btn:disabled { opacity: .25; cursor: default; }
+.prayer__date { display: flex; flex-direction: column; align-items: center; gap: 1px; text-align: center; }
+.prayer__next { font-size: 14px; }
+.prayer__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.prayer-row { display: grid; grid-template-columns: 26px 1fr auto auto; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; border: 1px solid var(--line); border-radius: 14px; transition: background .15s, border-color .15s; }
+.prayer-row.is-now { border-color: var(--fg); }
+.prayer-row.is-done { background: var(--w-memorized); border-color: #b9dcc0; }
+.prayer-row__check { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid #c9c9c9; display: grid; place-items: center; font-size: 14px; font-weight: 800; color: #fff; }
+.prayer-row.is-done .prayer-row__check { background: var(--w-memorized-ink); border-color: var(--w-memorized-ink); }
+.prayer-row__name { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.prayer-row__name strong { font-size: 16px; }
+.prayer-row__name span { color: var(--muted); font-size: 14px; }
+.prayer-row.is-done .prayer-row__name span { color: var(--w-memorized-ink); }
+.prayer-row__time { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.prayer-row__wait { min-width: 120px; text-align: right; }
+.prayer-row__acts { display: inline-flex; padding: 3px; gap: 2px; background: var(--soft); border-radius: 999px; }
+.prayer-row.is-done .prayer-row__acts { background: rgba(255, 255, 255, .7); }
+.prayer-row__acts button { height: 30px; padding: 0 11px; border: 0; border-radius: 999px; background: transparent; font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.prayer-row__acts button.is-on { background: var(--w-memorized-ink); color: #fff; }
+.prayer-row.is-late .prayer-row__acts button.is-on { background: #6f8f75; }
+.prayer__sunrise { margin-top: -4px; }
+.prayer__settings { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.prayer__settings select { height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg); font: inherit; font-size: 15px; }
+.prayer__head .link { font-size: 13px; }
+
+.prayer-week { display: grid; grid-template-columns: 64px repeat(7, 1fr); gap: 8px 4px; align-items: center; justify-items: center; }
+.prayer-week__name { justify-self: start; font-size: 13px; font-weight: 600; }
+.prayer-week__day { border: 0; background: none; padding: 2px 6px; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.prayer-week__day.is-on { background: var(--fg); color: var(--bg); }
+.prayer-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--soft); border: 1px solid var(--line); display: inline-block; }
+.prayer-dot.is-done { background: var(--w-memorized-ink); border-color: var(--w-memorized-ink); }
+.prayer-dot.is-late { background: repeating-linear-gradient(135deg, var(--w-memorized-ink) 0 3px, #cfe6d3 3px 6px); border-color: var(--w-memorized-ink); }
+.prayer-dot.is-future { background: transparent; border-style: dashed; }
+.prayer-legend { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.prayer-legend .prayer-dot { width: 12px; height: 12px; margin-left: 8px; }
+.prayer-legend .prayer-dot:first-child { margin-left: 0; }
+
+.prayer-pick { display: flex; flex-direction: column; gap: 10px; }
+.prayer-pick__list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.prayer-pick__list li + li { border-top: 1px solid var(--line); }
+.prayer-pick__list button { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; padding: 10px 14px; border: 0; background: var(--bg); text-align: left; }
+.prayer-pick__list button:hover { background: var(--soft); }
+.prayer-pick__acts { display: flex; align-items: center; gap: 12px; }
+
+@media (max-width: 420px) {
+  .prayer-row { grid-template-columns: 24px 1fr auto; row-gap: 8px; }
+  .prayer-row__acts, .prayer-row__wait { grid-column: 2 / -1; justify-self: start; }
+  .prayer-row__wait { text-align: left; min-width: 0; }
+  .prayer-row__name { flex-wrap: wrap; }
+}

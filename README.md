@@ -113,3 +113,15 @@ Setup (once):
 
 The app is built by GitHub Actions (`.github/workflows/phone-app.yml`) and published at
 `https://github.com/Abdalrazaq94/personal-tracker/releases/download/phone-app/tracker-phone.apk`.
+
+## Commitments: prayer times
+
+**Commit** → choose any city (search, or "Use my location"). It shows the 5 prayer times for that day
+(Fajr, Dhuhr, Asr, Maghrib, Isha), the next prayer, and the Hijri date. Tap **On time** or **Late** on each prayer
+to mark it prayed (it turns green); tap the same answer again to undo. **Last 7 days** shows every prayer at a glance.
+
+Times are calculated on your device with the free [adhan](https://github.com/batoulapps/adhan-js) library; pick the
+method your mosque uses (default: Moonsighting Committee) and Standard or Hanafi Asr. City search uses the free
+Open-Meteo geocoding service.
+
+Setup (once): run `supabase/migrations/006_prayers.sql` in Supabase → SQL Editor.
