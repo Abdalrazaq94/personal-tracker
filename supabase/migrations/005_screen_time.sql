@@ -18,3 +18,8 @@ alter table public.screen_time enable row level security;
 drop policy if exists "own rows" on public.screen_time;
 create policy "own rows" on public.screen_time for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create index if not exists screen_time_user_idx on public.screen_time (user_id);
+
+-- the private key the phone helper uses (same key as Google Wallet; safe if it already exists)
+alter table public.user_settings add column if not exists ingest_token text;
+create unique index if not exists user_settings_ingest_token_key
+  on public.user_settings (ingest_token) where ingest_token is not null and ingest_token <> '';

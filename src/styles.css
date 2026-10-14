@@ -733,3 +733,19 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .phone-form__apps li { display: grid; grid-template-columns: 1fr 96px 32px; gap: 6px; align-items: center; }
 .phone-form__add { align-self: flex-start; margin-top: 2px; }
 .phone-form__acts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.phone-connected { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius); }
+.phone-connected__dot { width: 9px; height: 9px; border-radius: 50%; background: var(--fg); flex: none; }
+.phone-connected .link { margin-left: auto; }
+.phone-connect { display: flex; flex-direction: column; gap: 10px; }
+.phone-connect__head { display: flex; justify-content: space-between; align-items: center; }
+.phone-connect h2 { font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+.phone-steps { margin: 4px 0 0; padding-left: 22px; display: flex; flex-direction: column; gap: 16px; }
+.phone-steps li { display: flex; flex-direction: column; gap: 6px; }
+.phone-steps li::marker { font-weight: 800; }
+.phone-steps__row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 2px; }
+.phone-qr-mini { display: inline-flex; align-items: center; gap: 8px; max-width: 220px; }
+.phone-qr-mini img { border: 1px solid var(--line); border-radius: 8px; flex: none; }
+.phone-key { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; margin-top: 2px; }
+.phone-key img { border: 1px solid var(--line); border-radius: 12px; flex: none; }
+.phone-key__side { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; flex: 1 1 200px; }
+.phone-key__text { font-size: 12px; word-break: break-all; }

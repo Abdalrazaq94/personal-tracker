@@ -366,7 +366,7 @@ function PhoneCard({ rows }) {
           )}
         </>
       ) : (
-        <p className="muted small">No phone time for today yet. Tap to add a screenshot from Digital Wellbeing.</p>
+        <p className="muted small">No phone time yet. Tap to connect your phone. It then measures itself every hour.</p>
       )}
     </Link>
   )

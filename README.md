@@ -101,12 +101,15 @@ The key only lets someone **add** spending to your account, not read anything; u
 
 ## Phone time
 
-The Home screen shows how long you used your phone today; tap it to see every app, the last 7 days and your top apps.
+The Home screen shows how long you used your phone today; tap it for every app, the last 7 days and your top apps.
+It measures itself: a small Android helper, **Tracker Phone** (`android/`), reads your phone's usage (the same data as
+Digital Wellbeing) and sends it here every hour. No screenshots, no typing.
 
-Android doesn't let websites read screen time, so you add it from a screenshot:
+Setup (once):
+1. Supabase → SQL Editor: run `supabase/migrations/005_screen_time.sql`.
+2. Supabase → Edge Functions: deploy `supabase/functions/ingest` with **Verify JWT off**.
+3. In the tracker open **Phone → Connect your phone**: download the app on your phone, scan the QR code to copy your
+   private key, tap **Paste key** in the app, then **Turn on usage access**.
 
-1. Phone **Settings → Digital Wellbeing & parental controls** → take a screenshot (Power + Volume down). Scroll for more apps and take another.
-2. In the app: **Phone → Add screenshot**, pick the pictures. The AI reads the total, unlocks and each app's time.
-3. Check the numbers and **Save**. You can also **Type it in** by hand.
-
-Setup (once): run `supabase/migrations/005_screen_time.sql` in Supabase → SQL Editor, and deploy the updated `ai` Edge Function.
+The app is built by GitHub Actions (`.github/workflows/phone-app.yml`) and published at
+`https://github.com/Abdalrazaq94/personal-tracker/releases/download/phone-app/tracker-phone.apk`.

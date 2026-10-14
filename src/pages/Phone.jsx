@@ -1,22 +1,27 @@
-import { useMemo, useRef, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { useEffect, useMemo, useState } from 'react'
 import { useRows } from '../lib/useRows'
-import { callAi } from '../lib/ai'
 import { addDays, dayLabel, parseYmd, today, ymd } from '../lib/dates'
-import { appTotals, fmtMins, mergeReads, parseMins, shrinkImage, sortApps } from '../lib/screentime'
+import { appTotals, fmtMins, sortApps } from '../lib/screentime'
 import { ErrorBar, PageHeader } from '../components/ui'
+import PhoneConnect from '../components/PhoneConnect'
 
 const NEEDS_TABLE =
   'Phone time needs a small database update: in Supabase open SQL Editor, paste the file supabase/migrations/005_screen_time.sql and press Run. Then refresh this page.'
 const missingTable = (e) => /screen_time|relation .* does not exist|schema cache/i.test(e || '')
 
 export default function Phone() {
-  const { rows, setRows, loading, error, setError, remove } = useRows('screen_time', { order: 'day' })
+  const { rows, loading, error, setError, reload } = useRows('screen_time', { order: 'day' })
   const [picked, setPicked] = useState(null) // selected day (YYYY-MM-DD)
-  const [draft, setDraft] = useState(null) // the form being checked before saving
-  const [reading, setReading] = useState('')
-  const [howOpen, setHowOpen] = useState(false)
-  const fileRef = useRef(null)
+
+  // new numbers arrive from the phone every hour: look again every minute while this page is open
+  useEffect(() => {
+    const t = setInterval(reload, 60000)
+    return () => clearInterval(t)
+  }, [reload])
+
+  const fromPhone = rows.filter((r) => r.source === 'phone')
+  const lastAt = fromPhone.reduce((m, r) => (r.updated_at > m ? r.updated_at : m), '')
+  const lastUpdate = lastAt ? new Date(lastAt).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : ''
 
   const byDay = useMemo(() => new Map(rows.map((r) => [r.day, r])), [rows])
   const latest = rows[0]?.day
@@ -44,52 +49,6 @@ export default function Phone() {
   }, [byDay])
   const topWeek = appTotals(weekRows).slice(0, 6)
 
-  /* ---------------- add from screenshots ---------------- */
-  const onFiles = async (files) => {
-    const list = [...(files || [])].filter((f) => f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name))
-    if (!list.length) return
-    setError(null)
-    let merged = draft && draft.fromPhoto ? draft.read : null
-    try {
-      for (let i = 0; i < list.length; i++) {
-        setReading(list.length > 1 ? `Reading screenshot ${i + 1} of ${list.length}…` : 'Reading your screenshot…')
-        const { data, mime } = await shrinkImage(list[i])
-        const read = await callAi({ kind: 'screentime', image: data, mime, today: today() }, { timeoutMs: 60000 })
-        merged = mergeReads(merged, read)
-      }
-      setDraft(toDraft(merged, true))
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setReading('')
-      if (fileRef.current) fileRef.current.value = ''
-    }
-  }
-
-  const save = async () => {
-    const total = parseMins(draft.total)
-    if (total === null || total > 1440) return setError('Please enter the total time, for example 3h 25m.')
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.day) || draft.day > today()) return setError('Please choose a day (not in the future).')
-    const apps = sortApps(
-      draft.apps
-        .map((a) => ({ name: a.name.trim(), minutes: parseMins(a.time) }))
-        .filter((a) => a.name && a.minutes !== null && a.minutes > 0)
-    )
-    const row = {
-      day: draft.day,
-      total_minutes: total,
-      unlocks: draft.unlocks === '' ? null : Math.max(0, Math.round(Number(draft.unlocks)) || 0),
-      apps,
-      source: draft.fromPhoto ? 'photo' : '',
-      updated_at: new Date().toISOString(),
-    }
-    const { data, error } = await supabase.from('screen_time').upsert(row, { onConflict: 'user_id,day' }).select().single()
-    if (error) return setError(error.message)
-    setRows((r) => [data || row, ...r.filter((x) => x.day !== row.day)].sort((a, b) => (a.day < b.day ? 1 : -1)))
-    setPicked(row.day)
-    setDraft(null)
-  }
-
   const shownError = missingTable(error) ? NEEDS_TABLE : error
 
   return (
@@ -97,60 +56,12 @@ export default function Phone() {
       <PageHeader title="Phone time" subtitle="How long you used your phone, and on which apps" />
       <ErrorBar error={shownError} onClose={() => setError(null)} />
 
-      {/* ---------------- add ---------------- */}
-      {!draft && (
-        <section className="card phone-add">
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            multiple
-            hidden
-            onChange={(e) => onFiles(e.target.files)}
-          />
-          {reading ? (
-            <p className="phone-reading">{reading}</p>
-          ) : (
-            <>
-              <div className="phone-add__row">
-                <button className="btn" onClick={() => fileRef.current?.click()}>
-                  Add screenshot
-                </button>
-                <button className="btn btn--ghost" onClick={() => setDraft(toDraft({ date: today() }, false))}>
-                  Type it in
-                </button>
-              </div>
-              <button className="link small" onClick={() => setHowOpen((v) => !v)}>
-                {howOpen ? 'Hide how to' : 'How do I take the screenshot?'}
-              </button>
-              {howOpen && <HowTo />}
-            </>
-          )}
-        </section>
-      )}
-
-      {draft && (
-        <DraftForm
-          draft={draft}
-          setDraft={setDraft}
-          onSave={save}
-          onCancel={() => setDraft(null)}
-          onMore={() => fileRef.current?.click()}
-          reading={reading}
-          fileInput={
-            <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => onFiles(e.target.files)} />
-          }
-        />
-      )}
+      <PhoneConnect connected={fromPhone.length > 0} lastUpdate={lastUpdate} />
 
       {loading ? (
         <div className="empty muted">Loading…</div>
       ) : !rows.length ? (
-        !draft && (
-          <div className="empty">
-            No phone time yet. Add a screenshot of Digital Wellbeing and it fills in by itself.
-          </div>
-        )
+        <div className="empty">No phone time yet. Once Tracker Phone is set up, today’s time shows here by itself.</div>
       ) : (
         <>
           {/* ---------------- the chosen day ---------------- */}
@@ -166,21 +77,6 @@ export default function Phone() {
                   </p>
                 )}
               </div>
-              {sel && (
-                <div className="phone-day__acts">
-                  <button className="btn btn--ghost btn--sm" onClick={() => setDraft(toDraft(sel, false, true))}>
-                    Edit
-                  </button>
-                  <button
-                    className="icon-btn"
-                    aria-label="Delete this day"
-                    title="Delete this day"
-                    onClick={() => window.confirm(`Delete phone time for ${dayLabel(day)}?`) && remove(sel.id)}
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
             </div>
             {sel?.apps?.length > 0 ? <AppBars apps={sel.apps} total={sel.total_minutes} /> : sel && <p className="muted small">No apps listed for this day.</p>}
           </section>
@@ -231,19 +127,6 @@ export default function Phone() {
 }
 
 /* ------------------------------------------------------------------ */
-
-function toDraft(read, fromPhoto, editing = false) {
-  return {
-    fromPhoto,
-    editing,
-    read: fromPhoto ? read : null,
-    day: read?.day || read?.date || today(),
-    total: read?.total_minutes ? fmtMins(read.total_minutes) : '',
-    unlocks: read?.unlocks ?? '',
-    apps: (read?.apps || []).map((a) => ({ name: a.name, time: fmtMins(a.minutes) })),
-    noDate: fromPhoto && !read?.date,
-  }
-}
 
 const compare = (m, avg) => {
   const diff = m - avg
@@ -311,81 +194,5 @@ function WeekBars({ week, picked, onPick, avg }) {
         )
       })}
     </div>
-  )
-}
-
-function DraftForm({ draft, setDraft, onSave, onCancel, onMore, reading, fileInput }) {
-  const set = (patch) => setDraft((d) => ({ ...d, ...patch }))
-  const setApp = (i, patch) => set({ apps: draft.apps.map((a, j) => (j === i ? { ...a, ...patch } : a)) })
-  return (
-    <section className="card phone-form">
-      {fileInput}
-      <h2>{draft.fromPhoto ? 'Check what the AI read' : draft.editing ? 'Edit this day' : 'Type in your phone time'}</h2>
-      {draft.fromPhoto && (
-        <p className="muted small">
-          Fix anything that looks wrong, then save.{draft.noDate ? ' The screenshot didn’t show the day, so check the date.' : ''}
-        </p>
-      )}
-      <div className="row-2">
-        <label className="field">
-          <span>Day</span>
-          <input type="date" max={today()} value={draft.day} onChange={(e) => set({ day: e.target.value })} />
-        </label>
-        <label className="field">
-          <span>Total time</span>
-          <input placeholder="3h 25m" value={draft.total} onChange={(e) => set({ total: e.target.value })} />
-        </label>
-      </div>
-      <label className="field">
-        <span>Unlocks (optional)</span>
-        <input inputMode="numeric" placeholder="e.g. 64" value={draft.unlocks} onChange={(e) => set({ unlocks: e.target.value.replace(/\D/g, '') })} />
-      </label>
-
-      <div className="field">
-        <span>Apps</span>
-        <ul className="phone-form__apps">
-          {draft.apps.map((a, i) => (
-            <li key={i}>
-              <input dir="auto" placeholder="App" value={a.name} onChange={(e) => setApp(i, { name: e.target.value })} />
-              <input placeholder="45m" value={a.time} onChange={(e) => setApp(i, { time: e.target.value })} />
-              <button className="icon-btn" aria-label="Remove app" onClick={() => set({ apps: draft.apps.filter((_, j) => j !== i) })}>
-                ×
-              </button>
-            </li>
-          ))}
-        </ul>
-        <button className="link small phone-form__add" onClick={() => set({ apps: [...draft.apps, { name: '', time: '' }] })}>
-          + Add an app
-        </button>
-      </div>
-
-      {reading && <p className="phone-reading">{reading}</p>}
-      <div className="phone-form__acts">
-        <button className="btn" onClick={onSave} disabled={!!reading}>
-          Save
-        </button>
-        <button className="btn btn--ghost" onClick={onMore} disabled={!!reading}>
-          {draft.fromPhoto ? 'Add another screenshot' : 'Read from a screenshot'}
-        </button>
-        <button className="link" onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
-    </section>
-  )
-}
-
-function HowTo() {
-  return (
-    <ol className="phone-how">
-      <li>
-        On your Android phone open <strong>Settings → Digital Wellbeing &amp; parental controls</strong> (or search “Digital Wellbeing” in
-        Settings).
-      </li>
-      <li>You’ll see today’s screen time and your apps. Take a screenshot (press <strong>Power + Volume down</strong>).</li>
-      <li>More apps below? Scroll down and take another screenshot. Add both together.</li>
-      <li>For yesterday, tap the chart, choose yesterday’s bar, and screenshot that.</li>
-      <li>Here, tap <strong>Add screenshot</strong> and pick the pictures. The AI reads them; you check and save.</li>
-    </ol>
   )
 }
