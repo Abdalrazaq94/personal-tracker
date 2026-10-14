@@ -16,18 +16,25 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      # GitHub's machines already have the Android SDK; just make sure the pieces we need are there
+      - name: Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "build-tools;34.0.0" > /dev/null
 
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
+      - name: Gradle 8.9
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip
+          unzip -q gradle-8.9-bin.zip -d "$HOME"
+          echo "$HOME/gradle-8.9/bin" >> "$GITHUB_PATH"
 
       # the same signing key every time, so new versions install over old ones
       - name: Signing key
@@ -41,7 +48,9 @@ jobs:
 
       - name: Build
         working-directory: android
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          gradle assembleDebug --no-daemon --stacktrace
 
       - name: Publish download
         env:
@@ -51,7 +60,7 @@ jobs:
           gh release view phone-app >/dev/null 2>&1 || gh release create phone-app --title "Tracker Phone (Android helper)" --notes "Install on your Android phone. It sends your phone time to the tracker every hour."
           gh release upload phone-app tracker-phone.apk --clobber
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: tracker-phone
           path: tracker-phone.apk

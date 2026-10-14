@@ -739,9 +739,10 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .phone-connect { display: flex; flex-direction: column; gap: 10px; }
 .phone-connect__head { display: flex; justify-content: space-between; align-items: center; }
 .phone-connect h2 { font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
-.phone-steps { margin: 4px 0 0; padding-left: 22px; display: flex; flex-direction: column; gap: 16px; }
-.phone-steps li { display: flex; flex-direction: column; gap: 6px; }
-.phone-steps li::marker { font-weight: 800; }
+.phone-steps { margin: 4px 0 0; padding: 0; list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 18px; }
+.phone-steps li { position: relative; padding-left: 36px; display: flex; flex-direction: column; gap: 6px; counter-increment: step; }
+.phone-steps li::before { content: counter(step); position: absolute; left: 0; top: -1px; width: 24px; height: 24px; border-radius: 50%; background: var(--fg); color: var(--bg); font-size: 13px; font-weight: 800; display: grid; place-items: center; }
+a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 .phone-steps__row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 2px; }
 .phone-qr-mini { display: inline-flex; align-items: center; gap: 8px; max-width: 220px; }
 .phone-qr-mini img { border: 1px solid var(--line); border-radius: 8px; flex: none; }
