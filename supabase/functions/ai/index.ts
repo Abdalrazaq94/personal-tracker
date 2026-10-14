@@ -81,6 +81,7 @@ Deno.serve(async (req) => {
       case 'spending':
       case 'tasks':
       case 'habits':
+      case 'prayers':
         return json(await analyse(db, body))
       case 'today':
         return json(await brief(db, body))
@@ -317,7 +318,7 @@ async function parse(db: any, b: Body) {
 
 // deno-lint-ignore no-explicit-any
 async function analyse(db: any, b: Body) {
-  const kind = b.kind === 'spending' ? 'spending' : b.kind === 'habits' ? 'habits' : 'tasks'
+  const kind = b.kind === 'spending' ? 'spending' : b.kind === 'habits' ? 'habits' : b.kind === 'prayers' ? 'prayers' : 'tasks'
   const question = clip(b.question, 500)
   const today = /^\d{4}-\d{2}-\d{2}$/.test(b.today ?? '') ? b.today! : new Date().toISOString().slice(0, 10)
   const currency = clip(b.currency, 5) || 'GBP'
@@ -336,6 +337,37 @@ async function analyse(db: any, b: Body) {
       '\n\nPLANNED TASKS (title | date | done):\n' +
       // deno-lint-ignore no-explicit-any
       (plans.data.map((p: any) => `${p.title} | ${p.plan_date} | ${p.done ? 'done' : 'not done'}`).join('\n') || '(none)')
+  } else if (kind === 'prayers') {
+    const since = new Date(today)
+    since.setDate(since.getDate() - 29)
+    const sinceKey = since.toISOString().slice(0, 10)
+    const { data: logs, error } = await db.from('prayer_logs').select('day, prayer, late').gte('day', sinceKey)
+    if (error) throw new Error(error.message)
+    const days: string[] = []
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(since)
+      d.setDate(d.getDate() + i)
+      days.push(d.toISOString().slice(0, 10))
+    }
+    // deno-lint-ignore no-explicit-any
+    const first = (logs as any[]).reduce((m, l) => (l.day < m ? l.day : m), today)
+    const names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    data =
+      'MY 5 DAILY PRAYERS, last 30 days, oldest first, ending today' +
+      ` (first day is a ${names[new Date(days[0] + 'T00:00:00Z').getUTCDay()]}). ` +
+      'Y = prayed on time, L = prayed late, x = not marked as prayed, - = before I started tracking (' + first + '). ' +
+      "Today's later prayers may not have come yet.\n" +
+      ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha']
+        .map((p) => {
+          const marks = days.map((d) => {
+            if (d < first) return '-'
+            // deno-lint-ignore no-explicit-any
+            const l = (logs as any[]).find((x) => x.day === d && x.prayer === p)
+            return l ? (l.late ? 'L' : 'Y') : 'x'
+          })
+          return `${p[0].toUpperCase() + p.slice(1)}: ${marks.join('')}`
+        })
+        .join('\n')
   } else if (kind === 'habits') {
     const since = new Date(today)
     since.setDate(since.getDate() - 29)
@@ -409,7 +441,12 @@ async function analyse(db: any, b: Body) {
     'If there is too little data, say so briefly and suggest what to track.'
 
   const task =
-    kind === 'habits'
+    kind === 'prayers'
+      ? 'Analyse my prayer commitment: overall consistency (prayed and on time), compare the last 7 days with the week before, ' +
+        'which prayer is strongest and which is most often late or missed, my best and weakest days of the week, my current streak of full days. ' +
+        'Then give 3 gentle, practical tips for the weakest prayer (for example sleep and alarm habits for Fajr, planning around work for Dhuhr and Asr). ' +
+        'Be warm, respectful and encouraging, never judgmental.'
+      : kind === 'habits'
       ? 'Analyse my habits: for each habit say if it is improving, steady or slipping (compare the last 7 days with the week before), current streaks, ' +
         'my best and worst days of the week, and give 3 concrete tips. For bad habits, fewer is better and clean days are wins; ' +
         'if triggers are given, name the main triggers and give a specific plan for each; mention urges resisted and money saved when available. Be encouraging.'

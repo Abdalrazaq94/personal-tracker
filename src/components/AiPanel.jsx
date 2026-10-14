@@ -30,7 +30,7 @@ export default function AiPanel({ kind, examples = [], children, extra = {}, lab
         <span className="ai-spark" aria-hidden>✦</span>
         <span>
           <strong>Analyse with AI</strong>
-          <span className="muted small"> · {label || (kind === 'tasks' ? 'how your tasks are going' : kind === 'habits' ? 'graphs + how your habits are going' : 'where your money goes')}</span>
+          <span className="muted small"> · {label || (kind === 'tasks' ? 'how your tasks are going' : kind === 'habits' ? 'graphs + how your habits are going' : kind === 'prayers' ? 'graph + how your prayers are going' : 'where your money goes')}</span>
         </span>
       </button>
     )

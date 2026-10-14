@@ -737,3 +737,20 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
   .prayer-row__wait { text-align: left; min-width: 0; }
   .prayer-row__name { flex-wrap: wrap; }
 }
+
+/* prayer chart (AI analysis) */
+.hc-grid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 3; }
+.prayer-chart { margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.prayer-chart svg { width: 100%; height: auto; display: block; touch-action: none; }
+.prayer-chart__legend { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+.prayer-chart__legend .lg { display: inline-block; width: 18px; height: 0; border-top: 2px solid #2f7a3f; margin-left: 6px; }
+.prayer-chart__legend .lg:first-child { margin-left: 0; }
+.prayer-chart__legend .lg--ontime { border-top: 2px dashed #2f5d93; }
+.prayer-chart__end { fill: var(--fg); font-weight: 600; }
+.prayer-rates { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.prayer-rates li { display: grid; grid-template-columns: 62px 1fr auto; align-items: center; gap: 10px; font-size: 13px; }
+.prayer-rates__name { font-weight: 600; }
+.prayer-rates__bar { display: flex; height: 8px; background: var(--soft); border-radius: 999px; overflow: hidden; gap: 2px; }
+.prayer-rates__bar .is-ontime { background: #2f7a3f; border-radius: 999px 0 0 999px; }
+.prayer-rates__bar .is-late { background: repeating-linear-gradient(135deg, #2f7a3f 0 3px, #cfe6d3 3px 6px); }
+.prayer-rates__num { font-variant-numeric: tabular-nums; white-space: nowrap; }

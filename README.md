@@ -109,4 +109,7 @@ Times are calculated on your device with the free [adhan](https://github.com/bat
 method your mosque uses (default: Moonsighting Committee) and Standard or Hanafi Asr. City search uses the free
 Open-Meteo geocoding service.
 
-Setup (once): run `supabase/migrations/006_prayers.sql` in Supabase → SQL Editor.
+**Analyse with AI** (on the same page) shows a line chart of the last 30 days (prayed and on time per day),
+how often each prayer was prayed or late, and an AI review with tips. It needs the updated `ai` Edge Function.
+
+Setup (once): run `supabase/migrations/006_prayers.sql` in Supabase → SQL Editor, and redeploy the `ai` function.

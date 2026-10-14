@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRows } from '../lib/useRows'
 import { ErrorBar, PageHeader } from '../components/ui'
+import AiPanel from '../components/AiPanel'
+import PrayerChart from '../components/PrayerChart'
 import { METHODS, PRAYERS, clock, currentPrayer, findPlaces, hijri, inWords, nextPrayer, placeToday, timesFor } from '../lib/prayer'
 
 const NEEDS_TABLE =
@@ -101,6 +103,15 @@ export default function Commit() {
       )}
 
       {place && !picking && <PrayerWeek place={place} today={today} logs={logs} onPick={(d) => setDay(d === today ? null : d)} picked={shown} />}
+
+      {place && !picking && (
+        <AiPanel
+          kind="prayers"
+          examples={['Which prayer do I miss most?', 'How can I pray Fajr on time?', 'Am I improving this month?']}
+        >
+          <PrayerChart logs={logs} today={today} />
+        </AiPanel>
+      )}
     </div>
   )
 }
