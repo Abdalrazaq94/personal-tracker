@@ -18,8 +18,8 @@ const label = (day, opts) => {
 }
 
 /**
- * Line chart for the last 30 full days (ending yesterday): how many of the 5 prayers were prayed each day (green)
- * and how many of them on time (blue, dashed). Hover or tap for a day's numbers.
+ * Line chart for the last 30 days (ending today): how many of the 5 prayers were prayed each day (green)
+ * and how many of them on time (blue, dashed). Always drawn, even on day one. Hover or tap for a day's numbers.
  */
 export default function PrayerChart({ logs, today, days = 30 }) {
   const [hover, setHover] = useState(null)
@@ -30,10 +30,11 @@ export default function PrayerChart({ logs, today, days = 30 }) {
       const d = k.split('|')[0]
       if (d < first) first = d
     }
-    // the chart ends yesterday: today isn't finished yet
     return Array.from({ length: days }, (_, i) => {
-      const day = shift(today, i - days)
+      const day = shift(today, i - (days - 1))
       if (day < first) return { day, prayed: null, onTime: null }
+      // today isn't finished: show it only once something is marked, so the line doesn't drop to 0
+      if (day === today && !PRAYERS.some((p) => logs.has(`${today}|${p.key}`))) return { day, prayed: null, onTime: null }
       let prayed = 0
       let onTime = 0
       for (const p of PRAYERS) {
@@ -64,9 +65,12 @@ export default function PrayerChart({ logs, today, days = 30 }) {
   }, [data, logs])
 
   const tracked = data.filter((d) => d.prayed !== null)
+  const finished = tracked.filter((d) => d.day !== today) // whole days only, for averages
   const todayDone = PRAYERS.filter((p) => logs.has(`${today}|${p.key}`)).length
-  if (tracked.length < 2)
-    return <p className="muted small">The graph appears after 2 days of marking your prayers.</p>
+  const lastIdx = (() => {
+    for (let i = days - 1; i >= 0; i--) if (data[i].prayed !== null) return i
+    return -1
+  })()
 
   const x = (i) => PAD.l + (i / (days - 1)) * (W - PAD.l - PAD.r)
   const y = (v) => PAD.t + (1 - v / 5) * (H - PAD.t - PAD.b)
@@ -78,12 +82,12 @@ export default function PrayerChart({ logs, today, days = 30 }) {
 
   // trend: last 7 days vs the 7 before
   const avg = (arr, k) => (arr.length ? arr.reduce((a, d) => a + d[k], 0) / arr.length : null)
-  const recent = tracked.slice(-7)
-  const before = tracked.slice(-14, -7)
+  const recent = finished.slice(-7)
+  const before = finished.slice(-14, -7)
   const r = avg(recent, 'prayed')
   const b = avg(before, 'prayed')
-  let trend = `${r.toFixed(1)} of 5 a day this week`
-  if (b !== null && before.length >= 5) {
+  let trend = r === null ? `Your graph starts today · ${todayDone} of 5 prayed so far` : `${r.toFixed(1)} of 5 a day this week`
+  if (r !== null && b !== null && before.length >= 5) {
     const diff = r - b
     trend = Math.abs(diff) < 0.2 ? `Steady · ${r.toFixed(1)} of 5 a day` : `${diff > 0 ? 'Improving' : 'Slipping'} · ${r.toFixed(1)} of 5 a day (was ${b.toFixed(1)})`
   }
@@ -95,10 +99,10 @@ export default function PrayerChart({ logs, today, days = 30 }) {
     setHover(data[i].prayed === null ? null : i)
   }
   const hv = hover !== null ? data[hover] : null
-  const last = data[days - 1]
+  const last = lastIdx >= 0 ? data[lastIdx] : null
   // keep the two end labels apart when the lines end close together
-  const endY = { prayed: y(last.prayed), onTime: y(last.onTime) }
-  if (Math.abs(endY.prayed - endY.onTime) < 12) endY.onTime = endY.prayed + 12
+  const endY = last ? { prayed: y(last.prayed), onTime: y(last.onTime) } : null
+  if (endY && Math.abs(endY.prayed - endY.onTime) < 12) endY.onTime = endY.prayed + 12
 
   return (
     <figure className="prayer-chart">
@@ -132,15 +136,34 @@ export default function PrayerChart({ logs, today, days = 30 }) {
         <path d={line('prayed')} fill="none" stroke={GREEN} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
         <path d={line('onTime')} fill="none" stroke={BLUE} strokeWidth="2" strokeDasharray="5 4" strokeLinejoin="round" strokeLinecap="round" />
 
+        {/* a small dot for every day, so even one day shows */}
+        {data.map((d, i) =>
+          d.prayed === null ? null : (
+            <g key={d.day}>
+              <circle cx={x(i)} cy={y(d.prayed)} r="2.5" fill={GREEN} />
+              <circle cx={x(i)} cy={y(d.onTime)} r="2.5" fill={BLUE} />
+            </g>
+          )
+        )}
+
         {/* end points + direct labels */}
-        <circle cx={x(days - 1)} cy={y(last.prayed)} r="4" fill={GREEN} stroke="#fff" strokeWidth="2" />
-        <circle cx={x(days - 1)} cy={y(last.onTime)} r="4" fill={BLUE} stroke="#fff" strokeWidth="2" />
-        <text x={x(days - 1) + 8} y={endY.prayed + 4} className="hc-tick prayer-chart__end">
-          Prayed {last.prayed}
-        </text>
-        <text x={x(days - 1) + 8} y={endY.onTime + 4} className="hc-tick prayer-chart__end">
-          On time {last.onTime}
-        </text>
+        {last && (
+          <>
+            <circle cx={x(lastIdx)} cy={y(last.prayed)} r="4" fill={GREEN} stroke="#fff" strokeWidth="2" />
+            <circle cx={x(lastIdx)} cy={y(last.onTime)} r="4" fill={BLUE} stroke="#fff" strokeWidth="2" />
+            <text x={x(lastIdx) + 8} y={endY.prayed + 4} className="hc-tick prayer-chart__end">
+              Prayed {last.prayed}
+            </text>
+            <text x={x(lastIdx) + 8} y={endY.onTime + 4} className="hc-tick prayer-chart__end">
+              On time {last.onTime}
+            </text>
+          </>
+        )}
+        {!last && (
+          <text x={(PAD.l + W - PAD.r) / 2} y={H / 2} className="hc-tick" textAnchor="middle">
+            Mark a prayer below and your line starts here
+          </text>
+        )}
 
         {hv && (
           <>
@@ -154,18 +177,17 @@ export default function PrayerChart({ logs, today, days = 30 }) {
           {label(data[0].day, { day: 'numeric', month: 'short' })}
         </text>
         <text x={W - PAD.r} y={H - 5} className="hc-tick" textAnchor="end">
-          Yesterday
+          Today
         </text>
       </svg>
 
-      <p className="muted small">Today so far: {todayDone} of 5 prayed.</p>
-      <ul className="prayer-rates" aria-label="Each prayer over the same days">
+      {tracked.length > 0 && <ul className="prayer-rates" aria-label="Each prayer over the same days">
         {perPrayer.map((p) => (
           <li key={p.key}>
             <span className="prayer-rates__name">{p.name}</span>
             <span className="prayer-rates__bar" aria-hidden>
-              <span className="is-ontime" style={{ width: `${((p.done - p.late) / p.of) * 100}%` }} />
-              <span className="is-late" style={{ width: `${(p.late / p.of) * 100}%` }} />
+              <span className="is-ontime" style={{ width: `${p.of ? ((p.done - p.late) / p.of) * 100 : 0}%` }} />
+              <span className="is-late" style={{ width: `${p.of ? (p.late / p.of) * 100 : 0}%` }} />
             </span>
             <span className="prayer-rates__num">
               {p.done}/{p.of}
@@ -173,7 +195,7 @@ export default function PrayerChart({ logs, today, days = 30 }) {
             </span>
           </li>
         ))}
-      </ul>
+      </ul>}
     </figure>
   )
 }
