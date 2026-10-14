@@ -11,6 +11,7 @@ import Plan from './pages/Plan'
 import Links from './pages/Links'
 import Notes from './pages/Notes'
 import Jobs from './pages/Jobs'
+import Phone from './pages/Phone'
 
 export const SECTIONS = [
   { to: '/words', label: 'Words', hint: 'New English words & translations' },
@@ -21,6 +22,7 @@ export const SECTIONS = [
   { to: '/links', label: 'Links', hint: 'Saved video & web links' },
   { to: '/notes', label: 'Notes', hint: 'Notebooks with note cards' },
   { to: '/jobs', label: 'Jobs', hint: 'Jobs applied · Trello' },
+  { to: '/phone', label: 'Phone', hint: 'Phone time · which apps' },
 ]
 
 // bottom bar on phones: the most used pages + "More"
@@ -69,6 +71,7 @@ export default function App() {
           <Route path="/links" element={<Links />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/jobs" element={<Jobs />} />
+          <Route path="/phone" element={<Phone />} />
           <Route path="/more" element={<More />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

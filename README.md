@@ -97,3 +97,16 @@ The key only lets someone **add** spending to your account, not read anything; u
 - Link previews: YouTube pictures come straight from YouTube; other sites use the free microlink.io preview service (about 50 previews a day). If a preview can't be loaded the link still saves, with the site name instead of a picture.
 - Never put the Supabase **service_role / secret** key in this app.
 - Free Supabase projects pause after 7 days with no use — open the dashboard and click **Restore**.
+
+
+## Phone time
+
+The Home screen shows how long you used your phone today; tap it to see every app, the last 7 days and your top apps.
+
+Android doesn't let websites read screen time, so you add it from a screenshot:
+
+1. Phone **Settings → Digital Wellbeing & parental controls** → take a screenshot (Power + Volume down). Scroll for more apps and take another.
+2. In the app: **Phone → Add screenshot**, pick the pictures. The AI reads the total, unlocks and each app's time.
+3. Check the numbers and **Save**. You can also **Type it in** by hand.
+
+Setup (once): run `supabase/migrations/005_screen_time.sql` in Supabase → SQL Editor, and deploy the updated `ai` Edge Function.

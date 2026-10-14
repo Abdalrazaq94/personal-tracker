@@ -5,6 +5,7 @@ import { money, parseYmd, startOfMonth, today, ymd } from '../lib/dates'
 import { dayState, isBad, logOn, planned } from '../lib/habits'
 import { SpeakButton } from '../lib/speech'
 import { DayBrief, QuickAddAll } from '../components/TodayAI'
+import { fmtMins, sortApps } from '../lib/screentime'
 
 const PRIORITY = { doing: 0, todo: 1 }
 
@@ -28,7 +29,7 @@ export default function Home({ session }) {
   useEffect(() => {
     const t = today()
     const load = async () => {
-      const [tasks, plans, habits, logs, words, spend, links, notes] = await Promise.all([
+      const [tasks, plans, habits, logs, words, spend, links, notes, phone] = await Promise.all([
         supabase.from('tasks').select('*').neq('status', 'done'),
         supabase.from('plans').select('*').lte('plan_date', t).eq('done', false),
         supabase.from('habits').select('*').order('created_at', { ascending: true }),
@@ -37,6 +38,7 @@ export default function Home({ session }) {
         supabase.from('expenses').select('amount, spent_on').gte('spent_on', ymd(startOfMonth())),
         supabase.from('links').select('id', { count: 'exact', head: true }),
         supabase.from('notes').select('id', { count: 'exact', head: true }),
+        supabase.from('screen_time').select('day, total_minutes, apps').gte('day', ymd(new Date(Date.now() - 8 * 864e5))),
       ])
       const err = [tasks, plans, habits, logs, words, spend].find((r) => r.error)?.error
       if (err) setError(err.message)
@@ -55,6 +57,7 @@ export default function Home({ session }) {
         spend: spend.data || [],
         links: links.count || 0,
         notes: notes.count || 0,
+        phone: phone.error ? null : phone.data || [], // null = Phone time not set up yet
       })
     }
     load()
@@ -304,6 +307,9 @@ export default function Home({ session }) {
             </form>
           </section>
 
+          {/* ------------------------------ phone time ------------------------------ */}
+          <PhoneCard rows={d.phone} />
+
           {/* ------------------------------ everything else ------------------------------ */}
           <nav className="today-more-grid" aria-label="More sections">
             <Link to="/plan">Plan tomorrow →</Link>
@@ -321,6 +327,48 @@ export default function Home({ session }) {
         </button>
       </footer>
     </div>
+  )
+}
+
+/** Today's phone time; tap for the details. */
+function PhoneCard({ rows }) {
+  if (rows === null) return null
+  const t = today()
+  const yesterday = ymd(new Date(Date.now() - 864e5))
+  const shown = rows.find((r) => r.day === t) || rows.find((r) => r.day === yesterday)
+  const others = rows.filter((r) => r !== shown)
+  const avg = others.length ? Math.round(others.reduce((a, r) => a + r.total_minutes, 0) / others.length) : 0
+  const diff = shown && avg ? shown.total_minutes - avg : 0
+  const top = shown ? sortApps(shown.apps).slice(0, 3) : []
+  return (
+    <Link to="/phone" className="today-card phone-card" aria-label="Phone time: open details">
+      <div className="today-head">
+        <h2>Phone time</h2>
+        <span className="phone-card__open">Details →</span>
+      </div>
+      {shown ? (
+        <>
+          <div className="phone-card__main">
+            <strong className="phone-card__big">{fmtMins(shown.total_minutes)}</strong>
+            <span className="muted small">
+              {shown.day === t ? 'Today' : 'Yesterday'}
+              {avg > 0 && (Math.abs(diff) < 5 ? ' · about your average' : ` · ${fmtMins(Math.abs(diff))} ${diff > 0 ? 'more' : 'less'} than usual`)}
+            </span>
+          </div>
+          {top.length > 0 && (
+            <p className="phone-card__apps small">
+              {top.map((a) => (
+                <span key={a.name}>
+                  <span dir="auto">{a.name}</span> {fmtMins(a.minutes)}
+                </span>
+              ))}
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="muted small">No phone time for today yet. Tap to add a screenshot from Digital Wellbeing.</p>
+      )}
+    </Link>
   )
 }
 

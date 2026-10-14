@@ -45,6 +45,8 @@ type Body = {
   habitKind?: string
   text?: string
   hour?: number
+  image?: string // base64 (no "data:" prefix) — a phone screen-time screenshot
+  mime?: string
 }
 
 Deno.serve(async (req) => {
@@ -86,6 +88,8 @@ Deno.serve(async (req) => {
         return json(await brief(db, body))
       case 'parse':
         return json(await parse(db, body))
+      case 'screentime':
+        return json(await screenTime(body))
       default:
         return json({ error: 'Unknown request.' }, 400)
     }
@@ -440,7 +444,58 @@ async function askJson(system: string, prompt: string, fast = true): Promise<any
   }
 }
 
-async function askModel(system: string, prompt: string, wantJson: boolean, fast = false): Promise<string> {
+/* ------------------------------ phone time --------------------------------- */
+
+/** Reads a Digital Wellbeing / Screen Time screenshot: total time, unlocks and minutes per app. */
+async function screenTime(b: Body) {
+  const image = (b.image ?? '').replace(/^data:[^,]+,/, '')
+  const mime = /^image\/(png|jpe?g|webp|heic|heif)$/i.test(b.mime ?? '') ? b.mime! : 'image/jpeg'
+  if (!image) throw new Error('No screenshot was sent.')
+  if (image.length > 7_000_000) throw new Error('That picture is too big. Please send a normal screenshot.')
+  const today = /^\d{4}-\d{2}-\d{2}$/.test(b.today ?? '') ? b.today! : new Date().toISOString().slice(0, 10)
+
+  const system =
+    'You read screenshots of phone screen-time pages (Android Digital Wellbeing, Samsung, Xiaomi, iPhone Screen Time) in any language. ' +
+    'Answer with JSON only.'
+  const prompt =
+    `Today is ${today}. Read this screenshot and return JSON exactly like:\n` +
+    '{"is_screen_time": true, "date": "YYYY-MM-DD" or null, "total_minutes": number or null, "unlocks": number or null, ' +
+    '"apps": [{"name": "WhatsApp", "minutes": 52}]}\n' +
+    'Rules: convert times to whole minutes ("2 hr 15 min" = 135, "45m" = 45, "1h" = 60, "ساعتان و5 دقائق" = 125). ' +
+    '"date": the day the screenshot is about. "Today" = today, "Yesterday" = the day before, a weekday name = the most recent such day, ' +
+    'a date without a year = this year. null if not shown. ' +
+    '"total_minutes": the big total screen time for that day (not a weekly total). ' +
+    '"unlocks": phone unlocks / pickups if shown. ' +
+    '"apps": every app listed with its time, in the order shown, using the app names exactly as written. ' +
+    'If this is not a screen-time page, return {"is_screen_time": false}.'
+
+  const text = await askModel(system, prompt, true, false, { data: image, mime })
+  let out: any = {}
+  try {
+    out = JSON.parse(text.replace(/^```(json)?|```$/g, '').trim())
+  } catch {
+    throw new Error('Could not read that screenshot. Please try again.')
+  }
+  if (out.is_screen_time === false) throw new Error('That doesn’t look like a screen-time page. Open Digital Wellbeing and take a screenshot there.')
+
+  const mins = (v: unknown) => {
+    const n = Math.round(Number(v))
+    return Number.isFinite(n) && n >= 0 && n <= 1440 ? n : null
+  }
+  const apps = (Array.isArray(out.apps) ? out.apps : [])
+    .map((a: any) => ({ name: String(a?.name ?? '').trim().slice(0, 60), minutes: mins(a?.minutes) }))
+    .filter((a: any) => a.name && a.minutes !== null)
+    .slice(0, 40)
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(out.date ?? '') && out.date <= today ? out.date : null
+  let total = mins(out.total_minutes)
+  if (total === null && apps.length) total = Math.min(1440, apps.reduce((t: number, a: any) => t + a.minutes, 0))
+  const unlocks = Number.isFinite(Number(out.unlocks)) && Number(out.unlocks) >= 0 ? Math.round(Number(out.unlocks)) : null
+  return { date, total_minutes: total, unlocks, apps }
+}
+
+type Picture = { data: string; mime: string }
+
+async function askModel(system: string, prompt: string, wantJson: boolean, fast = false, picture?: Picture): Promise<string> {
   const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY')
   const geminiKey = Deno.env.get('GEMINI_API_KEY')
 
@@ -452,7 +507,17 @@ async function askModel(system: string, prompt: string, wantJson: boolean, fast 
         model: Deno.env.get('ANTHROPIC_MODEL') || 'claude-haiku-5-5',
         max_tokens: 1500,
         system,
-        messages: [{ role: 'user', content: prompt }],
+        messages: [
+          {
+            role: 'user',
+            content: picture
+              ? [
+                  { type: 'image', source: { type: 'base64', media_type: picture.mime, data: picture.data } },
+                  { type: 'text', text: prompt },
+                ]
+              : prompt,
+          },
+        ],
       }),
     })
     const out = await res.json()
@@ -469,7 +534,9 @@ async function askModel(system: string, prompt: string, wantJson: boolean, fast 
     )
     const payload = JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      contents: [
+        { role: 'user', parts: picture ? [{ inline_data: { mime_type: picture.mime, data: picture.data } }, { text: prompt }] : [{ text: prompt }] },
+      ],
       ...(wantJson ? { generationConfig: { responseMimeType: 'application/json' } } : {}),
     })
     let lastError = 'The AI is busy right now. Please try again in a minute.'
