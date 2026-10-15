@@ -6,6 +6,7 @@ import AlarmOverlay from './components/AlarmOverlay'
 import { MotionConfig, motion } from 'motion/react'
 import InstallApp from './components/InstallApp'
 import LangSwitch from './components/LangSwitch'
+import TopControls from './components/TopControls'
 import { followAccountLang } from './lib/i18n'
 import { configured, supabase } from './lib/supabase'
 import Login from './pages/Login'
@@ -75,7 +76,7 @@ export default function App() {
               {n.label}
             </NavLink>
           ))}
-          <LangSwitch className="lang-switch--top" />
+          <TopControls className="top-controls--top" />
         </nav>
 
         <main className="content">
@@ -146,6 +147,7 @@ function MobileBar({ pathname, email }) {
           <span />
         </button>
         <span className="mobilebar__title">{here}</span>
+        <TopControls />
       </header>
 
       {open && (

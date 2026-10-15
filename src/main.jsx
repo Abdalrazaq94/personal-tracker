@@ -7,9 +7,11 @@ import './styles.css'
 import { registerWorker } from './lib/push'
 import { watchInstall } from './lib/install'
 import { applyLang } from './lib/i18n'
+import { applyTheme } from './lib/theme'
 
 // English or Arabic (right-to-left) before anything is drawn
 applyLang()
+applyTheme()
 
 // catch Chrome's "install" offer as early as possible, so our Install app button can use it
 watchInstall()

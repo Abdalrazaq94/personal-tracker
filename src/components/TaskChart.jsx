@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react'
 import { T, Tr, LOCALE } from '../lib/i18n'
+import { chartColors, useTheme } from '../lib/theme'
 
 const W = 340
 const H = 150
 const PAD = { l: 22, r: 62, t: 14, b: 24 }
-const GREEN = '#2f7a3f' // done
-const BLUE = '#2f5d93' // added (dashed)
 
 const ymdOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const shift = (day, n) => {
@@ -22,6 +21,7 @@ const label = (day, opts) => {
  * Hover or tap the chart to see a day's numbers.
  */
 export default function TaskChart({ tasks, today, days = 14 }) {
+  const { green: GREEN, blue: BLUE, ring: RING } = chartColors(useTheme()) // brighter lines in dark mode
   const [hover, setHover] = useState(null)
 
   const data = useMemo(() => {
@@ -125,8 +125,8 @@ export default function TaskChart({ tasks, today, days = 14 }) {
         )}
         {endY && (
           <>
-            <circle cx={x(lastIdx)} cy={y(last.added)} r="4" fill={BLUE} stroke="#fff" strokeWidth="2" />
-            <circle cx={x(lastIdx)} cy={y(last.done)} r="4" fill={GREEN} stroke="#fff" strokeWidth="2" />
+            <circle cx={x(lastIdx)} cy={y(last.added)} r="4" fill={BLUE} stroke={RING} strokeWidth="2" />
+            <circle cx={x(lastIdx)} cy={y(last.done)} r="4" fill={GREEN} stroke={RING} strokeWidth="2" />
             <text x={x(lastIdx) + 8} y={endY.done + 4} className="hc-tick prayer-chart__end">{Tr("Done {0}", last.done)}</text>
             <text x={x(lastIdx) + 8} y={endY.added + 4} className="hc-tick prayer-chart__end">{Tr("Added {0}", last.added)}</text>
           </>
@@ -134,8 +134,8 @@ export default function TaskChart({ tasks, today, days = 14 }) {
         {hv && (
           <>
             <line x1={x(hover)} x2={x(hover)} y1={PAD.t} y2={y(0)} className="hc-cross" />
-            <circle cx={x(hover)} cy={y(hv.added)} r="5" fill={BLUE} stroke="#fff" strokeWidth="2" />
-            <circle cx={x(hover)} cy={y(hv.done)} r="5" fill={GREEN} stroke="#fff" strokeWidth="2" />
+            <circle cx={x(hover)} cy={y(hv.added)} r="5" fill={BLUE} stroke={RING} strokeWidth="2" />
+            <circle cx={x(hover)} cy={y(hv.done)} r="5" fill={GREEN} stroke={RING} strokeWidth="2" />
           </>
         )}
         <text x={PAD.l} y={H - 5} className="hc-tick">

@@ -10,6 +10,15 @@
     <link rel="icon" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <title>Tracker</title>
+    <script>
+      // light / dark before anything is drawn (no white flash); same rules as src/lib/theme.js
+      try {
+        var t = localStorage.getItem('tracker-theme')
+        if (t !== 'dark' && t !== 'light') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        document.documentElement.dataset.theme = t
+        if (localStorage.getItem('tracker-lang') === 'ar') { document.documentElement.dir = 'rtl'; document.documentElement.lang = 'ar' }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

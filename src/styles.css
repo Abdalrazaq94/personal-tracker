@@ -1089,3 +1089,118 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 /* your own text (task names, words…) lines up on the right in Arabic, even when it is English */
 [dir='rtl'] [dir='auto']:not(input):not(textarea) { text-align: right; }
 [dir='rtl'] .task--doing .task__title::before { content: 'قيد التنفيذ · '; }
+
+/* ================= top-right controls: EN | ع and light / dark ================= */
+.top-controls { display: inline-flex; align-items: center; gap: 6px; margin-inline-start: auto; }
+.top-controls--top { align-self: center; }
+.lang-mini { display: inline-flex; padding: 2px; border-radius: 999px; background: var(--soft); }
+.lang-mini button { border: 0; background: transparent; min-width: 34px; height: 30px; padding: 0 8px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; }
+.lang-mini button[lang='ar'] { font-family: 'IBM Plex Sans Arabic', var(--font); font-size: 15px; }
+.lang-mini button.is-active { background: var(--fg); color: var(--bg); }
+.theme-btn { display: inline-grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; background: var(--bg); color: var(--fg); cursor: pointer; transition: transform .2s, background .2s; }
+.theme-btn:active { transform: scale(.9) rotate(-20deg); }
+.mobilebar__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* tile + glare colours (light) */
+:root { --tile-bg: #f2f2f2; --tile-line: #dcdcdc; --glare: #0a0a0a; --glare-blend: multiply; }
+
+/* smooth switch between light and dark */
+html.theme-anim, html.theme-anim * { transition: background-color .3s ease, border-color .3s ease, color .2s ease !important; }
+
+/* ================= dark mode ================= */
+[data-theme='dark'] {
+  --bg: #0e0e10;
+  --fg: #f2f2f3;
+  --muted: #9a9aa2;
+  --line: #2a2a2f;
+  --line-strong: #f2f2f3;
+  --soft: #1a1a1e;
+  --w-new: #2b241c;      --w-new-ink: #dcb68f;
+  --w-learning: #18222f; --w-learning-ink: #8fb6e8;
+  --w-memorized: #17271c;--w-memorized-ink: #7fcf8f;
+  --tile-bg: #18181c; --tile-line: #2c2c32; --glare: #ffffff; --glare-blend: screen;
+  color-scheme: dark;
+}
+[data-theme='dark'] body { background: var(--bg); }
+
+/* bars */
+[data-theme='dark'] .tabbar, [data-theme='dark'] .topbar, [data-theme='dark'] .mobilebar { background: rgba(14, 14, 16, .9); }
+[data-theme='dark'] .sticky-search { background: rgba(14, 14, 16, .94); }
+
+/* text that was a fixed dark grey */
+[data-theme='dark'] .word__tr, [data-theme='dark'] .note-card__body, [data-theme='dark'] .steps, [data-theme='dark'] .word__translate,
+[data-theme='dark'] .word__line .word__tr, [data-theme='dark'] .habit__insights, [data-theme='dark'] .rem-tips,
+[data-theme='dark'] .alarm__body { color: #cfcfd4; }
+[data-theme='dark'] .verdict .yours, [data-theme='dark'] .alarm__mute, [data-theme='dark'] .pt span,
+[data-theme='dark'] .home-tile__text span, [data-theme='dark'] .up-day, [data-theme='dark'] .home-glare .home-tile__text span { color: #a6a6ad; }
+
+/* fields and small controls */
+[data-theme='dark'] input:focus, [data-theme='dark'] select:focus, [data-theme='dark'] textarea:focus { box-shadow: 0 0 0 3px rgba(255, 255, 255, .12); }
+[data-theme='dark'] input::placeholder, [data-theme='dark'] textarea::placeholder { color: #6e6e76; }
+[data-theme='dark'] select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%23f2f2f3' stroke-width='1.8'%3E%3Cpath d='m1 1 5 5 5-5'/%3E%3C/svg%3E");
+}
+[data-theme='dark'] .icon-btn:hover { background: rgba(255, 255, 255, .08); }
+[data-theme='dark'] .input-plain { background: rgba(255, 255, 255, .05); }
+[data-theme='dark'] .corrected { background: var(--soft); }
+[data-theme='dark'] .word { border-color: rgba(255, 255, 255, .06); }
+[data-theme='dark'] .word .icon-btn { color: rgba(255, 255, 255, .6); }
+[data-theme='dark'] .word .chip { background: rgba(255, 255, 255, .06); }
+[data-theme='dark'] .word .chip.is-active { background: var(--bg); border-color: var(--fg); }
+[data-theme='dark'] .dot { border-color: rgba(255, 255, 255, .2); }
+[data-theme='dark'] .day__box.is-part { border-color: #55555c; }
+[data-theme='dark'] .day__box.is-over::after { background: repeating-linear-gradient(135deg, transparent 0 4px, rgba(255, 255, 255, .22) 4px 5px); }
+
+/* things that are black in light mode turn white in dark mode: keep their small text readable */
+[data-theme='dark'] .total--hero span, [data-theme='dark'] .home-card--wide .home-card__small,
+[data-theme='dark'] .home-card--wide .home-card__title, [data-theme='dark'] .drawer li button.is-active span { color: #5c5c63; }
+
+/* "Your day": a raised dark card instead of a white block */
+[data-theme='dark'] .day-brief { background: #1b1b20; color: var(--fg); border: 1px solid #2c2c33; }
+[data-theme='dark'] .day-brief .ai-spark { background: var(--fg); color: var(--bg); }
+[data-theme='dark'] .day-brief .link, [data-theme='dark'] .day-brief__note { color: #9a9aa2; }
+
+/* loading shine */
+[data-theme='dark'] .ai-loading, [data-theme='dark'] .loading-text, [data-theme='dark'] .splash {
+  background-image: linear-gradient(100deg, #5e5e66 40%, #ffffff 50%, #5e5e66 60%);
+}
+
+/* home: buttons, coloured boxes, prayers */
+[data-theme='dark'] .home-tile__icon, [data-theme='dark'] .home-glare .home-tile__icon { background: #0e0e10; box-shadow: none; }
+[data-theme='dark'] .home-glare:hover, [data-theme='dark'] .home-tile:hover { box-shadow: 0 8px 22px rgba(0, 0, 0, .5); border-color: #3a3a42; }
+[data-theme='dark'] .today-card--tasks { background: #122016; border-color: #22382a; }
+[data-theme='dark'] .today-card--plans { background: #121b29; border-color: #243149; }
+[data-theme='dark'] .today-card--prayers { background: #221d14; border-color: #3a3122; }
+[data-theme='dark'] .today-card--tasks .today-list li, [data-theme='dark'] .today-card--plans .today-list li,
+[data-theme='dark'] .today-card--prayers .pt-act { border-top-color: rgba(255, 255, 255, .08); }
+[data-theme='dark'] .today-card--tasks .check, [data-theme='dark'] .today-card--plans .check,
+[data-theme='dark'] .today-card--tasks .tag:not(.tag--solid), [data-theme='dark'] .today-card--plans .tag:not(.tag--solid),
+[data-theme='dark'] .today-card--prayers .btn--ghost { background: var(--bg); }
+[data-theme='dark'] .today-card--tasks .check.is-on, [data-theme='dark'] .today-card--plans .check.is-on { background: var(--fg); }
+[data-theme='dark'] .today-card--tasks .habit-chart__info { color: #9fb8a6; }
+[data-theme='dark'] .today-card--plans .up-day { color: #9db0cc; }
+[data-theme='dark'] .up-day.is-late, [data-theme='dark'] .today-card--plans .up-day.is-late,
+[data-theme='dark'] .pt--missed span, [data-theme='dark'] .pt-act--missed b { color: #ff8a80; }
+[data-theme='dark'] .pt, [data-theme='dark'] .today-card--prayers .pt { background: #17171b; }
+[data-theme='dark'] .pt--done, [data-theme='dark'] .pt--late,
+[data-theme='dark'] .today-card--prayers .pt--done, [data-theme='dark'] .today-card--prayers .pt--late { background: #17301f; }
+[data-theme='dark'] .pt--done span, [data-theme='dark'] .pt--late span { color: #7fcf8f; }
+[data-theme='dark'] .pt--missed, [data-theme='dark'] .today-card--prayers .pt--missed { background: #3a1916; }
+[data-theme='dark'] .pt--now { background: var(--fg); }
+[data-theme='dark'] .pt--now span { color: var(--bg); }
+
+/* prayer page + charts */
+[data-theme='dark'] .prayer-row.is-done { border-color: #2c5236; }
+[data-theme='dark'] .prayer-row__check { border-color: #55555c; }
+[data-theme='dark'] .prayer-row.is-done .prayer-row__acts { background: rgba(255, 255, 255, .06); }
+[data-theme='dark'] .prayer-dot.is-late { background: repeating-linear-gradient(135deg, var(--w-memorized-ink) 0 3px, #24432c 3px 6px); }
+[data-theme='dark'] .prayer-chart__legend .lg { border-top-color: #5fbf70; }
+[data-theme='dark'] .prayer-chart__legend .lg--ontime { border-top-color: #7aa7e6; }
+[data-theme='dark'] .prayer-rates__bar .is-ontime { background: #5fbf70; }
+[data-theme='dark'] .prayer-rates__bar .is-late { background: repeating-linear-gradient(135deg, #5fbf70 0 3px, #24432c 3px 6px); }
+
+/* reminders */
+[data-theme='dark'] .adhan-box { background: #221d14; border-color: #3a3122; }
+[data-theme='dark'] .adhan-box .btn--ghost { background: var(--bg); }
+[data-theme='dark'] .alarm { background: rgba(0, 0, 0, .7); }
+[data-theme='dark'] .alarm__card { border: 1px solid var(--line); }

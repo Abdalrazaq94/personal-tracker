@@ -259,4 +259,6 @@ export default {
   'Before you started': 'قبل أن تبدأ',
   ' tomorrow': ' غدًا',
   '{0} of {1} prayed': 'صلّيت {0} من {1}',
+  'Light mode': 'الوضع الفاتح',
+  'Dark mode': 'الوضع الداكن',
 }

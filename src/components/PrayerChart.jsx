@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react'
 import { PRAYERS, prayerName } from '../lib/prayer'
 import { T, Tr, LOCALE } from '../lib/i18n'
+import { chartColors, useTheme } from '../lib/theme'
 
 const W = 340
 const H = 168
 const PAD = { l: 22, r: 58, t: 14, b: 24 }
-const GREEN = '#2f7a3f' // prayed
-const BLUE = '#2f5d93' // on time (dashed)
 
 const shift = (day, n) => {
   const [y, m, d] = day.split('-').map(Number)
@@ -23,6 +22,7 @@ const label = (day, opts) => {
  * and how many of them on time (blue, dashed). Always drawn, even on day one. Hover or tap for a day's numbers.
  */
 export default function PrayerChart({ logs, today, days = 30 }) {
+  const { green: GREEN, blue: BLUE, ring: RING } = chartColors(useTheme()) // brighter lines in dark mode
   const [hover, setHover] = useState(null)
 
   const data = useMemo(() => {
@@ -156,8 +156,8 @@ export default function PrayerChart({ logs, today, days = 30 }) {
         {/* end points + direct labels */}
         {last && (
           <>
-            <circle cx={x(lastIdx)} cy={y(last.prayed)} r="4" fill={GREEN} stroke="#fff" strokeWidth="2" />
-            <circle cx={x(lastIdx)} cy={y(last.onTime)} r="4" fill={BLUE} stroke="#fff" strokeWidth="2" />
+            <circle cx={x(lastIdx)} cy={y(last.prayed)} r="4" fill={GREEN} stroke={RING} strokeWidth="2" />
+            <circle cx={x(lastIdx)} cy={y(last.onTime)} r="4" fill={BLUE} stroke={RING} strokeWidth="2" />
             <text x={x(lastIdx) + 8} y={endY.prayed + 4} className="hc-tick prayer-chart__end">{Tr("Prayed {0}", last.prayed)}</text>
             <text x={x(lastIdx) + 8} y={endY.onTime + 4} className="hc-tick prayer-chart__end">{Tr("On time {0}", last.onTime)}</text>
           </>
@@ -169,8 +169,8 @@ export default function PrayerChart({ logs, today, days = 30 }) {
         {hv && (
           <>
             <line x1={x(hover)} x2={x(hover)} y1={PAD.t} y2={y(0)} className="hc-cross" />
-            <circle cx={x(hover)} cy={y(hv.prayed)} r="5" fill={GREEN} stroke="#fff" strokeWidth="2" />
-            <circle cx={x(hover)} cy={y(hv.onTime)} r="5" fill={BLUE} stroke="#fff" strokeWidth="2" />
+            <circle cx={x(hover)} cy={y(hv.prayed)} r="5" fill={GREEN} stroke={RING} strokeWidth="2" />
+            <circle cx={x(hover)} cy={y(hv.onTime)} r="5" fill={BLUE} stroke={RING} strokeWidth="2" />
           </>
         )}
 
