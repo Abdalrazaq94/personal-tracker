@@ -113,3 +113,17 @@ Open-Meteo geocoding service.
 how often each prayer was prayed or late, and an AI review with tips. It needs the updated `ai` Edge Function.
 
 Setup (once): run `supabase/migrations/006_prayers.sql` in Supabase → SQL Editor, and redeploy the `ai` function.
+
+## Reminders (phone notifications)
+
+Plans with a time remind you at that time (or 15 min / 1 hour / 1 day before). **Important** plans repeat every
+5 minutes until you tap **Done** or **Postpone** (on the notification or in the app). Prayers can remind you at each
+prayer time and repeat every 10 minutes until you mark them.
+
+Setup (once):
+1. Supabase → SQL Editor: run `supabase/migrations/008_reminders.sql` (adds the tables and a job that runs every minute).
+2. Supabase → Edge Functions: deploy `supabase/functions/notify` (one file) with **Verify JWT off**.
+3. In the app (on your phone): **Reminders → Turn on reminders → Send a test**. For prayers, choose your city in
+   Commitments, then switch prayer reminders on.
+
+Works in Chrome on Android and on computers; on iPhone, add Tracker to the Home Screen first (iOS 16.4+).

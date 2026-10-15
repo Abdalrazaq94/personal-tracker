@@ -4,6 +4,7 @@ import { HashRouter } from 'react-router-dom'
 import App from './App.jsx'
 import PageGuard from './components/PageGuard'
 import './styles.css'
+import { registerWorker } from './lib/push'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -14,3 +15,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </HashRouter>
   </React.StrictMode>
 )
+
+// background helper for reminders (notifications + their buttons)
+registerWorker()

@@ -14,6 +14,7 @@ import Links from './pages/Links'
 import Notes from './pages/Notes'
 import Jobs from './pages/Jobs'
 import Commit from './pages/Commit'
+import Reminders from './pages/Reminders'
 
 export const SECTIONS = [
   { to: '/words', label: 'Words', hint: 'New English words & translations' },
@@ -25,6 +26,7 @@ export const SECTIONS = [
   { to: '/notes', label: 'Notes', hint: 'Notebooks with note cards' },
   { to: '/jobs', label: 'Jobs', hint: 'Jobs applied · Trello' },
   { to: '/commit', label: 'Commit', hint: 'Commitments · prayer times' },
+  { to: '/reminders', label: 'Reminders', hint: 'Notifications for plans & prayers' },
 ]
 
 // bottom bar on phones: the most used pages + "More"
@@ -79,6 +81,7 @@ export default function App() {
           <Route path="/notes" element={<Notes />} />
           <Route path="/jobs" element={<Jobs />} />
           <Route path="/commit" element={<Commit />} />
+          <Route path="/reminders" element={<Reminders />} />
           <Route path="/more" element={<More />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -19,6 +19,12 @@ const TYPES = [
   ['habit', 'Habit'],
   ['note', 'Note'],
 ]
+export const REMIND = [
+  [0, 'Remind at the time'],
+  [15, '15 min before'],
+  [60, '1 hour before'],
+  [1440, '1 day before'],
+]
 const TITLE_LABEL = { task: 'Task', plan: 'What', expense: 'What for', word: 'Word', habit: 'Habit', note: 'Note' }
 
 /**
@@ -187,6 +193,22 @@ export function QuickAddAll({ onChanged }) {
                 <div className="qa-row">
                   <input inputMode="decimal" placeholder="0.00" value={d.amount ?? ''} onChange={(e) => setDraft(i, { amount: e.target.value })} aria-label="Amount" />
                   <input type="date" value={d.date || today()} onChange={(e) => setDraft(i, { date: e.target.value })} aria-label="Day" />
+                </div>
+              )}
+              {d.type === 'plan' && (
+                <div className="qa-row">
+                  <label className="qa-check">
+                    <input type="checkbox" checked={!!d.important} onChange={(e) => setDraft(i, { important: e.target.checked })} /> Important
+                  </label>
+                  {d.time && (
+                    <select value={d.remind_before || 0} onChange={(e) => setDraft(i, { remind_before: Number(e.target.value) })} aria-label="Remind me">
+                      {REMIND.map(([v, l]) => (
+                        <option key={v} value={v}>
+                          {l}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               )}
               {d.type === 'task' && (

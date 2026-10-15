@@ -48,6 +48,9 @@ export default function Commit() {
     setPicking(false)
     const { error } = await supabase.auth.updateUser({ data: { prayer: next } })
     if (error) setError(error.message)
+    // the reminder server reads the city from here (ignored if the reminders update isn't installed yet)
+    const { data: u } = await supabase.auth.getUser()
+    if (u?.user) await supabase.from('user_settings').upsert({ user_id: u.user.id, prayer_place: next, updated_at: new Date().toISOString() })
   }
 
   const today = place ? placeToday(place.tz) : null

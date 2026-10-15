@@ -1,0 +1,92 @@
+import { supabase } from './supabase'
+
+/** Phone notifications (Web Push). Works in Chrome on Android, desktop browsers, and iPhone when added to the Home Screen. */
+
+export const pushSupported = () =>
+  typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
+
+export function registerWorker() {
+  if (!('serviceWorker' in navigator)) return Promise.resolve(null)
+  return navigator.serviceWorker.register('/sw.js').catch(() => null)
+}
+
+const toBytes = (b64) => {
+  const s = b64.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((b64.length + 3) % 4)
+  return Uint8Array.from(atob(s), (c) => c.charCodeAt(0))
+}
+const randomSecret = () => Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) => b.toString(16).padStart(2, '0')).join('')
+
+async function call(body) {
+  const { data, error } = await supabase.functions.invoke('notify', { body })
+  if (error) {
+    let msg = error.message
+    try {
+      const j = await error.context?.json?.()
+      if (j?.error) msg = j.error
+    } catch {}
+    if (error.context?.status === 404 || /Failed to send/i.test(msg)) msg = 'The “notify” function isn’t deployed yet (see the steps on this page).'
+    throw new Error(msg)
+  }
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
+/** Is this phone/browser already getting reminders? */
+export async function currentStatus() {
+  if (!pushSupported()) return 'unsupported'
+  if (Notification.permission === 'denied') return 'blocked'
+  const reg = await navigator.serviceWorker.getRegistration()
+  const sub = await reg?.pushManager.getSubscription()
+  return sub ? 'on' : 'off'
+}
+
+/** Ask permission, subscribe this phone, and save it. */
+export async function enablePush() {
+  if (!pushSupported()) throw new Error('This browser can’t show notifications. On iPhone, add Tracker to your Home Screen first.')
+  const perm = await Notification.requestPermission()
+  if (perm !== 'granted') throw new Error('Notifications were not allowed. Allow them for this site in your browser settings, then try again.')
+  const reg = (await registerWorker()) || (await navigator.serviceWorker.ready)
+  await navigator.serviceWorker.ready
+  const { publicKey } = await call({ action: 'vapid' })
+  let sub = await reg.pushManager.getSubscription()
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toBytes(publicKey) })
+  const j = sub.toJSON()
+  const { data: u } = await supabase.auth.getUser()
+  const { error } = await supabase.from('push_subscriptions').upsert(
+    {
+      user_id: u.user.id,
+      endpoint: j.endpoint,
+      p256dh: j.keys.p256dh,
+      auth: j.keys.auth,
+      secret: randomSecret(),
+      device: navigator.userAgent.slice(0, 160),
+    },
+    { onConflict: 'endpoint' }
+  )
+  if (error) throw new Error(/push_subscriptions/.test(error.message) ? 'Run supabase/migrations/008_reminders.sql in Supabase first.' : error.message)
+  await saveSettings({ tz: Intl.DateTimeFormat().resolvedOptions().timeZone })
+}
+
+export async function disablePush() {
+  const reg = await navigator.serviceWorker.getRegistration()
+  const sub = await reg?.pushManager.getSubscription()
+  if (sub) {
+    await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+    await sub.unsubscribe()
+  }
+}
+
+export const sendTest = () => call({ action: 'test' })
+
+/** Reminder settings live in user_settings (time zone, prayer reminders). */
+export async function saveSettings(patch) {
+  const { data: u } = await supabase.auth.getUser()
+  const { error } = await supabase.from('user_settings').upsert({ user_id: u.user.id, ...patch, updated_at: new Date().toISOString() })
+  if (error) throw new Error(/column|prayer_|tz/.test(error.message) ? 'Run supabase/migrations/008_reminders.sql in Supabase first.' : error.message)
+}
+
+export async function loadSettings() {
+  const { data, error } = await supabase.from('user_settings').select('tz, prayer_place, prayer_notify, prayer_repeat').maybeSingle()
+  if (error) return { needsUpdate: /column|prayer_|tz/.test(error.message) }
+  return data || {}
+}

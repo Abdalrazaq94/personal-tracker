@@ -2,12 +2,18 @@ import { useMemo, useState } from 'react'
 import { useRows } from '../lib/useRows'
 import { addDays, dayLabel, today, tomorrow, ymd } from '../lib/dates'
 import { DeleteButton, Empty, ErrorBar, Loading, PageHeader, Segmented } from '../components/ui'
+import { REMIND } from '../components/TodayAI'
+
+/** The moment a plan is due (local time), or null if it has no time. */
+const dueAt = (p) => (p.plan_time ? new Date(`${p.plan_date}T${String(p.plan_time).slice(0, 5)}:00`).getTime() : null)
 
 export default function Plan() {
   const { rows, loading, error, setError, insert, update, remove } = useRows('plans', { order: 'plan_date', ascending: true })
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(tomorrow())
   const [time, setTime] = useState('')
+  const [important, setImportant] = useState(false)
+  const [remind, setRemind] = useState(0)
   const [view, setView] = useState('tomorrow')
 
   const shown = useMemo(() => {
@@ -36,8 +42,9 @@ export default function Plan() {
   const add = async (e) => {
     e.preventDefault()
     if (!title.trim()) return
-    let ok = await insert({ title: title.trim(), plan_date: date, ...(time ? { plan_time: time } : {}) })
-    if (!ok && time) {
+    const extra = { ...(important ? { important: true } : {}), ...(time && remind ? { remind_before: remind } : {}) }
+    let ok = await insert({ title: title.trim(), plan_date: date, ...(time ? { plan_time: time } : {}), ...extra })
+    if (!ok && (time || important)) {
       // database not updated for times yet: keep the time in the title
       setError(null)
       ok = await insert({ title: `${title.trim()} · ${time}`, plan_date: date })
@@ -45,7 +52,17 @@ export default function Plan() {
     if (ok) {
       setTitle('')
       setTime('')
+      setImportant(false)
+      setRemind(0)
     }
+  }
+
+  // stop the reminder for an hour, or move the plan to tomorrow (same time)
+  const postpone = (p, how) => {
+    if (how === 'hour') return update(p.id, { snoozed_until: new Date(Date.now() + 3600e3).toISOString() })
+    const d = new Date(`${p.plan_date}T00:00:00`)
+    d.setDate(d.getDate() + 1)
+    return update(p.id, { plan_date: ymd(d < new Date(today() + 'T00:00:00') ? addDays(new Date(), 1) : d), notify_count: 0, last_notified: null, snoozed_until: null })
   }
 
   const quick = [
@@ -80,6 +97,20 @@ export default function Plan() {
             <input type="date" className="date-inline" value={date} min={today()} onChange={(e) => setDate(e.target.value || tomorrow())} />
             <input type="time" className="date-inline" value={time} onChange={(e) => setTime(e.target.value)} aria-label="Time (optional)" title="Time (optional)" />
           </div>
+        </div>
+        <div className="plan-opts">
+          <label className="qa-check">
+            <input type="checkbox" checked={important} onChange={(e) => setImportant(e.target.checked)} /> Important
+          </label>
+          {time && (
+            <select value={remind} onChange={(e) => setRemind(Number(e.target.value))} aria-label="Remind me">
+              {REMIND.map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="form-foot form-foot--end">
           <button className="btn">Add to plan</button>
@@ -123,8 +154,19 @@ export default function Plan() {
                   </button>
                   <span className="plan__title" dir="auto">
                     {p.plan_time && <strong className="plan__time">{String(p.plan_time).slice(0, 5)}</strong>}
+                    {p.important && <span className="plan__imp" title="Important">!</span>}
                     {p.title}
                     {key === 'overdue' && <small className="muted"> · {dayLabel(p.plan_date)}</small>}
+                    {!p.done && dueAt(p) && dueAt(p) <= Date.now() && (
+                      <span className="plan__postpone">
+                        <button type="button" className="chip" onClick={() => postpone(p, 'hour')}>
+                          Postpone 1 h
+                        </button>
+                        <button type="button" className="chip" onClick={() => postpone(p, 'tomorrow')}>
+                          Tomorrow
+                        </button>
+                      </span>
+                    )}
                   </span>
                   <DeleteButton label="Delete this plan" onClick={() => remove(p.id)} />
                 </li>

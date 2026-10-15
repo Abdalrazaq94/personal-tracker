@@ -31,10 +31,11 @@ async function run(a, lang) {
     }
     case 'plan': {
       const date = a.date || today()
-      let res = await supabase.from('plans').insert({ title: a.title, plan_date: date, ...(a.time ? { plan_time: a.time } : {}) }).select().single()
-      // database not updated for times yet: keep the time in the title instead
-      if (res.error && a.time && /plan_time/.test(res.error.message))
-        res = await supabase.from('plans').insert({ title: `${a.title} · ${a.time}`, plan_date: date }).select().single()
+      const extra = { ...(a.important ? { important: true } : {}), ...(a.time && a.remind_before ? { remind_before: a.remind_before } : {}) }
+      let res = await supabase.from('plans').insert({ title: a.title, plan_date: date, ...(a.time ? { plan_time: a.time } : {}), ...extra }).select().single()
+      // database not updated yet: drop the new fields, keep the time in the title
+      if (res.error && /plan_time|important|remind_before|column/.test(res.error.message))
+        res = await supabase.from('plans').insert({ title: a.time ? `${a.title} · ${a.time}` : a.title, plan_date: date }).select().single()
       const row = must(res)
       return {
         label: `Plan · ${dayLabel(date)}${a.time ? ` ${a.time}` : ''}: ${a.title}`,
@@ -199,7 +200,7 @@ export function actionFromDraft(d) {
     case 'task':
       return title && { type: 'task', title, important: !!d.important }
     case 'plan':
-      return title && { type: 'plan', title, date: d.date || today(), time: d.time || null }
+      return title && { type: 'plan', title, date: d.date || today(), time: d.time || null, important: !!d.important, remind_before: Number(d.remind_before) || 0 }
     case 'expense': {
       const amount = Math.round(Number(String(d.amount).replace(',', '.')) * 100) / 100
       return amount > 0 && { type: 'expense', amount, note: title, date: d.date || today() }

@@ -825,3 +825,26 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .qa-check { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
 .qa-actions { display: flex; align-items: center; gap: 12px; }
 .plan__time { display: inline-block; margin-right: 8px; padding: 1px 7px; border-radius: 6px; background: var(--fg); color: var(--bg); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; vertical-align: 1px; }
+
+/* reminders */
+.plan-opts { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.plan-opts select { height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg); font: inherit; font-size: 14px; }
+.plan__imp { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: var(--fg); color: var(--bg); font-size: 12px; font-weight: 800; vertical-align: 1px; }
+.plan__postpone { display: flex; gap: 6px; margin-top: 6px; }
+.plan__postpone .chip { height: 28px; cursor: pointer; }
+.qa-card select { width: 100%; }
+.rem-card { display: flex; flex-direction: column; gap: 10px; }
+.rem-card h2 { font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+.rem-head { display: flex; gap: 12px; align-items: flex-start; }
+.rem-dot { width: 12px; height: 12px; margin-top: 6px; border-radius: 50%; background: var(--line); flex: none; }
+.rem-dot.is-on { background: var(--w-memorized-ink); box-shadow: 0 0 0 4px var(--w-memorized); }
+.rem-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.rem-note { color: var(--w-memorized-ink); font-weight: 600; }
+.rem-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); cursor: pointer; }
+.rem-row > span { display: flex; flex-direction: column; gap: 2px; }
+.rem-switch { appearance: none; -webkit-appearance: none; flex: none; width: 44px; height: 26px; border-radius: 999px; background: var(--line); position: relative; cursor: pointer; transition: background .15s; }
+.rem-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+.rem-switch:checked { background: var(--fg); }
+.rem-switch:checked::after { transform: translateX(18px); }
+.rem-switch:disabled { opacity: .45; cursor: default; }
+.rem-tips { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: #3a3a3a; }
