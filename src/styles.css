@@ -1086,3 +1086,6 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .lang-switch--top { margin-inline-start: auto; align-self: center; }
 .lang-switch--login { align-self: center; margin-bottom: 8px; }
 [dir='rtl'] .search { background-position: right 16px center !important; }
+/* your own text (task names, words…) lines up on the right in Arabic, even when it is English */
+[dir='rtl'] [dir='auto']:not(input):not(textarea) { text-align: right; }
+[dir='rtl'] .task--doing .task__title::before { content: 'قيد التنفيذ · '; }

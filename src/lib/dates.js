@@ -39,7 +39,8 @@ const CURRENCY = import.meta.env.VITE_CURRENCY || 'GBP'
 
 export const money = (n) => {
   try {
-    return new Intl.NumberFormat(LOCALE, { style: 'currency', currency: CURRENCY }).format(n)
+    // always “£45.55” (also in Arabic, where the default would be “45.55 UK£”)
+    return new Intl.NumberFormat(LOCALE ? 'en-GB' : undefined, { style: 'currency', currency: CURRENCY }).format(n)
   } catch {
     return `${Number(n).toFixed(2)} ${CURRENCY}`
   }

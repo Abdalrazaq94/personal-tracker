@@ -127,3 +127,11 @@ Setup (once):
    Commitments, then switch prayer reminders on.
 
 Works in Chrome on Android and on computers; on iPhone, add Tracker to the Home Screen first (iOS 16.4+).
+
+## Arabic interface (العربية)
+
+Switch **English | العربية** in the ☰ menu (or the top bar on a computer, or the sign-in page). The whole app turns right-to-left with an Arabic font and Arabic dates; the choice is saved to your account so every device follows it.
+
+- Texts live in `src/i18n/ar1.js`–`ar3.js` (the English text is the key). In code, wrap new text with `T('…')`, or `Tr('… {0} …', <b>part</b>)` when part of the sentence is JSX.
+- AI answers (“Your day”, analysis) come back in Arabic — redeploy the `ai` function.
+- Reminders arrive in Arabic — run `supabase/migrations/013_lang.sql` and redeploy the `notify` function.
