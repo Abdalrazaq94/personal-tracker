@@ -45,14 +45,12 @@ alter table public.prayer_alerts enable row level security;
 drop policy if exists "own rows" on public.prayer_alerts;
 create policy "own rows" on public.prayer_alerts for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
-create extension if not exists pgcrypto with schema extensions;
-
 -- 5) the server's own keys (only the server can read this table: no policies)
 create table if not exists public.push_config (
   id          integer primary key default 1 check (id = 1),
   public_key  text,
   private_jwk jsonb,
-  cron_secret text not null default encode(extensions.gen_random_bytes(24), 'hex')
+  cron_secret text not null default (replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''))
 );
 alter table public.push_config enable row level security;
 insert into public.push_config (id) values (1) on conflict (id) do nothing;
