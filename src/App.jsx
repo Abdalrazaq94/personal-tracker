@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { useBackToClose } from './lib/useBack'
 import { configured, supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Home from './pages/Home'
@@ -49,6 +50,7 @@ export default function App() {
 
   return (
     <div className="shell">
+      <MobileBar pathname={pathname} email={session.user.email} />
       <nav className="topbar" aria-label="Sections">
         <NavLink to="/" end className={({ isActive }) => (isActive ? 'is-active' : '')}>
           Home
@@ -91,6 +93,69 @@ export default function App() {
         </NavLink>
       </nav>
     </div>
+  )
+}
+
+/** Phones: a slim bar at the top with ☰ — opens a list of every page. The phone's back button closes it. */
+function MobileBar({ pathname, email }) {
+  const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
+  useBackToClose(open, () => setOpen(false))
+
+  const here = pathname === '/' ? 'Home' : SECTIONS.find((s) => pathname.startsWith(s.to))?.label || 'Tracker'
+  const go = (to) => {
+    // close the menu first (that takes its own history step back out), then open the page
+    const after = () => {
+      window.removeEventListener('popstate', after)
+      if (to !== pathname) navigate(to)
+    }
+    window.addEventListener('popstate', after)
+    setOpen(false)
+  }
+
+  return (
+    <>
+      <header className="mobilebar">
+        <button type="button" className="mobilebar__burger" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)}>
+          <span />
+          <span />
+          <span />
+        </button>
+        <span className="mobilebar__title">{here}</span>
+      </header>
+
+      {open && (
+        <div className="drawer-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}>
+          <nav className="drawer" aria-label="All pages">
+            <div className="drawer__head">
+              <span className="drawer__brand">Tracker</span>
+              <button type="button" className="icon-btn" aria-label="Close menu" onClick={() => setOpen(false)}>
+                ×
+              </button>
+            </div>
+            <ul>
+              {[{ to: '/', label: 'Home', hint: 'Today at a glance' }, ...SECTIONS].map((s) => {
+                const active = s.to === '/' ? pathname === '/' : pathname.startsWith(s.to)
+                return (
+                  <li key={s.to}>
+                    <button type="button" className={active ? 'is-active' : ''} onClick={() => go(s.to)}>
+                      <strong>{s.label}</strong>
+                      <span>{s.hint}</span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+            <div className="drawer__foot">
+              <span className="muted small">{email}</span>
+              <button className="btn btn--ghost btn--sm" onClick={() => supabase.auth.signOut()}>
+                Sign out
+              </button>
+            </div>
+          </nav>
+        </div>
+      )}
+    </>
   )
 }
 

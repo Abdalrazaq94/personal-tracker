@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRows } from '../lib/useRows'
+import { useBackToClose } from '../lib/useBack'
 import { ErrorBar, PageHeader } from '../components/ui'
 import { Markdown } from '../components/AiPanel'
 import { callAi } from '../lib/ai'
@@ -78,6 +79,8 @@ export default function Commit() {
   }
 
   const shownError = missingTable(error) ? NEEDS_TABLE : error
+  useBackToClose(picking && !!place, () => setPicking(false)) // back closes "Change city"
+  useBackToClose(!!day && day !== today, () => setDay(null)) // back from an earlier day returns to today
 
   return (
     <div className="page">

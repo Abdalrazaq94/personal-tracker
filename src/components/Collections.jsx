@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { useBackToClose } from '../lib/useBack'
 
 /** Bottom sheet on phones, centred dialog on bigger screens. */
 export function Sheet({ title, onClose, children }) {
+  useBackToClose(true, onClose) // phone back button closes the sheet
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
