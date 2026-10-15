@@ -101,7 +101,28 @@ async function encryptPayload(p256dh: string, auth: string, payload: Uint8Array,
 type Subscription = { endpoint: string; p256dh: string; auth: string }
 
 /** Sends one notification. Returns the push service's HTTP status (201 = sent, 404/410 = subscription is gone) and its error text. */
+// Only real browser push services (Chrome/Android, Firefox, Safari/iPhone, Edge/Windows). A saved "phone" pointing
+// anywhere else is ignored, so nobody can make this server send requests to other websites.
+const PUSH_HOSTS = [/^fcm\.googleapis\.com$/, /^android\.googleapis\.com$/, /(^|\.)push\.services\.mozilla\.com$/, /(^|\.)push\.apple\.com$/, /(^|\.)notify\.windows\.com$/]
+function isPushEndpoint(endpoint: string) {
+  try {
+    const u = new URL(endpoint)
+    return u.protocol === 'https:' && !u.port && PUSH_HOSTS.some((re) => re.test(u.hostname))
+  } catch {
+    return false
+  }
+}
+
+/** Same length + every character compared, so the answer time doesn't hint at the secret. */
+function sameSecret(a: string | null | undefined, b: string | null | undefined) {
+  if (!a || !b || a.length !== b.length) return false
+  let diff = 0
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  return diff === 0
+}
+
 async function sendPush(sub: Subscription, data: unknown, vapid: { publicKey: string; privateJwk: JsonWebKey; subject: string }, ttl = 3600, urgency = 'high') {
+  if (!isPushEndpoint(sub.endpoint)) return { status: 400, text: 'not a push service address' }
   const body = await encryptPayload(sub.p256dh, sub.auth, enc.encode(JSON.stringify(data)))
   const res = await fetch(sub.endpoint, {
     method: 'POST',
@@ -214,6 +235,7 @@ Deno.serve(async (req) => {
 
   let body: Any = {}
   try {
+    if (Number(req.headers.get('content-length') || 0) > 20_000) return json({ error: 'Too big.' }, 413)
     body = await req.json()
   } catch {
     /* empty */
@@ -225,7 +247,7 @@ Deno.serve(async (req) => {
       case 'vapid':
         return json({ publicKey: cfg.public_key })
       case 'tick':
-        if (req.headers.get('x-cron-secret') !== cfg.cron_secret) return json({ error: 'not allowed' }, 401)
+        if (!sameSecret(req.headers.get('x-cron-secret'), cfg.cron_secret)) return json({ error: 'not allowed' }, 401)
         return json(await tick(db, cfg))
       case 'test': {
         const user = await signedInUser(db, req)
@@ -291,7 +313,7 @@ async function sendToUser(db: Any, cfg: Any, userId: string, build: (sub: Any) =
       const { status, text } = await sendPush(sub as Subscription, build(sub), vapidOf(cfg))
       if (status === 404 || status === 410) await db.from('push_subscriptions').delete().eq('id', sub.id)
       if (status < 300) sent++
-      else problems?.push(`${new URL(sub.endpoint).host} said ${status}${text ? ': ' + text : ''}`)
+      else problems?.push(`${isPushEndpoint(sub.endpoint) ? new URL(sub.endpoint).host : 'unknown address'} said ${status}${text ? ': ' + text : ''}`)
     } catch (e) {
       // one phone failing must not stop the others
       problems?.push(`Could not send: ${e instanceof Error ? e.message : String(e)}`)

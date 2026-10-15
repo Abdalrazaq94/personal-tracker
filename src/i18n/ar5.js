@@ -49,4 +49,9 @@ export default {
   '{0} over your {1} budget': 'تجاوزت ميزانيتك ({1}) بـ {0}',
   '{0} of {1} · {2} left': '{0} من {1} · باقي {2}',
   '{0} of {1} · {2} over': '{0} من {1} · أكثر بـ {2}',
+
+  // AI fair-use limits (messages from the server)
+  'You’ve used the AI a lot today. Please try again tomorrow.': 'استخدمت الذكاء الاصطناعي كثيرًا اليوم. حاول مرة أخرى غدًا.',
+  'You’ve used the AI a lot in the last hour. Please try again a bit later.': 'استخدمت الذكاء الاصطناعي كثيرًا خلال الساعة الماضية. حاول مرة أخرى بعد قليل.',
+  'Too much text in one request.': 'النص طويل جدًا لطلب واحد.',
 }

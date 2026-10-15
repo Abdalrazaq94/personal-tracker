@@ -15,7 +15,7 @@ export async function callAi(body, { timeoutMs = 45000 } = {}) {
     } catch {}
     if (error.context?.status === 404 || /Failed to send/i.test(msg))
       msg = T('The AI isn’t set up yet. See “AI analysis” in the README.')
-    throw new Error(msg)
+    throw new Error(T(msg)) // known server messages are shown in Arabic too
   }
   if (data?.error) throw new Error(data.error)
   return data

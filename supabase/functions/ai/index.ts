@@ -61,8 +61,13 @@ Deno.serve(async (req) => {
   const { data: userData, error: userErr } = await db.auth.getUser(auth.replace(/^Bearer\s+/i, ''))
   if (userErr || !userData?.user) return json({ error: 'Please sign in again.' }, 401)
 
+  // --- fair use: limits per person (needs migrations/016_security.sql; skipped if it hasn't been run) ---
+  const limited = await overLimit(db, userData.user.id)
+  if (limited) return json({ error: limited }, 429)
+
   let body: Body = {}
   try {
+    if (Number(req.headers.get('content-length') || 0) > 50_000) return json({ error: 'Too much text in one request.' }, 413)
     body = await req.json()
   } catch {
     /* empty body is fine */
@@ -96,6 +101,25 @@ Deno.serve(async (req) => {
     return json({ error: e instanceof Error ? e.message : String(e) }, 502)
   }
 })
+
+const PER_HOUR = Number(Deno.env.get('AI_PER_HOUR') || 60)
+const PER_DAY = Number(Deno.env.get('AI_PER_DAY') || 300)
+
+/** null = fine; otherwise the message to show. Counts this request too. */
+// deno-lint-ignore no-explicit-any
+async function overLimit(db: any, userId: string): Promise<string | null> {
+  const hourAgo = new Date(Date.now() - 3600_000).toISOString()
+  const dayAgo = new Date(Date.now() - 86400_000).toISOString()
+  const [hour, day] = await Promise.all([
+    db.from('ai_usage').select('id', { count: 'exact', head: true }).gte('at', hourAgo),
+    db.from('ai_usage').select('id', { count: 'exact', head: true }).gte('at', dayAgo),
+  ])
+  if (hour.error || day.error) return null // table not there yet
+  if ((day.count ?? 0) >= PER_DAY) return 'You’ve used the AI a lot today. Please try again tomorrow.'
+  if ((hour.count ?? 0) >= PER_HOUR) return 'You’ve used the AI a lot in the last hour. Please try again a bit later.'
+  await db.from('ai_usage').insert({ user_id: userId })
+  return null
+}
 
 /* ------------------------------- words ---------------------------------- */
 
