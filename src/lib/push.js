@@ -37,6 +37,17 @@ async function call(body) {
   return data
 }
 
+/** How to allow notifications, for where you are (installed app or browser tab). */
+export function blockedHelp(perm = Notification.permission) {
+  const app = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true
+  const iphone = /iPhone|iPad|iPod/.test(navigator.userAgent)
+  if (perm === 'default') return 'You closed the question without choosing. Tap “Turn on reminders” again and choose Allow.'
+  if (iphone) return 'Notifications are off for Tracker. Open iPhone Settings → Notifications → Tracker → turn on Allow Notifications, then come back and tap Turn on reminders.'
+  if (app)
+    return 'Notifications are off for the Tracker app. Open phone Settings → Apps → Tracker → Notifications → turn on, then come back and tap Turn on reminders.'
+  return 'Notifications are blocked for this site. Tap the icon left of the web address → Permissions (or Site settings) → Notifications → Allow, then reload and tap Turn on reminders.'
+}
+
 /** Is this phone/browser already getting reminders? */
 export async function currentStatus() {
   if (!pushSupported()) return 'unsupported'
@@ -50,7 +61,7 @@ export async function currentStatus() {
 export async function enablePush() {
   if (!pushSupported()) throw new Error('This browser can’t show notifications. On iPhone, add Tracker to your Home Screen first.')
   const perm = await Notification.requestPermission()
-  if (perm !== 'granted') throw new Error('Notifications were not allowed. Allow them for this site in your browser settings, then try again.')
+  if (perm !== 'granted') throw new Error(blockedHelp(perm))
   const reg = (await registerWorker()) || (await navigator.serviceWorker.ready)
   await navigator.serviceWorker.ready
   const { publicKey } = await call({ action: 'vapid' })

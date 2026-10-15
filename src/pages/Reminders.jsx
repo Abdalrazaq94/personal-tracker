@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { ErrorBar, PageHeader, Segmented } from '../components/ui'
 import { KINDS, playSound, SOUNDS, soundsWith } from '../lib/sounds'
 import InstallApp from '../components/InstallApp'
-import { currentStatus, disablePush, enablePush, loadSettings, saveSettings, sendTest } from '../lib/push'
+import { blockedHelp, currentStatus, disablePush, enablePush, loadSettings, saveSettings, sendTest } from '../lib/push'
 
 /** Turn phone reminders on, test them, and choose prayer reminders. */
 export default function Reminders() {
@@ -92,7 +92,7 @@ export default function Reminders() {
               {on
                 ? 'This phone gets your reminders, even when the app is closed.'
                 : status === 'blocked'
-                  ? 'Allow notifications for this site in your browser settings (tap the lock icon next to the address), then come back.'
+                  ? blockedHelp()
                   : status === 'unsupported'
                     ? isIphone && !standalone
                       ? 'On iPhone: tap Share → “Add to Home Screen”, open Tracker from there, then turn reminders on.'
