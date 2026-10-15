@@ -1,0 +1,499 @@
+import { useEffect, useMemo, useState } from 'react'
+import { supabase } from '../lib/supabase'
+import { money, parseYmd, today } from '../lib/dates'
+import { change, lastN, periodFor, previousOf, statsFor, trend } from '../lib/review'
+import { isAr, LANG, LOCALE, T, Tr } from '../lib/i18n'
+import { PRAYERS, prayerName } from '../lib/prayer'
+import { callAi } from '../lib/ai'
+import { chartColors, useTheme } from '../lib/theme'
+import { ErrorBar, PageHeader, Segmented } from '../components/ui'
+import { Markdown } from '../components/AiPanel'
+import Reveal from '../components/bits/Reveal'
+import CountUp from '../components/bits/CountUp'
+
+const PRESETS = [
+  { id: '2w', n: 2, unit: 'week', label: 'Last 2 weeks' },
+  { id: '1m', n: 1, unit: 'month', label: 'Last month' },
+  { id: '2m', n: 2, unit: 'month', label: 'Last 2 months' },
+  { id: '3m', n: 3, unit: 'month', label: 'Last 3 months' },
+  { id: '6m', n: 6, unit: 'month', label: 'Last 6 months' },
+]
+
+const fmtDay = (s, opts) => parseYmd(s).toLocaleDateString(LOCALE, opts)
+const pct = (x) => (x == null ? '—' : `${Math.round(x * 100)}%`)
+
+/** "This week", "Last month", "October 2026", "2026", "12 Aug – 15 Oct" */
+function periodLabel(p, offset) {
+  if (p.kind === 'week')
+    return offset === 0 ? T('This week') : offset === -1 ? T('Last week') : `${fmtDay(p.from, { day: 'numeric', month: 'short' })} – ${fmtDay(p.to, { day: 'numeric', month: 'short', year: 'numeric' })}`
+  if (p.kind === 'month') return offset === 0 ? T('This month') : fmtDay(p.from, { month: 'long', year: 'numeric' })
+  if (p.kind === 'year') return offset === 0 ? T('This year') : p.from.slice(0, 4)
+  return `${fmtDay(p.from, { day: 'numeric', month: 'short' })} – ${fmtDay(p.to, { day: 'numeric', month: 'short', year: 'numeric' })}`
+}
+const prevWord = (p) => (p.kind === 'week' ? T('vs the week before') : p.kind === 'month' ? T('vs the month before') : p.kind === 'year' ? T('vs the year before') : T('vs the same length before'))
+
+export default function Review() {
+  const [kind, setKind] = useState('week')
+  const [offset, setOffset] = useState(0)
+  const [custom, setCustom] = useState(() => lastN(2, 'month'))
+  const [preset, setPreset] = useState('2m')
+  const [data, setData] = useState(null)
+  const [error, setError] = useState(null)
+
+  const period = kind === 'custom' ? custom : periodFor(kind, offset)
+  const prev = useMemo(() => previousOf(period), [period.from, period.to, period.kind]) // eslint-disable-line react-hooks/exhaustive-deps
+  const t = today()
+
+  // load everything from the start of the previous period to the end of this one
+  useEffect(() => {
+    let alive = true
+    setData(null)
+    const from = prev.from
+    const to = period.to < t ? period.to : t
+    ;(async () => {
+      const [tasks, plans, habits, logs, prayers, first, expenses, words, notes, links] = await Promise.all([
+        supabase.from('tasks').select('*'),
+        supabase.from('plans').select('plan_date, done').gte('plan_date', from).lte('plan_date', to),
+        supabase.from('habits').select('*'),
+        supabase.from('habit_logs').select('habit_id, day, count, skipped, resisted').gte('day', from).lte('day', to),
+        supabase.from('prayer_logs').select('day, prayer, late').gte('day', from).lte('day', to),
+        supabase.from('prayer_logs').select('day').order('day', { ascending: true }).limit(1),
+        supabase.from('expenses').select('amount, note, spent_on').gte('spent_on', from).lte('spent_on', to),
+        supabase.from('words').select('created_at').gte('created_at', from),
+        supabase.from('notes').select('created_at').gte('created_at', from),
+        supabase.from('links').select('created_at').gte('created_at', from),
+      ])
+      if (!alive) return
+      const err = [tasks, plans, habits, logs, expenses].find((r) => r.error)?.error
+      if (err) setError(err.message)
+      setData({
+        tasks: tasks.data || [],
+        plans: plans.data || [],
+        habits: habits.data || [],
+        habitLogs: logs.data || [],
+        prayerLogs: prayers.error ? [] : prayers.data || [],
+        firstPrayerDay: first.data?.[0]?.day || null,
+        expenses: expenses.data || [],
+        words: words.data || [],
+        notes: notes.data || [],
+        links: links.data || [],
+      })
+    })()
+    return () => {
+      alive = false
+    }
+  }, [period.from, period.to, prev.from]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const now = data && statsFor(data, period, t)
+  const before = data && statsFor(data, prev, t)
+  const tr = data && trend(data, period, t)
+  const future = period.from > t
+
+  return (
+    <div className="page review">
+      <PageHeader title={T('Review')} subtitle={T('Your week, month or year at a glance')} />
+      <ErrorBar error={error} onClose={() => setError(null)} />
+
+      {/* ------------------------------ choose the period ------------------------------ */}
+      <section className="card review-pick">
+        <Segmented
+          value={kind}
+          onChange={(k) => {
+            setKind(k)
+            setOffset(0)
+          }}
+          options={[
+            { value: 'week', label: T('Week') },
+            { value: 'month', label: T('Month') },
+            { value: 'year', label: T('Year') },
+            { value: 'custom', label: T('Custom') },
+          ]}
+        />
+        {kind !== 'custom' ? (
+          <div className="review-nav">
+            <button type="button" className="round-btn" aria-label={T('Earlier')} onClick={() => setOffset((o) => o - 1)}>
+              {isAr ? '›' : '‹'}
+            </button>
+            <div className="review-nav__label">
+              <strong>{periodLabel(period, offset)}</strong>
+              <span className="muted small">
+                {fmtDay(period.from, { day: 'numeric', month: 'short' })} – {fmtDay(period.to, { day: 'numeric', month: 'short', year: 'numeric' })}
+              </span>
+            </div>
+            <button type="button" className="round-btn" aria-label={T('Later')} disabled={offset >= 0} onClick={() => setOffset((o) => Math.min(0, o + 1))}>
+              {isAr ? '‹' : '›'}
+            </button>
+          </div>
+        ) : (
+          <div className="review-custom">
+            <div className="chips-row">
+              {PRESETS.map((x) => (
+                <button
+                  key={x.id}
+                  type="button"
+                  className={`chip ${preset === x.id ? 'is-active chip--solid' : ''}`}
+                  onClick={() => {
+                    setPreset(x.id)
+                    setCustom(lastN(x.n, x.unit))
+                  }}
+                >
+                  {T(x.label)}
+                </button>
+              ))}
+            </div>
+            <div className="review-dates">
+              <label className="field">
+                <span>{T('From')}</span>
+                <input
+                  type="date"
+                  value={custom.from}
+                  max={custom.to}
+                  onChange={(e) => {
+                    setPreset('')
+                    if (e.target.value) setCustom((c) => ({ ...c, from: e.target.value }))
+                  }}
+                />
+              </label>
+              <label className="field">
+                <span>{T('To')}</span>
+                <input
+                  type="date"
+                  value={custom.to}
+                  min={custom.from}
+                  onChange={(e) => {
+                    setPreset('')
+                    if (e.target.value) setCustom((c) => ({ ...c, to: e.target.value }))
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {future ? (
+        <div className="empty muted">{T('This period hasn’t started yet.')}</div>
+      ) : !now ? (
+        <div className="empty muted loading-text">{T('Adding it all up…')}</div>
+      ) : (
+        <>
+          {/* ------------------------------ the big numbers ------------------------------ */}
+          <div className="review-kpis">
+            <Kpi label={T('Tasks done')} value={now.tasks.done} before={before.tasks.done} prev={prevWord(period)} />
+            <Kpi label={T('Spent')} value={now.spending.total} before={before.spending.total} format={money} lowerIsBetter prev={prevWord(period)} />
+            <Kpi
+              label={T('Prayers on time')}
+              value={now.prayers.possible ? now.prayers.onTime / now.prayers.possible : null}
+              before={before.prayers.possible ? before.prayers.onTime / before.prayers.possible : null}
+              format={pct}
+              points
+              prev={prevWord(period)}
+            />
+            <Kpi label={T('Good habits kept')} value={now.habits.goodRate} before={before.habits.goodRate} format={pct} points prev={prevWord(period)} />
+          </div>
+
+          {/* ------------------------------ trend ------------------------------ */}
+          {tr.buckets.length > 1 && (
+            <Reveal as="section" className="card review-card">
+              <h2>{tr.unit === 'day' ? T('Day by day') : tr.unit === 'week' ? T('Week by week') : T('Month by month')}</h2>
+              <Bars buckets={tr.buckets} field="spend" unit={tr.unit} label={T('Spending')} format={money} color="blue" />
+              <Bars buckets={tr.buckets} field="tasks" unit={tr.unit} label={T('Tasks done')} color="green" />
+              {now.prayers.possible > 0 && <Bars buckets={tr.buckets} field="prayed" unit={tr.unit} label={T('Prayers prayed')} color="green" />}
+            </Reveal>
+          )}
+
+          {/* ------------------------------ details ------------------------------ */}
+          <Reveal as="section" className="card review-card">
+            <h2>{T('Tasks and plans')}</h2>
+            <Rows
+              rows={[
+                [T('Tasks done'), now.tasks.done, before.tasks.done],
+                [T('Important tasks done'), now.tasks.importantDone, before.tasks.importantDone],
+                [T('Tasks added'), now.tasks.added, before.tasks.added],
+                [T('Plans done'), `${now.plans.done} / ${now.plans.total}`, `${before.plans.done} / ${before.plans.total}`],
+              ]}
+            />
+          </Reveal>
+
+          {(now.habits.good.length > 0 || now.habits.bad.length > 0) && (
+            <Reveal as="section" className="card review-card">
+              <h2>{T('Habits')}</h2>
+              {now.habits.good.map((h) => (
+                <Meter key={h.id} name={h.name} rate={h.rate} note={T('{0} of {1} days', [h.good, h.plannedDays])} />
+              ))}
+              {now.habits.bad.map((h) => (
+                <Meter
+                  key={h.id}
+                  name={h.name}
+                  rate={h.rate}
+                  bad
+                  note={`${T('{0} of {1} days clean', [h.good, h.plannedDays])} · ${T('{0} times', [h.total])}${h.resisted ? ` · ${T('{0} urges resisted', [h.resisted])}` : ''}`}
+                />
+              ))}
+              {now.habits.saved > 0 && <p className="review-note">{Tr('{0} saved by cutting down', <b>{money(now.habits.saved)}</b>)}</p>}
+            </Reveal>
+          )}
+
+          {now.prayers.possible > 0 && (
+            <Reveal as="section" className="card review-card">
+              <h2>{T('Prayers')}</h2>
+              <p className="review-note">
+                {T('{0} of {1} prayed · {2} on time', [now.prayers.prayed, now.prayers.possible, now.prayers.onTime])}
+              </p>
+              {now.prayers.perPrayer.map((x) => (
+                <Meter
+                  key={x.key}
+                  name={prayerName(PRAYERS.find((p) => p.key === x.key))}
+                  rate={x.possible ? x.prayed / x.possible : null}
+                  inner={x.possible ? x.onTime / x.possible : null}
+                  note={T('{0} of {1} · {2} on time', [x.prayed, x.possible, x.onTime])}
+                />
+              ))}
+            </Reveal>
+          )}
+
+          <Reveal as="section" className="card review-card">
+            <h2>{T('Spending')}</h2>
+            <Rows
+              rows={[
+                [T('Total'), money(now.spending.total), money(before.spending.total)],
+                [T('Per day'), money(now.spending.perDay), money(before.spending.perDay)],
+                [T('Payments'), now.spending.count, before.spending.count],
+              ]}
+            />
+            {now.spending.top.length > 0 && (
+              <>
+                <h3 className="review-sub">{T('Where it went')}</h3>
+                <ul className="review-top">
+                  {now.spending.top.map((g) => (
+                    <li key={g.name}>
+                      <span dir="auto">{g.name}</span>
+                      <span className="review-top__bar" aria-hidden>
+                        <span style={{ width: `${(g.amount / now.spending.top[0].amount) * 100}%` }} />
+                      </span>
+                      <strong>{money(g.amount)}</strong>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {now.spending.biggest && (
+              <p className="review-note">
+                {Tr(
+                  'Biggest: {0} · {1} on {2}',
+                  <b dir="auto">{now.spending.biggest.name}</b>,
+                  money(now.spending.biggest.amount),
+                  fmtDay(now.spending.biggest.day, { day: 'numeric', month: 'short' })
+                )}
+              </p>
+            )}
+          </Reveal>
+
+          <Reveal as="section" className="card review-card">
+            <h2>{T('Learning and notes')}</h2>
+            <Rows
+              rows={[
+                [T('New words'), now.words.added, before.words.added],
+                [T('Notes written'), now.notes, before.notes],
+                [T('Links saved'), now.links, before.links],
+              ]}
+            />
+          </Reveal>
+
+          <AiReview period={period} label={periodLabel(period, offset)} now={now} before={before} />
+        </>
+      )}
+    </div>
+  )
+}
+
+/** A big number with the change from last time. */
+function Kpi({ label, value, before, format = (n) => Math.round(n), lowerIsBetter = false, points = false, prev }) {
+  const diff = value == null || before == null ? null : points ? value - before : change(value, before)
+  const up = diff != null && diff > 0.005
+  const down = diff != null && diff < -0.005
+  const good = lowerIsBetter ? down : up
+  const bad = lowerIsBetter ? up : down
+  const shown = diff == null ? null : points ? `${Math.round(Math.abs(diff) * 100)} ${T('pts')}` : `${Math.round(Math.abs(diff) * 100)}%`
+  return (
+    <div className="review-kpi">
+      <span className="review-kpi__label">{label}</span>
+      <strong className="review-kpi__value">{value == null ? '—' : <CountUp to={value} format={format} />}</strong>
+      <span className={`review-kpi__delta ${good ? 'is-good' : bad ? 'is-bad' : ''}`}>
+        {diff == null ? T('nothing to compare') : up || down ? `${up ? '▲' : '▼'} ${shown} ${prev}` : `= ${prev}`}
+      </span>
+    </div>
+  )
+}
+
+/** Simple table: this period, and the one before. */
+function Rows({ rows }) {
+  return (
+    <table className="review-rows">
+      <thead>
+        <tr>
+          <th />
+          <th>{T('Now')}</th>
+          <th>{T('Before')}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(([label, a, b]) => (
+          <tr key={label}>
+            <th scope="row">{label}</th>
+            <td>{a}</td>
+            <td className="muted">{b}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+/** A bar for one habit or prayer (share of days). */
+function Meter({ name, rate, inner, note, bad }) {
+  return (
+    <div className="review-meter">
+      <div className="review-meter__head">
+        <span dir="auto">{name}</span>
+        <strong>{pct(rate)}</strong>
+      </div>
+      <div className={`review-meter__bar ${bad ? 'is-bad' : ''}`} aria-hidden>
+        <span style={{ width: `${(rate || 0) * 100}%` }} />
+        {inner != null && <span className="is-inner" style={{ width: `${inner * 100}%` }} />}
+      </div>
+      {note && <span className="muted small">{note}</span>}
+    </div>
+  )
+}
+
+/** Small bar chart for one measure across the period. */
+function Bars({ buckets, field, unit, label, format = (n) => String(Math.round(n)), color }) {
+  const theme = useTheme()
+  const c = chartColors(theme)[color]
+  const [hover, setHover] = useState(null)
+  const max = Math.max(1, ...buckets.map((b) => b[field]))
+  const total = buckets.reduce((a, b) => a + b[field], 0)
+  const name = (key) =>
+    unit === 'month'
+      ? parseYmd(`${key}-01`).toLocaleDateString(LOCALE, { month: 'short' })
+      : parseYmd(key).toLocaleDateString(LOCALE, unit === 'day' && buckets.length <= 7 ? { weekday: 'short' } : { day: 'numeric', month: 'short' })
+  const hv = hover != null ? buckets[hover] : null
+  const step = Math.ceil(buckets.length / 7)
+  return (
+    <figure className="review-bars">
+      <figcaption>
+        <span>{label}</span>
+        <span className="muted small">{hv ? `${name(hv.key)} · ${format(hv[field])}` : `${T('Total')} ${format(total)}`}</span>
+      </figcaption>
+      <div className="review-bars__plot" onPointerLeave={() => setHover(null)}>
+        {buckets.map((b, i) => (
+          <button
+            type="button"
+            key={b.key}
+            className={`review-bars__bar ${hover === i ? 'is-on' : ''}`}
+            style={{ '--h': `${(b[field] / max) * 100}%`, '--c': c }}
+            onPointerEnter={() => setHover(i)}
+            onClick={() => setHover(i)}
+            aria-label={`${name(b.key)}: ${format(b[field])}`}
+          />
+        ))}
+      </div>
+      <div className="review-bars__axis" aria-hidden>
+        {buckets.map((b, i) => (
+          <span key={b.key}>{i % step === 0 ? name(b.key) : ''}</span>
+        ))}
+      </div>
+    </figure>
+  )
+}
+
+/** The AI writes the review from the numbers (in Arabic when the app is in Arabic). */
+function AiReview({ period, label, now, before }) {
+  const key = `review:${LANG}:${period.from}:${period.to}`
+  const [text, setText] = useState(() => {
+    try {
+      return localStorage.getItem(key) || ''
+    } catch {
+      return ''
+    }
+  })
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    try {
+      setText(localStorage.getItem(key) || '')
+    } catch {
+      setText('')
+    }
+    setError('')
+  }, [key])
+
+  const write = async () => {
+    setBusy(true)
+    setError('')
+    try {
+      const r = await callAi({ kind: 'review', label, from: period.from, to: period.to, summary: summaryText(now, before) })
+      setText(r.text)
+      try {
+        localStorage.setItem(key, r.text)
+      } catch {
+        /* fine */
+      }
+    } catch (e) {
+      setError(/unknown request/i.test(e.message) ? T('The AI part needs updating on the server (deploy the “ai” function again).') : e.message)
+    }
+    setBusy(false)
+  }
+
+  return (
+    <Reveal as="section" className="day-brief review-ai">
+      <div className="day-brief__head">
+        <h2>
+          <span className="ai-spark" aria-hidden>
+            ✦
+          </span>{' '}
+          {T('AI review')}
+        </h2>
+        {text && (
+          <button type="button" className="link small" onClick={write} disabled={busy}>
+            {busy ? T('Thinking…') : T('Write again')}
+          </button>
+        )}
+      </div>
+      {text ? (
+        <Markdown text={text} />
+      ) : (
+        <>
+          <p className="small">{T('Get a short written review of this period: your wins, what slipped, and 3 things to try next.')}</p>
+          <button type="button" className="btn btn--sm review-ai__btn" onClick={write} disabled={busy}>
+            {busy ? T('Writing your review…') : T('✦ Write my review')}
+          </button>
+        </>
+      )}
+      {busy && text && <div className="ai-loading">{T('Writing your review…')}</div>}
+      {error && <p className="day-brief__note small">{error}</p>}
+    </Reveal>
+  )
+}
+
+/** The numbers, as plain text for the AI (always English; the AI answers in the app's language). */
+function summaryText(n, b) {
+  const p = (x) => (x == null ? 'n/a' : `${Math.round(x * 100)}%`)
+  const lines = [
+    `Days counted: ${n.days} (previous period: ${b.days})`,
+    `Tasks done: ${n.tasks.done} (before ${b.tasks.done}); important done ${n.tasks.importantDone}; added ${n.tasks.added}`,
+    `Plans done: ${n.plans.done}/${n.plans.total} (before ${b.plans.done}/${b.plans.total})`,
+    `Good habits kept: ${p(n.habits.goodRate)} (before ${p(b.habits.goodRate)})`,
+    ...n.habits.good.map((h) => `  - ${h.name}: ${h.good}/${h.plannedDays} days`),
+    `Bad habits clean days: ${p(n.habits.cleanRate)} (before ${p(b.habits.cleanRate)}); slips ${n.habits.slips} (before ${b.habits.slips}); money saved ${n.habits.saved.toFixed(2)}`,
+    ...n.habits.bad.map((h) => `  - ${h.name}: ${h.good}/${h.plannedDays} clean days, ${h.total} times, ${h.resisted} urges resisted`),
+    n.prayers.possible
+      ? `Prayers: ${n.prayers.prayed}/${n.prayers.possible} prayed, ${n.prayers.onTime} on time (before ${b.prayers.prayed}/${b.prayers.possible}, ${b.prayers.onTime} on time); by prayer: ${n.prayers.perPrayer.map((x) => `${x.key} ${x.prayed}/${x.possible} (${x.onTime} on time)`).join(', ')}`
+      : 'Prayers: not tracked in this period',
+    `Spending: total ${n.spending.total.toFixed(2)} (before ${b.spending.total.toFixed(2)}), per day ${n.spending.perDay.toFixed(2)}, ${n.spending.count} payments; top: ${n.spending.top.map((g) => `${g.name} ${g.amount.toFixed(2)}`).join(', ') || 'none'}`,
+    `New words: ${n.words.added}; notes: ${n.notes}; links: ${n.links}`,
+  ]
+  return lines.join('\n')
+}
+

@@ -21,6 +21,7 @@ import Notes from './pages/Notes'
 import Jobs from './pages/Jobs'
 import Commit from './pages/Commit'
 import Reminders from './pages/Reminders'
+import Review from './pages/Review'
 import { T, Tr } from './lib/i18n'
 
 export const SECTIONS = [
@@ -33,6 +34,7 @@ export const SECTIONS = [
   { to: '/notes', label: T("Notes"), hint: T("Notebooks with note cards") },
   { to: '/jobs', label: T("Jobs"), hint: T("Jobs applied · Trello") },
   { to: '/commit', label: T("Commit"), hint: T("Commitments · prayer times") },
+  { to: '/review', label: T("Review"), hint: T("Week, month or year at a glance") },
   { to: '/reminders', label: T("Reminders"), hint: T("Notifications for plans & prayers") },
 ]
 
@@ -100,6 +102,7 @@ export default function App() {
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/commit" element={<Commit />} />
             <Route path="/reminders" element={<Reminders />} />
+          <Route path="/review" element={<Review />} />
             <Route path="/more" element={<More />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

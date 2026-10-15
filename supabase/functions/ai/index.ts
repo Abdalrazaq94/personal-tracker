@@ -87,6 +87,8 @@ Deno.serve(async (req) => {
         return json(await brief(db, body))
       case 'parse':
         return json(await parse(db, body))
+      case 'review':
+        return json(await review(body))
       default:
         return json({ error: 'Unknown request.' }, 400)
     }
@@ -462,6 +464,25 @@ async function analyse(db: any, b: Body) {
       : 'Analyse my spending: totals this week and month vs earlier, biggest categories (group similar notes), unusual spends, trends, and 3 concrete money-saving suggestions.'
 
   const text = await askText(system + (inArabic(b) ? ARABIC : ''), `Today is ${today}.\n\n${data}\n\n${question ? `My question: ${question}` : task}`)
+  return { text }
+}
+
+/* ------------------------------- review ---------------------------------- */
+
+// A written review of a week / month / year / custom period, from the numbers the app already added up.
+async function review(b: Body) {
+  const x = b as { label?: string; from?: string; to?: string; summary?: string }
+  const summary = clip(x.summary, 4000)
+  if (!summary) throw new Error('Nothing to review yet.')
+  const label = clip(x.label, 80) || 'this period'
+  const text = await askText(
+    'You are a warm, honest personal coach inside a tracker app. Write a short review of the user\'s period from the numbers given. ' +
+      'Structure: "## Wins" (2–3 bullets), "## What slipped" (1–3 bullets), "## Next" (3 concrete, small things to try). ' +
+      'Use the real numbers and names, compare with the previous period when it helps, **bold** the key numbers. ' +
+      'Be kind and encouraging, never judgmental; for prayers be respectful. Max ~180 words. Never invent data; skip areas with no data.' +
+      (inArabic(b) ? ARABIC : ''),
+    `Period: ${label} (${x.from} to ${x.to}).\n\n${summary}`
+  )
   return { text }
 }
 

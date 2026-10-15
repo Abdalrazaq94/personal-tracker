@@ -28,6 +28,7 @@ const TILES = [
   { to: '/links', icon: '🔗', label: T("Links") },
   { to: '/jobs', icon: '💼', label: T("Jobs") },
   { to: '/reminders', icon: '🔔', label: T("Reminders") },
+  { to: '/review', icon: '📊', label: T("Review"), wide: true },
 ]
 
 const addDays = (ymdStr, n) => {
@@ -314,6 +315,8 @@ export default function Home({ session }) {
         return T('{0} saved', [d.links])
       case '/jobs':
         return T("Applications");
+      case '/review':
+        return T('Your week, month or year at a glance')
       case '/reminders':
         return remind === 'on' ? T("On") : remind === 'blocked' ? T("Blocked") : T("Off");
       default:
@@ -340,7 +343,7 @@ export default function Home({ session }) {
         {TILES.map((x, i) => (
           <GlareHover
             key={x.to}
-            className="home-glare"
+            className={`home-glare ${x.wide ? 'home-glare--wide' : ''}`}
             style={{ '--i': i }}
             background="var(--tile-bg)"
             borderColor="var(--tile-line)"

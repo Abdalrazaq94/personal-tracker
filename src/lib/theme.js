@@ -61,4 +61,4 @@ export function useTheme() {
 
 /** Chart colours that read well on each background. */
 export const chartColors = (t) =>
-  t === 'dark' ? { green: '#5fbf70', blue: '#7aa7e6', ring: '#0e0e10' } : { green: '#2f7a3f', blue: '#2f5d93', ring: '#ffffff' }
+  t === 'dark' ? { green: '#4fa960', blue: '#6a96d4', ring: '#0e0e10' } : { green: '#2f7a3f', blue: '#2f5d93', ring: '#ffffff' }
