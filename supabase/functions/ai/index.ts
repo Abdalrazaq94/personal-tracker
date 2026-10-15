@@ -275,11 +275,13 @@ async function parse(db: any, b: Body) {
       `Note: "${text}"\n\n` +
       'Action types:\n' +
       '- {"type":"task","title":"...","important":true|false}  — something to do with no specific date (or today)\n' +
-      '- {"type":"plan","title":"...","date":"YYYY-MM-DD"}  — something to do on a future date (tomorrow, Friday, next week…)\n' +
+      '- {"type":"plan","title":"...","date":"YYYY-MM-DD","time":"HH:MM"}  — something to do on a date and/or at a time (tomorrow, Friday, "at 3 40"…); time is optional, 24-hour\n' +
       '- {"type":"expense","amount":3.4,"note":"coffee","date":"YYYY-MM-DD"}  — money spent (date = today unless said)\n' +
       '- {"type":"word","word":"..."}  — a new English word or phrase to learn\n' +
       '- {"type":"habit","habit":<number from the habit list>,"count":1}  — the user did one of their listed habits (count = how many times)\n' +
       '- {"type":"note","text":"..."}  — a thought or information to remember\n' +
+      'Times: "at 3 40", "3.40", "3:40pm" → "15:40"; a bare hour from 1 to 6 means afternoon unless "am"/"morning" is said; ' +
+      'anything with a time is a "plan" (date = today if no day is said), and the time words are not part of the title. ' +
       'Rules: keep titles short and in the user\'s words; split several things into several actions; ' +
       'only use "habit" when it clearly matches a listed habit; if nothing fits, use "note".\n' +
       'Return JSON: {"actions":[...]}'
@@ -291,8 +293,10 @@ async function parse(db: any, b: Body) {
     switch (a?.type) {
       case 'task':
         return clip(a.title, 200) ? { type: 'task', title: clip(a.title, 200), important: Boolean(a.important) } : null
-      case 'plan':
-        return clip(a.title, 200) ? { type: 'plan', title: clip(a.title, 200), date: ok(a.date) } : null
+      case 'plan': {
+        const time = typeof a.time === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(a.time) ? a.time : null
+        return clip(a.title, 200) ? { type: 'plan', title: clip(a.title, 200), date: ok(a.date), ...(time ? { time } : {}) } : null
+      }
       case 'expense': {
         const amount = Math.round(Number(a.amount) * 100) / 100
         return amount > 0 && amount < 1e7 ? { type: 'expense', amount, note: clip(a.note, 120), date: ok(a.date) } : null

@@ -809,3 +809,19 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .crash__msg { display: block; padding: 10px; white-space: pre-wrap; word-break: break-word; font-size: 13px; }
 .crash__acts { display: flex; gap: 8px; flex-wrap: wrap; }
 .crash__more pre { margin: 6px 0 0; padding: 10px; background: var(--soft); border-radius: 10px; font-size: 11px; line-height: 1.4; white-space: pre-wrap; word-break: break-all; max-height: 260px; overflow: auto; }
+
+/* quick add: choose what it is before adding */
+.qa-review { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.qa-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); }
+.qa-types { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.qa-types .chip { cursor: pointer; }
+.qa-types .chip:disabled { opacity: .4; cursor: default; }
+.qa-remove { margin-left: auto; }
+.qa-card input:not([type='checkbox']), .qa-card select { height: 42px; }
+.qa-card select { padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg); font: inherit; font-size: 16px; }
+.qa-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.qa-row select { width: 100%; }
+.qa-small { max-width: 90px; }
+.qa-check { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.qa-actions { display: flex; align-items: center; gap: 12px; }
+.plan__time { display: inline-block; margin-right: 8px; padding: 1px 7px; border-radius: 6px; background: var(--fg); color: var(--bg); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; vertical-align: 1px; }

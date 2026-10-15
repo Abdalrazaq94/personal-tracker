@@ -7,6 +7,7 @@ export default function Plan() {
   const { rows, loading, error, setError, insert, update, remove } = useRows('plans', { order: 'plan_date', ascending: true })
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(tomorrow())
+  const [time, setTime] = useState('')
   const [view, setView] = useState('tomorrow')
 
   const shown = useMemo(() => {
@@ -19,7 +20,11 @@ export default function Plan() {
     else list = rows.filter((r) => r.plan_date >= t || !r.done) // upcoming + anything unfinished
     const map = new Map()
     ;[...list]
-      .sort((a, b) => (a.plan_date === b.plan_date ? a.done - b.done : a.plan_date < b.plan_date ? -1 : 1))
+      .sort((a, b) =>
+        a.plan_date !== b.plan_date
+          ? a.plan_date < b.plan_date ? -1 : 1
+          : a.done - b.done || (a.plan_time || '99').localeCompare(b.plan_time || '99')
+      )
       .forEach((r) => {
         const key = r.plan_date < t ? 'overdue' : r.plan_date
         if (!map.has(key)) map.set(key, [])
@@ -31,8 +36,16 @@ export default function Plan() {
   const add = async (e) => {
     e.preventDefault()
     if (!title.trim()) return
-    const ok = await insert({ title: title.trim(), plan_date: date })
-    if (ok) setTitle('')
+    let ok = await insert({ title: title.trim(), plan_date: date, ...(time ? { plan_time: time } : {}) })
+    if (!ok && time) {
+      // database not updated for times yet: keep the time in the title
+      setError(null)
+      ok = await insert({ title: `${title.trim()} · ${time}`, plan_date: date })
+    }
+    if (ok) {
+      setTitle('')
+      setTime('')
+    }
   }
 
   const quick = [
@@ -65,6 +78,7 @@ export default function Plan() {
               </button>
             ))}
             <input type="date" className="date-inline" value={date} min={today()} onChange={(e) => setDate(e.target.value || tomorrow())} />
+            <input type="time" className="date-inline" value={time} onChange={(e) => setTime(e.target.value)} aria-label="Time (optional)" title="Time (optional)" />
           </div>
         </div>
         <div className="form-foot form-foot--end">
@@ -108,6 +122,7 @@ export default function Plan() {
                     {p.done ? '✓' : ''}
                   </button>
                   <span className="plan__title" dir="auto">
+                    {p.plan_time && <strong className="plan__time">{String(p.plan_time).slice(0, 5)}</strong>}
                     {p.title}
                     {key === 'overdue' && <small className="muted"> · {dayLabel(p.plan_date)}</small>}
                   </span>

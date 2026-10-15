@@ -68,6 +68,7 @@ create table if not exists public.plans (
   user_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
   title      text not null,
   plan_date  date not null,
+  plan_time  time,                               -- optional, e.g. 15:40
   done       boolean not null default false,
   created_at timestamptz not null default now()
 );

@@ -47,7 +47,9 @@ export default function Home({ session }) {
             PRIORITY[a.status] - PRIORITY[b.status] ||
             new Date(b.created_at) - new Date(a.created_at)
         ),
-        plans: (plans.data || []).sort((a, b) => (a.plan_date < b.plan_date ? -1 : 1)),
+        plans: (plans.data || []).sort((a, b) =>
+          a.plan_date !== b.plan_date ? (a.plan_date < b.plan_date ? -1 : 1) : (a.plan_time || '99').localeCompare(b.plan_time || '99')
+        ),
         habits: habits.data || [],
         logs: logs.data || [],
         words: wordsOfTheDay(words.data || []),
@@ -180,6 +182,7 @@ export default function Home({ session }) {
                       {p.done ? '✓' : ''}
                     </button>
                     <span dir="auto" className="today-list__text">
+                      {p.plan_time && <strong className="plan__time">{String(p.plan_time).slice(0, 5)}</strong>}
                       {p.title}
                     </span>
                     <span className="tag">
