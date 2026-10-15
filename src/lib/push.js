@@ -14,6 +14,12 @@ const toBytes = (b64) => {
   const s = b64.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((b64.length + 3) % 4)
   return Uint8Array.from(atob(s), (c) => c.charCodeAt(0))
 }
+const sameKey = (buf, b64) => {
+  if (!buf) return true // browser doesn't tell us: assume it's fine
+  const a = new Uint8Array(buf)
+  const b = toBytes(b64)
+  return a.length === b.length && a.every((x, i) => x === b[i])
+}
 const randomSecret = () => Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) => b.toString(16).padStart(2, '0')).join('')
 
 async function call(body) {
@@ -49,6 +55,12 @@ export async function enablePush() {
   await navigator.serviceWorker.ready
   const { publicKey } = await call({ action: 'vapid' })
   let sub = await reg.pushManager.getSubscription()
+  // a subscription made with an older server key can never receive anything: replace it
+  if (sub && !sameKey(sub.options?.applicationServerKey, publicKey)) {
+    await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+    await sub.unsubscribe().catch(() => {})
+    sub = null
+  }
   if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toBytes(publicKey) })
   const j = sub.toJSON()
   const { data: u } = await supabase.auth.getUser()
@@ -76,7 +88,27 @@ export async function disablePush() {
   }
 }
 
-export const sendTest = () => call({ action: 'test' })
+/** Sends a test. If nothing arrives, re-saves this phone once and tries again, then explains what went wrong. */
+export async function sendTest() {
+  let r = await call({ action: 'test' })
+  if (r?.sent) return r
+  // fix the usual causes (phone not saved, or saved with an old key) and try once more
+  const reg = await navigator.serviceWorker.getRegistration()
+  const sub = await reg?.pushManager.getSubscription()
+  if (sub && r?.problems?.some((p) => / (400|401|403) /.test(p + ' '))) {
+    await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+    await sub.unsubscribe().catch(() => {})
+  }
+  await enablePush()
+  r = await call({ action: 'test' })
+  if (r?.sent) return r
+  const why = r?.problems?.length
+    ? r.problems.join(' · ')
+    : r?.devices === 0
+      ? 'This phone is not saved on the server.'
+      : 'Unknown reason.'
+  throw new Error(`Nothing was delivered. ${why}`)
+}
 
 /** Reminder settings live in user_settings (time zone, prayer reminders). */
 export async function saveSettings(patch) {

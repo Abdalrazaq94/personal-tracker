@@ -100,7 +100,7 @@ async function encryptPayload(p256dh: string, auth: string, payload: Uint8Array,
 
 type Subscription = { endpoint: string; p256dh: string; auth: string }
 
-/** Sends one notification. Returns the push service's HTTP status (201 = sent, 404/410 = subscription is gone). */
+/** Sends one notification. Returns the push service's HTTP status (201 = sent, 404/410 = subscription is gone) and its error text. */
 async function sendPush(sub: Subscription, data: unknown, vapid: { publicKey: string; privateJwk: JsonWebKey; subject: string }, ttl = 3600, urgency = 'high') {
   const body = await encryptPayload(sub.p256dh, sub.auth, enc.encode(JSON.stringify(data)))
   const res = await fetch(sub.endpoint, {
@@ -114,7 +114,8 @@ async function sendPush(sub: Subscription, data: unknown, vapid: { publicKey: st
     },
     body,
   })
-  return res.status
+  const text = res.status < 300 ? '' : (await res.text().catch(() => '')).slice(0, 300)
+  return { status: res.status, text }
 }
 
 /* ================================ the reminder server ================================ */
@@ -202,6 +203,8 @@ Deno.serve(async (req) => {
       case 'test': {
         const user = await signedInUser(db, req)
         if (!user) return json({ error: 'Please sign in again.' }, 401)
+        const { data: subs } = await db.from('push_subscriptions').select('*').eq('user_id', user)
+        const problems: string[] = []
         const sent = await sendToUser(db, cfg, user, (sub) => ({
           title: '🔔 Reminders are on',
           body: 'This is how your reminders will look. Tap Done to try the button.',
@@ -209,8 +212,8 @@ Deno.serve(async (req) => {
           requireInteraction: false,
           actions: [{ action: 'done', title: '✓ Done' }],
           data: { kind: 'test', secret: sub.secret, url: '/#/reminders', api: API() },
-        }))
-        return json({ sent })
+        }), subs ?? [], problems)
+        return json({ sent, devices: (subs ?? []).length, problems, publicKey: cfg.public_key })
       }
       case 'act':
         return json(await act(db, body))
@@ -234,10 +237,12 @@ async function config(db: Any) {
   const { data, error } = await db.from('push_config').select('*').eq('id', 1).maybeSingle()
   if (error) throw new Error(/push_config/.test(error.message) ? 'Run supabase/migrations/008_reminders.sql first.' : error.message)
   if (data?.public_key && data?.private_jwk) return data
+  // only fill the keys if nobody else did at the same moment (two keys would break every phone's subscription)
   const keys = await generateVapidKeys()
-  const row = { id: 1, public_key: keys.publicKey, private_jwk: keys.privateJwk }
-  const { data: saved, error: e2 } = await db.from('push_config').upsert(row).select().single()
+  const { error: e2 } = await db.from('push_config').update({ public_key: keys.publicKey, private_jwk: keys.privateJwk }).eq('id', 1).is('public_key', null)
   if (e2) throw new Error(e2.message)
+  const { data: saved, error: e3 } = await db.from('push_config').select('*').eq('id', 1).single()
+  if (e3) throw new Error(e3.message)
   return saved
 }
 
@@ -245,16 +250,18 @@ const API = () => `${Deno.env.get('SUPABASE_URL')}/functions/v1/notify`
 const vapidOf = (cfg: Any) => ({ publicKey: cfg.public_key, privateJwk: cfg.private_jwk, subject: 'mailto:reminders@personal-tracker.app' })
 
 /** Sends to every phone/browser of one user. Removes subscriptions the push service says are gone. */
-async function sendToUser(db: Any, cfg: Any, userId: string, build: (sub: Any) => unknown, subsIn?: Any[]) {
+async function sendToUser(db: Any, cfg: Any, userId: string, build: (sub: Any) => unknown, subsIn?: Any[], problems?: string[]) {
   const subs = subsIn ?? (await db.from('push_subscriptions').select('*').eq('user_id', userId)).data ?? []
   let sent = 0
   for (const sub of subs) {
     try {
-      const status = await sendPush(sub as Subscription, build(sub), vapidOf(cfg))
+      const { status, text } = await sendPush(sub as Subscription, build(sub), vapidOf(cfg))
       if (status === 404 || status === 410) await db.from('push_subscriptions').delete().eq('id', sub.id)
-      else if (status < 300) sent++
-    } catch {
-      /* one phone failing must not stop the others */
+      if (status < 300) sent++
+      else problems?.push(`${new URL(sub.endpoint).host} said ${status}${text ? ': ' + text : ''}`)
+    } catch (e) {
+      // one phone failing must not stop the others
+      problems?.push(`Could not send: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
   return sent

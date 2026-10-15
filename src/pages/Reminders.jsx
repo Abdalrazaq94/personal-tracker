@@ -84,10 +84,7 @@ export default function Reminders() {
           )}
           {on && (
             <>
-              <button className="btn" disabled={busy} onClick={() => run(async () => {
-                const r = await sendTest()
-                if (!r?.sent) throw new Error('Nothing was delivered. Turn reminders off and on again.')
-              }, 'Sent. It should arrive in a few seconds.')}>
+              <button className="btn" disabled={busy} onClick={() => run(sendTest, 'Sent. It should arrive in a few seconds.')}>
                 Send a test
               </button>
               <button className="btn btn--ghost" disabled={busy} onClick={() => run(disablePush, 'Reminders are off on this phone.')}>
