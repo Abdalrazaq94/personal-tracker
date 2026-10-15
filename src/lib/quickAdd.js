@@ -98,6 +98,12 @@ async function run(a, lang) {
 const pad = (n) => String(n).padStart(2, '0')
 const ymdOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+// Arabic day names in the same order (Sunday first), with common spellings
+const AR_DAYS = [/الأحد|الاحد/, /الإثنين|الاثنين|الأثنين/, /الثلاثاء|الثلاثا/, /الأربعاء|الاربعاء/, /الخميس/, /الجمعة|الجمعه/, /السبت/]
+// Arabic words don't have \b word edges in JavaScript: use start/space instead
+const ar = (body, flags = '') => new RegExp(`(^|\\s)(?:${body})(?=\\s|$|[،,.!؟?])`, flags)
+/** ٣:٤٠ → 3:40 (Arabic-Indic and Persian digits) */
+const westernDigits = (s) => s.replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
 
 function takeTime(s) {
   const pick = (re, ampmIdx) => {
@@ -112,6 +118,19 @@ function takeTime(s) {
     else if (!ap && h >= 1 && h <= 6) h += 12 // "at 3 40" usually means the afternoon
     return { time: `${pad(h)}:${pad(min)}`, rest: (s.slice(0, m.index) + ' ' + s.slice(m.index + m[0].length)).trim() }
   }
+  // Arabic: "الساعة 3 40", "الساعة ٣:٤٠ مساءً", "3:40 م"
+  const arTime = /(?:(?:^|\s)(?:عند\s+)?(?:الساعة|الساعه|ساعة)\s*(\d{1,2})(?:[:.\s]([0-5]\d))?|(?:^|\s)(\d{1,2})[:.]([0-5]\d))\s*(صباحًا|صباحاً|صباحا|الصبح|ص|مساءً|مساءا|مساء|ظهرًا|ظهراً|ظهرا|عصرًا|عصرا|ليلًا|ليلا|م)?(?=\s|$|[،,.!؟?])/.exec(s)
+  if (arTime && /[\u0600-\u06FF]/.test(s)) {
+    let h = Number(arTime[1] ?? arTime[3])
+    const min = Number(arTime[2] ?? arTime[4] ?? 0)
+    const ap = arTime[5] || ''
+    if (h <= 23 && min <= 59) {
+      if (/^(م|مساء|ظهر|عصر|ليل)/.test(ap) && h < 12) h += 12
+      else if (/^(ص|صباح|الصبح)/.test(ap) && h === 12) h = 0
+      else if (!ap && h >= 1 && h <= 6) h += 12 // "الساعة 3" usually means the afternoon
+      return { time: `${pad(h)}:${pad(min)}`, rest: (s.slice(0, arTime.index) + ' ' + s.slice(arTime.index + arTime[0].length)).trim() }
+    }
+  }
   return (pick(/\b(?:at\s+)?(\d{1,2})(?:[:.\s](\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)/i, 3) ||
   pick(/\bat\s+(\d{1,2})(?:[:.\s]([0-5]\d))?\b/i, 0) ||
   pick(/\b([01]?\d|2[0-3]):([0-5]\d)\b/, 0) || { time: null, rest: s });
@@ -121,6 +140,21 @@ function takeDate(s) {
   const now = new Date()
   const base = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   let m
+  // Arabic
+  if ((m = ar('بعد غد|بعد غدٍ|بعد بكرة|بعد بكره').exec(s))) return { date: ymdOf(new Date(base.getTime() + 2 * 864e5)), rest: s.replace(m[0], ' ') }
+  if ((m = ar('اليوم|الليلة|الليله|هذا المساء|هذا الصباح').exec(s))) return { date: ymdOf(base), rest: s.replace(m[0], ' ') }
+  if ((m = ar('أمس|امس|البارحة|البارحه').exec(s))) return { date: ymdOf(new Date(base.getTime() - 864e5)), rest: s.replace(m[0], ' ') }
+  if ((m = ar('غدًا|غداً|غدا|بكرة|بكره').exec(s))) return { date: ymdOf(new Date(base.getTime() + 864e5)), rest: s.replace(m[0], ' ') }
+  if ((m = /(?:^|\s)بعد\s+(\d{1,2})\s+(?:أيام|ايام|يوم|يومًا|يوما)(?=\s|$)/.exec(s))) return { date: ymdOf(new Date(base.getTime() + Number(m[1]) * 864e5)), rest: s.replace(m[0], ' ') }
+  if ((m = ar('الأسبوع القادم|الاسبوع القادم|الأسبوع الجاي|الاسبوع الجاي').exec(s))) return { date: ymdOf(new Date(base.getTime() + 7 * 864e5)), rest: s.replace(m[0], ' ') }
+  for (let i = 0; i < 7; i++) {
+    const dm = new RegExp(`(^|\\s)(?:يوم\\s+)?(?:${AR_DAYS[i].source})(?:\\s+(?:القادم|الجاي))?(?=\\s|$|[،,.!؟?])`).exec(s)
+    if (dm) {
+      let diff = (i - base.getDay() + 7) % 7
+      if (diff === 0) diff = 7
+      return { date: ymdOf(new Date(base.getTime() + diff * 864e5)), rest: s.replace(dm[0], ' ') }
+    }
+  }
   if ((m = /\b(today|tonight|this (?:morning|afternoon|evening))\b/i.exec(s))) return { date: ymdOf(base), rest: s.replace(m[0], ' ') }
   if ((m = /\b(?:the day after tomorrow)\b/i.exec(s))) return { date: ymdOf(new Date(base.getTime() + 2 * 864e5)), rest: s.replace(m[0], ' ') }
   if ((m = /\byesterday\b/i.exec(s))) return { date: ymdOf(new Date(base.getTime() - 864e5)), rest: s.replace(m[0], ' ') }
@@ -139,27 +173,31 @@ const tidy = (s) =>
   s
     .replace(/\b(on|at|by|for)\s*$/i, '')
     .replace(/^\s*(on|at|by)\b/i, '')
+    .replace(/(^|\s)(في|يوم|الساعة|عند)\s*$/, '')
+    .replace(/^\s*(في|يوم|عند)(?=\s)/, '')
     .replace(/\s{2,}/g, ' ')
-    .replace(/^[\s,.;:-]+|[\s,.;:-]+$/g, '')
+    .replace(/^[\s,.;:،-]+|[\s,.;:،-]+$/g, '')
 
 /** One note → one draft { type, title, date, time, amount, important, habit_id, count }. */
 export function guessOne(raw, habits = []) {
-  let s = raw.trim()
+  let s = westernDigits(raw.trim())
   if (!s) return null
   let m
   if ((m = /^(?:new\s+)?word[:\s]+(.+)$/i.exec(s))) return { type: 'word', title: tidy(m[1]) }
+  if ((m = /^(?:كلمة جديدة|كلمه جديده|كلمة)[:\s]+(.+)$/.exec(s))) return { type: 'word', title: tidy(m[1]) }
   if ((m = /^note[:\s]+(.+)$/i.exec(s))) return { type: 'note', title: m[1].trim() }
-  const important = /\b(important|urgent|asap)\b/i.test(s)
-  s = s.replace(/\b(important|urgent|asap)\b/gi, ' ')
+  if ((m = /^(?:ملاحظة|ملاحظه)[:\s]+(.+)$/.exec(s))) return { type: 'note', title: m[1].trim() }
+  const important = /\b(important|urgent|asap)\b/i.test(s) || ar('مهم|مهمة|عاجل|ضروري').test(s)
+  s = s.replace(/\b(important|urgent|asap)\b/gi, ' ').replace(ar('مهم|مهمة|عاجل|ضروري', 'g'), ' ')
 
   // money: £3.40, 3.40, 12 pounds, $5
-  const money = /(?:[£$€]\s?(\d+(?:[.,]\d{1,2})?))|(?:\b(\d+[.,]\d{2})\b)|(?:\b(\d+(?:[.,]\d{1,2})?)\s?(?:pounds?|quid|gbp|euros?|dollars?)\b)/i.exec(s)
+  const money = /(?:[£$€]\s?(\d+(?:[.,]\d{1,2})?))|(?:\b(\d+[.,]\d{2})\b)|(?:\b(\d+(?:[.,]\d{1,2})?)\s?(?:pounds?|quid|gbp|euros?|dollars?|جنيه|باوند|دولار|يورو|ريال|درهم|دينار)(?=\s|$|\b))/i.exec(s)
   const timeFirst = takeTime(s)
-  if (money && !(timeFirst.time && /\bat\s+\d/i.test(s) && !/[£$€]|pound|quid/i.test(s))) {
+  if (money && !(timeFirst.time && /\bat\s+\d|الساعة|الساعه/i.test(s) && !/[£$€]|pound|quid|جنيه|باوند/i.test(s))) {
     const amount = Number((money[1] || money[2] || money[3]).replace(',', '.'))
     const rest = s.replace(money[0], ' ')
     const d = takeDate(rest)
-    const note = tidy(d.rest.replace(/\b(spent|paid|pay|cost|for|on)\b/gi, ' '))
+    const note = tidy(d.rest.replace(/\b(spent|paid|pay|cost|for|on)\b/gi, ' ').replace(ar('صرفت|دفعت|على|ثمن|سعر', 'g'), ' '))
     return { type: 'expense', amount, title: note, date: d.date || ymdOf(new Date()) }
   }
 

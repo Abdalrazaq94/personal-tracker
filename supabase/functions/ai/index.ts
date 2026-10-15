@@ -249,7 +249,10 @@ async function brief(db: any, b: Body) {
 
   const part = hour < 12 ? 'morning briefing' : hour < 18 ? 'afternoon check-in' : 'evening recap (what got done, what is left, and what to prepare for tomorrow)'
   const text = await askText(
-    'You are a warm, practical personal assistant inside a tracker app. Write in simple English, second person ("you"). ' +
+    'You are a warm, practical personal assistant inside a tracker app. ' +
+      (inArabic(b)
+        ? 'Write in simple Modern Standard Arabic, speaking to the user directly. Keep their own item names exactly as written. '
+        : 'Write in simple English, second person ("you"). ') +
       'No headings, no lists, no greeting line. 2–4 short sentences, max 70 words. Use **bold** for the 1–3 most important items. ' +
       'Prioritise: overdue or important items, habits at risk today, unusual spending. Never invent data.',
     `Write a ${part} from this data:\n${data}`,
@@ -458,9 +461,17 @@ async function analyse(db: any, b: Body) {
       ? 'Analyse my tasks: how I am doing, what is overdue or stuck in "doing", whether important tasks get done, patterns, and 3 concrete suggestions for tomorrow.'
       : 'Analyse my spending: totals this week and month vs earlier, biggest categories (group similar notes), unusual spends, trends, and 3 concrete money-saving suggestions.'
 
-  const text = await askText(system, `Today is ${today}.\n\n${data}\n\n${question ? `My question: ${question}` : task}`)
+  const text = await askText(system + (inArabic(b) ? ARABIC : ''), `Today is ${today}.\n\n${data}\n\n${question ? `My question: ${question}` : task}`)
   return { text }
 }
+
+/* ------------------------------ language -------------------------------- */
+
+// The app sends uiLang: 'ar' when its interface is in Arabic; answers then come back in Arabic.
+const inArabic = (b: Body) => (b as { uiLang?: string }).uiLang === 'ar'
+const ARABIC =
+  ' Write the whole answer in clear, simple Modern Standard Arabic. Keep the user\'s own item names, numbers and currency exactly as in the data. ' +
+  'Keep the same format ("## " headings, "- " bullets, **bold**).'
 
 /* ------------------------------ AI models -------------------------------- */
 

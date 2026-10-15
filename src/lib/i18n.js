@@ -56,6 +56,9 @@ export async function setLang(lang, supabase) {
   }
   try {
     await supabase?.auth.updateUser({ data: { lang } })
+    // reminders are written on the server: tell it the language too (needs migrations/013_lang.sql; ignored if not run yet)
+    const { data } = await supabase.auth.getUser()
+    if (data?.user) await supabase.from('user_settings').upsert({ user_id: data.user.id, lang })
   } catch {
     /* the phone remembers it anyway */
   }

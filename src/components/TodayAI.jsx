@@ -6,7 +6,7 @@ import { MicButton, useListen } from '../lib/speech'
 import { actionFromDraft, draftFromAction, guessLocal, runActions } from '../lib/quickAdd'
 import { supabase } from '../lib/supabase'
 import { Markdown } from './AiPanel'
-import { T, Tr, LOCALE } from '../lib/i18n'
+import { T, Tr, LOCALE, LANG, isAr } from '../lib/i18n'
 
 const CURRENCY = import.meta.env.VITE_CURRENCY || 'GBP'
 
@@ -83,6 +83,7 @@ export function QuickAddAll({ onChanged }) {
   }
 
   const listen = useListen({
+    lang: isAr ? 'ar-SA' : 'en-GB', // speak in the app's language
     onResult: (t) => {
       setText(t)
       read(t)
@@ -251,7 +252,7 @@ export function QuickAddAll({ onChanged }) {
 
 /* ------------------------------ AI day summary ----------------------------- */
 
-const KEY = () => `brief:${today()}`
+const KEY = () => `brief:${LANG}:${today()}`
 
 const readCache = () => {
   try {

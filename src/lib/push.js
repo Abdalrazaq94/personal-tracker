@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { T } from './i18n'
+import { LANG, T } from './i18n'
 
 /** Phone notifications (Web Push). Works in Chrome on Android, desktop browsers, and iPhone when added to the Home Screen. */
 
@@ -99,6 +99,7 @@ export async function enablePush() {
   )
   if (error) throw new Error(/push_subscriptions/.test(error.message) ? T("Run supabase/migrations/008_reminders.sql in Supabase first.") : error.message)
   await saveSettings({ tz: Intl.DateTimeFormat().resolvedOptions().timeZone })
+  await saveSettings({ lang: LANG }).catch(() => {}) // reminders in the app's language (needs migration 013)
 }
 
 export async function disablePush() {

@@ -161,6 +161,12 @@ function soundFor(setting: Any, kind: string) {
   return out
 }
 
+/* ------------------------------ language ------------------------------ */
+// Notifications follow the app's language (user_settings.lang, saved when you switch English / العربية).
+const isAr = (setting: Any) => setting?.lang === 'ar'
+const L = (setting: Any, en: string, ar: string) => (isAr(setting) ? ar : en)
+const PRAYER_AR: Record<string, string> = { fajr: 'الفجر', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء' }
+
 /* ------------------------------ time zones ------------------------------ */
 
 /** Minutes the zone is ahead of UTC at that moment. */
@@ -229,14 +235,14 @@ Deno.serve(async (req) => {
         const kind = DEFAULT_SOUNDS[body.kind] ? body.kind : 'important'
         const snd = soundFor(mySet, kind)
         const sent = await sendToUser(db, cfg, user, (sub) => ({
-          title: '🔔 Reminders are on',
-          body: 'This is how your reminders will look. Tap Done to try the button.',
+          title: L(mySet, '🔔 Reminders are on', '🔔 التذكيرات مفعّلة'),
+          body: L(mySet, 'This is how your reminders will look. Tap Done to try the button.', 'هكذا ستبدو تذكيراتك. اضغط «تم» لتجربة الزر.'),
           tag: 'test',
           renotify: true,
           requireInteraction: false,
           sound: snd.sound,
           ring: false,
-          actions: [{ action: 'done', title: '✓ Done' }],
+          actions: [{ action: 'done', title: L(mySet, '✓ Done', '✓ تم') }],
           data: { kind: 'test', secret: sub.secret, url: '/#/reminders', api: API() },
         }), subs ?? [], problems)
         return json({ sent, devices: (subs ?? []).length, problems, publicKey: cfg.public_key })
@@ -332,24 +338,31 @@ async function tick(db: Any, cfg: Any) {
     if (!why) continue
     const snd = soundFor(setOf.get(p.user_id), p.important ? 'important' : 'plan')
 
+    const set = setOf.get(p.user_id)
     const at = clock(due, tz)
     const dueDay = localDay(due, tz)
+    const weekday = new Intl.DateTimeFormat(isAr(set) ? 'ar' : 'en-GB', { timeZone: tz, weekday: 'long' }).format(new Date(due))
     const dayWord =
       dueDay === localDay(now, tz)
-        ? 'today'
+        ? L(set, 'today', 'اليوم')
         : dueDay === localDay(now + 864e5, tz)
-          ? 'tomorrow'
-          : 'on ' + new Intl.DateTimeFormat('en-GB', { timeZone: tz, weekday: 'long' }).format(new Date(due))
+          ? L(set, 'tomorrow', 'غدًا')
+          : L(set, 'on ' + weekday, 'يوم ' + weekday)
     const left = Math.round((due - now) / MIN)
-    const inWords = left >= 120 ? `In ${Math.round(left / 60)} hours` : left >= 60 ? 'In 1 hour' : `In ${left} min`
+    const inWords =
+      left >= 120
+        ? L(set, `In ${Math.round(left / 60)} hours`, `بعد ${Math.round(left / 60)} ساعات`)
+        : left >= 60
+          ? L(set, 'In 1 hour', 'بعد ساعة')
+          : L(set, `In ${left} min`, `بعد ${left} دقيقة`)
     const body =
       why === 'early'
         ? left >= 6 * 60
-          ? `Reminder · ${dayWord} at ${at}`
-          : `${inWords} · ${dayWord} at ${at}`
+          ? L(set, `Reminder · ${dayWord} at ${at}`, `تذكير · ${dayWord} الساعة ${at}`)
+          : L(set, `${inWords} · ${dayWord} at ${at}`, `${inWords} · ${dayWord} الساعة ${at}`)
         : why === 'again'
-          ? `Still not done (was due at ${at}). Tap Done or Postpone.`
-          : `Now · ${at}${p.important ? ' · important' : ''}`
+          ? L(set, `Still not done (was due at ${at}). Tap Done or Postpone.`, `لم تُنجز بعد (موعدها ${at}). اضغط «تم» أو «تأجيل».`)
+          : L(set, `Now · ${at}${p.important ? ' · important' : ''}`, `الآن · ${at}${p.important ? ' · مهم' : ''}`)
     sent += await sendToUser(
       db,
       cfg,
@@ -363,8 +376,8 @@ async function tick(db: Any, cfg: Any) {
         sound: snd.sound,
         ring: snd.ring && why !== 'early',
         actions: [
-          { action: 'done', title: '✓ Done' },
-          { action: 'snooze', title: 'Postpone 1 h' },
+          { action: 'done', title: L(set, '✓ Done', '✓ تم') },
+          { action: 'snooze', title: L(set, 'Postpone 1 h', 'تأجيل ساعة') },
         ],
         data: { kind: 'plan', id: p.id, secret: sub.secret, url: '/#/plan', api: API() },
       }),
@@ -399,15 +412,17 @@ async function tick(db: Any, cfg: Any) {
       t.user_id,
       (sub) => ({
         title: `${t.priority === 'important' ? '❗' : '📝'} ${t.title}`,
-        body: first ? `Task · ${clock(due, tz)}` : `Still not done (since ${clock(due, tz)}). Tap Done or Postpone.`,
+        body: first
+          ? L(set, `Task · ${clock(due, tz)}`, `مهمة · ${clock(due, tz)}`)
+          : L(set, `Still not done (since ${clock(due, tz)}). Tap Done or Postpone.`, `لم تُنجز بعد (منذ ${clock(due, tz)}). اضغط «تم» أو «تأجيل».`),
         tag: `task-${t.id}`,
         renotify: true,
         requireInteraction: snd.ring,
         sound: snd.sound,
         ring: snd.ring,
         actions: [
-          { action: 'done', title: '✓ Done' },
-          { action: 'snooze', title: 'Postpone 1 h' },
+          { action: 'done', title: L(set, '✓ Done', '✓ تم') },
+          { action: 'snooze', title: L(set, 'Postpone 1 h', 'تأجيل ساعة') },
         ],
         data: { kind: 'task', id: t.id, secret: sub.secret, url: '/#/tasks', api: API() },
       }),
@@ -445,16 +460,18 @@ async function tick(db: Any, cfg: Any) {
         cfg,
         s.user_id,
         (sub) => ({
-          title: `🕌 ${name} · ${clock(start, tz)}`,
-          body: first ? `Time for ${name}${place.name ? ` (${place.name})` : ''}` : `${name} isn't marked yet. Did you pray?`,
+          title: `🕌 ${L(s, name, PRAYER_AR[key])} · ${clock(start, tz)}`,
+          body: first
+            ? L(s, `Time for ${name}${place.name ? ` (${place.name})` : ''}`, `حان وقت صلاة ${PRAYER_AR[key]}${place.name ? ` (${place.name})` : ''}`)
+            : L(s, `${name} isn't marked yet. Did you pray?`, `لم تُسجَّل صلاة ${PRAYER_AR[key]} بعد. هل صلّيت؟`),
           tag: `prayer-${day}-${key}`,
           renotify: true,
           requireInteraction: snd.ring,
           sound: snd.sound,
           ring: snd.ring,
           actions: [
-            { action: 'ontime', title: '✓ Prayed' },
-            { action: 'snooze', title: 'Remind in 10 min' },
+            { action: 'ontime', title: L(s, '✓ Prayed', '✓ صلّيت') },
+            { action: 'snooze', title: L(s, 'Remind in 10 min', 'ذكّرني بعد 10 دقائق') },
           ],
           data: { kind: 'prayer', day, prayer: key, secret: sub.secret, url: '/#/commit', api: API() },
         }),
