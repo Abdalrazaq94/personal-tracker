@@ -85,6 +85,9 @@ export const SOUNDS = {
   },
 }
 
+// "Adhan" plays your own recording (see lib/adhan.js); only offered for prayers
+export const ADHAN = { id: 'adhan', label: 'Adhan (your recording)', vibrate: [400, 200, 400, 200, 1200] }
+
 export const SOUND_IDS = Object.keys(SOUNDS)
 
 // what each kind of reminder uses until you change it

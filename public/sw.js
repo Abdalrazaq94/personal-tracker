@@ -9,6 +9,7 @@ const VIBRATE = {
   marimba: [150, 80, 150, 80, 150, 80, 400],
   gentle: [1000],
   ping: [120],
+  adhan: [400, 200, 400, 200, 1200],
 }
 
 self.addEventListener('install', () => self.skipWaiting())

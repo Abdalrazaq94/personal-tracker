@@ -1025,3 +1025,13 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .home-glare .home-tile__text span { color: #555; }
 .home-glare:hover { border-color: #bdbdbd; }
 
+
+/* adhan recordings */
+.adhan-box { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: var(--radius-sm); background: #f8f2e8; border: 1px solid #ecdfc9; }
+.adhan-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.adhan-row__text { display: flex; flex-direction: column; min-width: 0; flex: 1 1 160px; }
+.adhan-row__text .small { overflow-wrap: anywhere; }
+.adhan-row__btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.adhan-pick { position: relative; overflow: hidden; cursor: pointer; }
+.adhan-pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.adhan-box .btn--ghost { background: #fff; }

@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { ErrorBar, PageHeader, Segmented } from '../components/ui'
-import { KINDS, playSound, SOUNDS, soundsWith } from '../lib/sounds'
+import { ADHAN, KINDS, playSound, SOUNDS, soundsWith } from '../lib/sounds'
+import { getAdhan, playAdhan, removeAdhan, saveAdhan } from '../lib/adhan'
 import InstallApp from '../components/InstallApp'
 import { blockedHelp, currentStatus, disablePush, enablePush, loadSettings, saveSettings, sendTest } from '../lib/push'
 
@@ -49,7 +50,9 @@ export default function Reminders() {
   const sounds = soundsWith(settings?.sounds)
   const locked = busy || !settings || settings.needsSounds || settings.needsUpdate
 
+  const adhanRef = useRef(null)
   const preview = (id) => {
+    if (id === 'adhan') return
     playSound(id)
     const vib = SOUNDS[id]?.vibrate
     if (vib && navigator.vibrate) navigator.vibrate(vib)
@@ -135,13 +138,19 @@ export default function Reminders() {
               </div>
               <div className="snd-row__controls">
                 <select className="rem-select" aria-label={`${k.label} sound`} value={v.sound} disabled={locked} onChange={(e) => setSound(k.id, { sound: e.target.value })}>
+                  {k.id === 'prayer' && <option value="adhan">🕌 {ADHAN.label}</option>}
                   {Object.entries(SOUNDS).map(([id, x]) => (
                     <option key={id} value={id}>
                       {x.label}
                     </option>
                   ))}
                 </select>
-                <button type="button" className="btn btn--ghost snd-play" aria-label={`Play ${SOUNDS[v.sound]?.label}`} onClick={() => preview(v.sound)}>
+                <button
+                  type="button"
+                  className="btn btn--ghost snd-play"
+                  aria-label={`Play ${v.sound === 'adhan' ? 'adhan' : SOUNDS[v.sound]?.label}`}
+                  onClick={() => (v.sound === 'adhan' ? adhanRef.current?.toggle('adhan') : preview(v.sound))}
+                >
                   ▶
                 </button>
                 <Segmented
@@ -154,6 +163,7 @@ export default function Reminders() {
                   ]}
                 />
               </div>
+              {k.id === 'prayer' && v.sound === 'adhan' && <AdhanFiles ref={adhanRef} />}
             </div>
           )
         })}
@@ -201,6 +211,10 @@ export default function Reminders() {
           <li>
             Tap <b>Sound</b> and choose a long one, such as an alarm tone. Also turn on <b>Override Do Not Disturb</b> if you want prayers to
             ring at night.
+          </li>
+          <li>
+            <b>Adhan when the app is closed:</b> save your adhan mp3 on your phone, then in that same <b>Sound</b> screen choose it from your
+            files (on many phones: <b>Sound → Add</b> or <b>My sounds</b>). Note it then plays for all Tracker reminders, not only prayers.
           </li>
         </ol>
       </section>
@@ -281,3 +295,90 @@ function Diagnostics({ status }) {
   }, [status])
   return info ? <p className="muted small rem-diag">{info}</p> : null
 }
+
+/** Choose your adhan recording(s). They stay on this phone. */
+const AdhanFiles = forwardRef(function AdhanFiles(_, ref) {
+  const [files, setFiles] = useState({ adhan: null, 'adhan-fajr': null })
+  const [playing, setPlaying] = useState(null) // which slot is playing
+  const [error, setError] = useState('')
+  const stopRef = useRef(null)
+
+  const load = async () => {
+    const [a, f] = await Promise.all([getAdhan('adhan'), getAdhan('adhan-fajr')])
+    setFiles({ adhan: a ? { name: a.name, size: a.size } : null, 'adhan-fajr': f ? { name: f.name, size: f.size } : null })
+  }
+  useEffect(() => {
+    load()
+    return () => stopRef.current?.()
+  }, [])
+
+  const stop = () => {
+    stopRef.current?.()
+    stopRef.current = null
+    setPlaying(null)
+  }
+  const toggle = async (slot) => {
+    if (playing) return stop()
+    const st = await playAdhan(slot === 'adhan-fajr' ? 'fajr' : 'dhuhr')
+    if (!st) return setError('Choose your adhan recording first.')
+    stopRef.current = st
+    setPlaying(slot)
+  }
+  useImperativeHandle(ref, () => ({ toggle }))
+
+  const pick = async (slot, file) => {
+    setError('')
+    if (!file) return
+    try {
+      await saveAdhan(slot, file)
+      await load()
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  const row = (slot, label, hint) => (
+    <div className="adhan-row">
+      <div className="adhan-row__text">
+        <strong>{label}</strong>
+        <span className="muted small">{files[slot] ? `${files[slot].name} · ${(files[slot].size / 1048576).toFixed(1)} MB` : hint}</span>
+      </div>
+      <div className="adhan-row__btns">
+        {files[slot] && (
+          <button type="button" className="btn btn--ghost btn--sm" onClick={() => toggle(slot)}>
+            {playing === slot ? '■ Stop' : '▶ Play'}
+          </button>
+        )}
+        <label className="btn btn--sm adhan-pick">
+          {files[slot] ? 'Change' : 'Choose file'}
+          <input type="file" accept="audio/*,.mp3,.m4a,.ogg,.wav" onChange={(e) => pick(slot, e.target.files?.[0])} />
+        </label>
+        {files[slot] && (
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            aria-label={`Remove ${label}`}
+            onClick={async () => {
+              stop()
+              await removeAdhan(slot)
+              load()
+            }}
+          >
+            ✕
+          </button>
+        )}
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="adhan-box">
+      {row('adhan', 'Adhan recording', 'Choose an adhan audio file (mp3) from your phone')}
+      {row('adhan-fajr', 'Fajr adhan (optional)', 'A different recording just for Fajr')}
+      {error && <p className="small error-text">{error}</p>}
+      <p className="muted small">
+        With the app open, the full adhan plays when it’s prayer time (tap “Stop the adhan” any time). The recording is kept on this phone only.
+      </p>
+    </div>
+  )
+})
