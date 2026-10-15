@@ -1,8 +1,8 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { ErrorBar, PageHeader, Segmented } from '../components/ui'
-import { ADHAN, KINDS, playSound, SOUNDS, soundsWith } from '../lib/sounds'
-import { getAdhan, playAdhan, removeAdhan, saveAdhan } from '../lib/adhan'
+import { ADHAN_CHOICES, KINDS, playSound, SOUNDS, soundsWith } from '../lib/sounds'
+import { BUILTIN_ADHANS, getAdhan, isAdhan, playAdhan, removeAdhan, saveAdhan } from '../lib/adhan'
 import InstallApp from '../components/InstallApp'
 import { blockedHelp, currentStatus, disablePush, enablePush, loadSettings, saveSettings, sendTest } from '../lib/push'
 
@@ -50,9 +50,28 @@ export default function Reminders() {
   const sounds = soundsWith(settings?.sounds)
   const locked = busy || !settings || settings.needsSounds || settings.needsUpdate
 
-  const adhanRef = useRef(null)
+  // preview an adhan (tap again to stop)
+  const adhanStop = useRef(null)
+  const [adhanPlaying, setAdhanPlaying] = useState(false)
+  const stopAdhan = () => {
+    adhanStop.current?.()
+    adhanStop.current = null
+    setAdhanPlaying(false)
+  }
+  const toggleAdhan = async (choice) => {
+    if (adhanPlaying) return stopAdhan()
+    setAdhanPlaying(true)
+    const st = await playAdhan('dhuhr', choice)
+    if (!st) {
+      setAdhanPlaying(false)
+      setError('Couldn’t play the adhan. Check your internet connection and try again.')
+      return
+    }
+    adhanStop.current = st
+  }
+  useEffect(() => () => adhanStop.current?.(), [])
   const preview = (id) => {
-    if (id === 'adhan') return
+    if (isAdhan(id)) return
     playSound(id)
     const vib = SOUNDS[id]?.vibrate
     if (vib && navigator.vibrate) navigator.vibrate(vib)
@@ -60,7 +79,10 @@ export default function Reminders() {
 
   const setSound = (kind, patch) => {
     const next = { ...sounds, [kind]: { ...sounds[kind], ...patch } }
-    if (patch.sound) preview(patch.sound)
+    if (patch.sound) {
+      stopAdhan()
+      preview(patch.sound)
+    }
     setSettings((s) => ({ ...s, sounds: next }))
     run(async () => {
       await saveSettings({ sounds: next, ...(kind === 'prayer' ? { prayer_repeat: next.prayer.ring } : {}) })
@@ -138,7 +160,12 @@ export default function Reminders() {
               </div>
               <div className="snd-row__controls">
                 <select className="rem-select" aria-label={`${k.label} sound`} value={v.sound} disabled={locked} onChange={(e) => setSound(k.id, { sound: e.target.value })}>
-                  {k.id === 'prayer' && <option value="adhan">🕌 {ADHAN.label}</option>}
+                  {k.id === 'prayer' &&
+                    ADHAN_CHOICES.map(([id, label]) => (
+                      <option key={id} value={id}>
+                        {label}
+                      </option>
+                    ))}
                   {Object.entries(SOUNDS).map(([id, x]) => (
                     <option key={id} value={id}>
                       {x.label}
@@ -148,10 +175,10 @@ export default function Reminders() {
                 <button
                   type="button"
                   className="btn btn--ghost snd-play"
-                  aria-label={`Play ${v.sound === 'adhan' ? 'adhan' : SOUNDS[v.sound]?.label}`}
-                  onClick={() => (v.sound === 'adhan' ? adhanRef.current?.toggle('adhan') : preview(v.sound))}
+                  aria-label={isAdhan(v.sound) ? (adhanPlaying ? 'Stop the adhan' : 'Play the adhan') : `Play ${SOUNDS[v.sound]?.label}`}
+                  onClick={() => (isAdhan(v.sound) ? toggleAdhan(v.sound) : preview(v.sound))}
                 >
-                  ▶
+                  {isAdhan(v.sound) && adhanPlaying ? '■' : '▶'}
                 </button>
                 <Segmented
                   small
@@ -163,7 +190,20 @@ export default function Reminders() {
                   ]}
                 />
               </div>
-              {k.id === 'prayer' && v.sound === 'adhan' && <AdhanFiles ref={adhanRef} />}
+              {k.id === 'prayer' && v.sound === 'adhan-mine' && <AdhanFiles />}
+              {k.id === 'prayer' && (
+                <p className="muted small adhan-credit">
+                  Adhan 1 and 2 are free recordings from Wikimedia Commons (
+                  <a href={BUILTIN_ADHANS.adhan.page} target="_blank" rel="noreferrer">
+                    1
+                  </a>
+                  ,{' '}
+                  <a href={BUILTIN_ADHANS.adhan2.page} target="_blank" rel="noreferrer">
+                    2
+                  </a>
+                  : author and licence). They need the internet to play.
+                </p>
+              )}
             </div>
           )
         })}
@@ -297,7 +337,7 @@ function Diagnostics({ status }) {
 }
 
 /** Choose your adhan recording(s). They stay on this phone. */
-const AdhanFiles = forwardRef(function AdhanFiles(_, ref) {
+function AdhanFiles() {
   const [files, setFiles] = useState({ adhan: null, 'adhan-fajr': null })
   const [playing, setPlaying] = useState(null) // which slot is playing
   const [error, setError] = useState('')
@@ -319,12 +359,11 @@ const AdhanFiles = forwardRef(function AdhanFiles(_, ref) {
   }
   const toggle = async (slot) => {
     if (playing) return stop()
-    const st = await playAdhan(slot === 'adhan-fajr' ? 'fajr' : 'dhuhr')
+    const st = await playAdhan(slot === 'adhan-fajr' ? 'fajr' : 'dhuhr', 'adhan-mine')
     if (!st) return setError('Choose your adhan recording first.')
     stopRef.current = st
     setPlaying(slot)
   }
-  useImperativeHandle(ref, () => ({ toggle }))
 
   const pick = async (slot, file) => {
     setError('')
@@ -376,9 +415,7 @@ const AdhanFiles = forwardRef(function AdhanFiles(_, ref) {
       {row('adhan', 'Adhan recording', 'Choose an adhan audio file (mp3) from your phone')}
       {row('adhan-fajr', 'Fajr adhan (optional)', 'A different recording just for Fajr')}
       {error && <p className="small error-text">{error}</p>}
-      <p className="muted small">
-        With the app open, the full adhan plays when it’s prayer time (tap “Stop the adhan” any time). The recording is kept on this phone only.
-      </p>
+      <p className="muted small">Your recording is kept on this phone only. If none is chosen, Adhan 1 plays.</p>
     </div>
   )
-})
+}

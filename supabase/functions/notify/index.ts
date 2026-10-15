@@ -151,7 +151,7 @@ const DEFAULT_SOUNDS: Record<string, { sound: string; ring: boolean }> = {
   plan: { sound: 'chime', ring: false },
   important: { sound: 'alarm', ring: true },
   task: { sound: 'marimba', ring: false },
-  prayer: { sound: 'bell', ring: true },
+  prayer: { sound: 'adhan', ring: true },
 }
 function soundFor(setting: Any, kind: string) {
   const saved = setting?.sounds?.[kind]

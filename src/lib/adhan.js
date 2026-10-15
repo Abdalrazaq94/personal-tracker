@@ -34,20 +34,76 @@ export async function saveAdhan(slot, file) {
 export const getAdhan = (slot) => tx('readonly', (s) => s.get(slot)).catch(() => null)
 export const removeAdhan = (slot) => tx('readwrite', (s) => s.delete(slot))
 
-/** Plays your adhan (Fajr's own one for Fajr, if you added it). Returns stop(), or null if no file is saved. */
-export async function playAdhan(prayer) {
+/**
+ * Built-in adhan recordings, ready for everyone. They stream from Wikimedia Commons, which only hosts freely licensed files
+ * (author and licence on each file page, linked from the Reminders page). Each one tries an mp3 copy first (plays on every phone),
+ * then the original file.
+ */
+const WM = 'https://upload.wikimedia.org/wikipedia/commons'
+export const BUILTIN_ADHANS = {
+  adhan: {
+    label: 'Adhan 1',
+    page: 'https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg',
+    sources: [
+      `${WM}/transcoded/b/b0/Beautiful_adhan.ogg/Beautiful_adhan.ogg.mp3`,
+      `${WM}/b/b0/Beautiful_adhan.ogg`,
+      'https://commons.wikimedia.org/wiki/Special:FilePath/Beautiful_adhan.ogg',
+    ],
+  },
+  adhan2: {
+    label: 'Adhan 2',
+    page: 'https://commons.wikimedia.org/wiki/File:Adhan_wiki.oga',
+    sources: [
+      `${WM}/transcoded/1/16/Adhan_wiki.oga/Adhan_wiki.oga.mp3`,
+      `${WM}/1/16/Adhan_wiki.oga`,
+      'https://commons.wikimedia.org/wiki/Special:FilePath/Adhan_wiki.oga',
+    ],
+  },
+}
+export const isAdhan = (id) => id === 'adhan' || id === 'adhan2' || id === 'adhan-mine'
+
+/** Plays audio from the first source that works. Resolves to stop(), or null if none could play. */
+function playFirst(sources, onEnd) {
+  return new Promise((resolve) => {
+    let i = 0
+    let audio = null
+    let stopped = false
+    const stop = () => {
+      if (stopped) return
+      stopped = true
+      audio?.pause()
+      onEnd?.()
+    }
+    const next = () => {
+      if (i >= sources.length) return resolve(null)
+      audio = new Audio(sources[i++])
+      audio.preload = 'auto'
+      audio.addEventListener('error', next, { once: true })
+      audio.addEventListener('ended', stop, { once: true })
+      audio.play().then(() => resolve(stop)).catch((e) => {
+        // blocked autoplay is not "missing": keep the element so it plays as soon as the browser allows
+        if (e?.name === 'NotAllowedError') resolve(stop)
+        else next()
+      })
+    }
+    next()
+  })
+}
+
+/** Your own recording (Fajr's own one for Fajr, if you added it). Resolves to stop(), or null if none is saved. */
+async function playMine(prayer) {
   const rec = (prayer === 'fajr' && (await getAdhan('adhan-fajr'))) || (await getAdhan('adhan'))
   if (!rec?.blob) return null
   const url = URL.createObjectURL(rec.blob)
-  const audio = new Audio(url)
-  audio.play().catch(() => {})
-  let stopped = false
-  const stop = () => {
-    if (stopped) return
-    stopped = true
-    audio.pause()
-    URL.revokeObjectURL(url)
-  }
-  audio.addEventListener('ended', stop)
-  return stop
+  return playFirst([url], () => URL.revokeObjectURL(url))
+}
+
+/**
+ * Plays the adhan you picked: 'adhan' / 'adhan2' (built in) or 'adhan-mine' (your recording).
+ * Falls back to the other choices if one can't play (e.g. offline). Resolves to stop(), or null if nothing could play.
+ */
+export async function playAdhan(prayer, choice = 'adhan') {
+  if (choice === 'adhan-mine') return (await playMine(prayer)) || playFirst(BUILTIN_ADHANS.adhan.sources)
+  const first = BUILTIN_ADHANS[choice] || BUILTIN_ADHANS.adhan
+  return (await playFirst(first.sources)) || (await playMine(prayer))
 }

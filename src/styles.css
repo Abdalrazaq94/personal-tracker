@@ -1035,3 +1035,4 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .adhan-pick { position: relative; overflow: hidden; cursor: pointer; }
 .adhan-pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .adhan-box .btn--ghost { background: #fff; }
+.adhan-credit { margin: 0; font-size: 12px; } .adhan-credit a { color: inherit; }

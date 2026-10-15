@@ -10,6 +10,8 @@ const VIBRATE = {
   gentle: [1000],
   ping: [120],
   adhan: [400, 200, 400, 200, 1200],
+  adhan2: [400, 200, 400, 200, 1200],
+  'adhan-mine': [400, 200, 400, 200, 1200],
 }
 
 self.addEventListener('install', () => self.skipWaiting())

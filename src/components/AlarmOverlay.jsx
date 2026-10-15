@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ADHAN, playSound, SOUNDS } from '../lib/sounds'
-import { playAdhan } from '../lib/adhan'
+import { isAdhan, playAdhan } from '../lib/adhan'
 
 /**
  * When a reminder arrives while the app is open, this plays the sound you picked for that kind of reminder.
@@ -17,7 +17,7 @@ export default function AlarmOverlay() {
     const onMsg = (e) => {
       const m = e.data || {}
       // a repeat of the same prayer while its adhan is still playing doesn't restart it
-      if (m.type === 'tracker-alarm') setAlarm((a) => (a && a.tag === m.tag && m.sound === 'adhan' ? a : { ...m, at: Date.now() }))
+      if (m.type === 'tracker-alarm') setAlarm((a) => (a && a.tag === m.tag && isAdhan(m.sound) ? a : { ...m, at: Date.now() }))
       if (m.type === 'tracker-alarm-stop') setAlarm((a) => (a && (!m.tag || a.tag === m.tag) ? null : a))
     }
     navigator.serviceWorker.addEventListener('message', onMsg)
@@ -30,11 +30,11 @@ export default function AlarmOverlay() {
     let stopFile = null
     let cancelled = false
     let stopBeep = () => {}
-    if (alarm.sound === 'adhan') {
-      playAdhan(alarm.data?.prayer).then((st) => {
+    if (isAdhan(alarm.sound)) {
+      playAdhan(alarm.data?.prayer, alarm.sound).then((st) => {
         if (cancelled) return st?.()
         if (st) stopFile = st
-        else stopBeep = playSound('bell', { loop: !!alarm.ring }) // no recording saved on this phone
+        else stopBeep = playSound('bell', { loop: !!alarm.ring }) // no adhan could play (e.g. offline)
       })
     } else stopBeep = playSound(alarm.sound, { loop: !!alarm.ring })
     const stop = () => {
@@ -43,10 +43,10 @@ export default function AlarmOverlay() {
       stopBeep()
     }
     stopRef.current = stop
-    const vib = alarm.sound === 'adhan' ? ADHAN.vibrate : SOUNDS[alarm.sound]?.vibrate
+    const vib = isAdhan(alarm.sound) ? ADHAN.vibrate : SOUNDS[alarm.sound]?.vibrate
     if (vib && navigator.vibrate) navigator.vibrate(vib)
     // a ringing alarm stops after 2 minutes (the adhan after 6); a one-time banner hides after 12 seconds (the adhan keeps playing until you close it)
-    const long = alarm.sound === 'adhan'
+    const long = isAdhan(alarm.sound)
     const t = setTimeout(() => (alarm.ring || long ? stop() : setAlarm(null)), alarm.ring || long ? (long ? 6 : 2) * 60 * 1000 : 12000)
     return () => {
       clearTimeout(t)
@@ -119,7 +119,7 @@ export default function AlarmOverlay() {
         {alarm.body && <p className="alarm__body">{alarm.body}</p>}
         <div className="alarm__actions">{buttons}</div>
         <button className="alarm__mute" onClick={() => stopRef.current?.()}>
-          {alarm.sound === 'adhan' ? 'Stop the adhan' : 'Stop the sound'}
+          {isAdhan(alarm.sound) ? 'Stop the adhan' : 'Stop the sound'}
         </button>
       </div>
     </div>

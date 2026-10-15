@@ -85,8 +85,13 @@ export const SOUNDS = {
   },
 }
 
-// "Adhan" plays your own recording (see lib/adhan.js); only offered for prayers
-export const ADHAN = { id: 'adhan', label: 'Adhan (your recording)', vibrate: [400, 200, 400, 200, 1200] }
+// Adhan choices (see lib/adhan.js); only offered for prayers
+export const ADHAN = { vibrate: [400, 200, 400, 200, 1200] }
+export const ADHAN_CHOICES = [
+  ['adhan', '🕌 Adhan 1'],
+  ['adhan2', '🕌 Adhan 2'],
+  ['adhan-mine', '🕌 My own adhan recording'],
+]
 
 export const SOUND_IDS = Object.keys(SOUNDS)
 
@@ -101,7 +106,7 @@ export const DEFAULT_SOUNDS = {
   plan: { sound: 'chime', ring: false },
   important: { sound: 'alarm', ring: true },
   task: { sound: 'marimba', ring: false },
-  prayer: { sound: 'bell', ring: true },
+  prayer: { sound: 'adhan', ring: true },
 }
 export const soundsWith = (saved) => {
   const out = {}
