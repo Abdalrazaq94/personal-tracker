@@ -3,7 +3,6 @@ import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from
 import { useBackToClose } from './lib/useBack'
 import PageGuard from './components/PageGuard'
 import AlarmOverlay from './components/AlarmOverlay'
-import Galaxy from './components/reactbits/Galaxy'
 import { MotionConfig, motion } from 'motion/react'
 import InstallApp from './components/InstallApp'
 import { configured, supabase } from './lib/supabase'
@@ -61,26 +60,6 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user">
     <div className="shell">
-      {/* React Bits Galaxy: a black starfield behind everything; stars drift away from your finger or mouse */}
-      <div className="app-bg" aria-hidden>
-        <Galaxy
-          saturation={0}
-          density={1}
-          glowIntensity={0.3}
-          flareIntensity={0.8}
-          twinkleIntensity={0.4}
-          starSpeed={0.3}
-          speed={0.8}
-          rotationSpeed={0.05}
-          layers={4}
-          mouseRepulsion
-          repulsionStrength={2}
-          clickWarp={false}
-          transparent={false}
-          backgroundColor="#000000"
-          dpr={1.5}
-        />
-      </div>
       <MobileBar pathname={pathname} email={session.user.email} />
       <AlarmOverlay />
       <nav className="topbar" aria-label="Sections">
