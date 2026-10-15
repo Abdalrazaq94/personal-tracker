@@ -905,3 +905,17 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .up-day { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #666; margin: 4px 0 0; }
 .up-day.is-late { color: #b3261e; }
 .day-brief__note { margin: 0; color: #bdbdbd; font-size: 13px; }
+
+/* home: today's prayers */
+.pt-row { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.pt { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; border-radius: 12px; background: #f4f4f4; text-align: center; min-width: 0; }
+.pt strong { font-size: 12.5px; }
+.pt span { font-size: 12px; color: #555; }
+.pt--done, .pt--late { background: #e6f2e8; }
+.pt--done span, .pt--late span { color: #2f7a3f; font-weight: 700; }
+.pt--now { background: var(--fg); color: var(--bg); }
+.pt--now span { color: var(--bg); font-weight: 700; }
+.pt--missed { background: #fbe9e7; }
+.pt--missed span { color: #b3261e; font-weight: 700; }
+.pt-act { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.pt-act--missed b { color: #b3261e; }

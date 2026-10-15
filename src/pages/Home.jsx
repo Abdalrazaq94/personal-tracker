@@ -5,7 +5,8 @@ import { money, parseYmd, startOfMonth, today, ymd } from '../lib/dates'
 import { dayState, isBad, logOn, planned } from '../lib/habits'
 import { SpeakButton } from '../lib/speech'
 import { DayBrief, QuickAddAll } from '../components/TodayAI'
-import { inWords, nextPrayer, placeToday } from '../lib/prayer'
+import { inWords, nextPrayer, placeToday, PRAYERS, timesFor } from '../lib/prayer'
+import TaskChart from '../components/TaskChart'
 import { currentStatus } from '../lib/push'
 
 const PRIORITY = { doing: 0, todo: 1 }
@@ -54,28 +55,42 @@ export default function Home({ session }) {
   const [note, setNote] = useState('')
   const [reload, setReload] = useState(0)
   const [prayer, setPrayer] = useState(null) // the next prayer, if a city is chosen
+  const [place, setPlace] = useState(undefined) // the city for prayer times (null = not chosen)
+  const [prayerLogs, setPrayerLogs] = useState(null) // today's marked prayers: Map prayer → row
   const [remind, setRemind] = useState(null) // reminders on / off on this phone
 
   useEffect(() => {
     currentStatus()
       .then(setRemind)
       .catch(() => {})
-    supabase.auth.getUser().then(({ data }) => {
-      const place = data?.user?.user_metadata?.prayer
-      if (!place) return
+    supabase.auth.getUser().then(async ({ data }) => {
+      const pl = data?.user?.user_metadata?.prayer || null
+      setPlace(pl)
+      if (!pl) return
+      const day = placeToday(pl.tz)
       try {
-        setPrayer(nextPrayer(place, placeToday(place.tz)))
+        setPrayer(nextPrayer(pl, day))
       } catch {
         /* no prayer times */
       }
+      const { data: rows } = await supabase.from('prayer_logs').select('prayer, late').eq('day', day)
+      setPrayerLogs(new Map((rows || []).map((r) => [r.prayer, r])))
     })
   }, [])
+
+  // mark a prayer from Home (late = prayed after its time)
+  const markPrayer = async (key, late) => {
+    const day = placeToday(place?.tz)
+    setPrayerLogs((m) => new Map(m || []).set(key, { prayer: key, late }))
+    const { error } = await supabase.from('prayer_logs').upsert({ day, prayer: key, late }, { onConflict: 'user_id,day,prayer' })
+    if (error) setError(error.message)
+  }
 
   useEffect(() => {
     const t = today()
     const load = async () => {
       const [tasks, plans, habits, logs, words, spend, links, notes] = await Promise.all([
-        supabase.from('tasks').select('*').neq('status', 'done'),
+        supabase.from('tasks').select('*'),
         supabase.from('plans').select('*').lte('plan_date', addDays(t, 7)).eq('done', false),
         supabase.from('habits').select('*').order('created_at', { ascending: true }),
         supabase.from('habit_logs').select('*').eq('day', t),
@@ -87,7 +102,8 @@ export default function Home({ session }) {
       const err = [tasks, plans, habits, logs, words, spend].find((r) => r.error)?.error
       if (err) setError(err.message)
       setD({
-        tasks: (tasks.data || []).sort(
+        allTasks: tasks.data || [],
+        tasks: (tasks.data || []).filter((x) => x.status !== 'done').sort(
           (a, b) =>
             (a.priority === 'important' ? 0 : 1) - (b.priority === 'important' ? 0 : 1) ||
             PRIORITY[a.status] - PRIORITY[b.status] ||
@@ -111,7 +127,12 @@ export default function Home({ session }) {
   // ---- actions (update the screen immediately, then save) ----
   const doneTask = async (task) => {
     const next = task.status === 'done' ? 'todo' : 'done'
-    setD((x) => ({ ...x, tasks: x.tasks.map((t) => (t.id === task.id ? { ...t, status: next } : t)) }))
+    const done_at = next === 'done' ? new Date().toISOString() : null
+    setD((x) => ({
+      ...x,
+      tasks: x.tasks.map((t) => (t.id === task.id ? { ...t, status: next } : t)),
+      allTasks: x.allTasks.map((t) => (t.id === task.id ? { ...t, status: next, done_at } : t)),
+    }))
     const { error } = await supabase.from('tasks').update({ status: next }).eq('id', task.id)
     if (error) setError(error.message)
   }
@@ -200,9 +221,17 @@ export default function Home({ session }) {
     if (g) g[1].push(it)
     else groups.push([label, [it]])
   }
+  const openTasks = d
+    ? [...d.tasks]
+        .sort((a, b) => (a.remind_at ? 0 : 1) - (b.remind_at ? 0 : 1) || (a.remind_at || '').localeCompare(b.remind_at || ''))
+        .slice(0, 8)
+    : []
+  const planGroups = groups
+    .map(([label, list]) => [label, list.filter((x) => x.kind === 'Plan')])
+    .filter(([, list]) => list.length)
   const allUntimed = d ? d.tasks.filter((x) => !x.remind_at) : []
   const untimed = allUntimed.slice(0, 6)
-  const moreTasks = Math.max(0, allUntimed.length - untimed.length)
+  const moreTasks = d ? Math.max(0, d.tasks.length - openTasks.length) : 0
 
   const items = d
     ? [
@@ -305,72 +334,37 @@ export default function Home({ session }) {
         <div className="empty muted">Loading your day…</div>
       ) : (
         <>
-          {/* ------------------------------ upcoming ------------------------------ */}
-          <section className="today-card">
-            <div className="today-head">
-              <h2>
-                Upcoming
-                {items.length > 0 && (
-                  <span className="muted small">
-                    {' '}
-                    · {doneCount} of {items.length} done today
-                  </span>
-                )}
-              </h2>
-              <Link to="/plan">Plan →</Link>
-            </div>
-            {items.length > 0 && (
-              <div className="progress">
-                <span style={{ width: `${(doneCount / items.length) * 100}%` }} />
-              </div>
-            )}
+          {/* ------------------------------ microphone + AI summary ------------------------------ */}
+          <QuickAddAll onChanged={() => setReload((n) => n + 1)} />
+          <DayBrief fallback={plainBrief()} />
 
-            {upcoming.length === 0 && untimed.length === 0 ? (
+          {/* ------------------------------ daily tasks: chart, then the list ------------------------------ */}
+          <section className="today-card">
+            <SectionHead title="Daily tasks" to="/tasks" note={`${d.tasks.filter((x) => x.status !== 'done').length} to do`} />
+            <TaskChart tasks={d.allTasks} today={t} />
+            {d.allTasks.length > 0 && !d.allTasks.some((x) => 'done_at' in x) && (
+              <p className="muted small">To see what you finish each day, run supabase/migrations/011_task_done_at.sql in Supabase once.</p>
+            )}
+            {openTasks.length === 0 ? (
               <p className="muted small">
-                Nothing coming up. <Link to="/tasks">Add a task</Link> or <Link to="/plan">plan something</Link>.
+                No tasks to do. <Link to="/tasks">Add a task</Link>
               </p>
             ) : (
-              <>
-                {groups.map(([label, list]) => (
-                  <div key={label} className="up-group">
-                    <h3 className={`up-day ${label === 'Overdue' ? 'is-late' : ''}`}>{label}</h3>
-                    <ul className="today-list">
-                      {list.map((it) => (
-                        <li key={it.key} className={it.done ? 'is-done' : ''}>
-                          <button className={`check ${it.done ? 'is-on' : ''}`} aria-label="Done" onClick={it.toggle}>
-                            {it.done ? '✓' : ''}
-                          </button>
-                          <span dir="auto" className="today-list__text">
-                            {it.time && <strong className="plan__time">{it.time}</strong>}
-                            {it.title}
-                          </span>
-                          {it.important && <span className="tag tag--solid">!</span>}
-                          <span className="tag">{it.kind}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+              <ul className="today-list">
+                {openTasks.map((task) => (
+                  <li key={task.id} className={task.status === 'done' ? 'is-done' : ''}>
+                    <button className={`check ${task.status === 'done' ? 'is-on' : ''}`} aria-label="Done" onClick={() => doneTask(task)}>
+                      {task.status === 'done' ? '✓' : ''}
+                    </button>
+                    <span dir="auto" className="today-list__text">
+                      {task.remind_at && <strong className="plan__time">{whenShort(task.remind_at)}</strong>}
+                      {task.title}
+                    </span>
+                    {task.priority === 'important' && <span className="tag tag--solid">!</span>}
+                    {task.status === 'doing' && <span className="tag">Doing</span>}
+                  </li>
                 ))}
-                {untimed.length > 0 && (
-                  <div className="up-group">
-                    <h3 className="up-day">To do</h3>
-                    <ul className="today-list">
-                      {untimed.map((task) => (
-                        <li key={task.id} className={task.status === 'done' ? 'is-done' : ''}>
-                          <button className={`check ${task.status === 'done' ? 'is-on' : ''}`} aria-label="Done" onClick={() => doneTask(task)}>
-                            {task.status === 'done' ? '✓' : ''}
-                          </button>
-                          <span dir="auto" className="today-list__text">
-                            {task.title}
-                          </span>
-                          {task.priority === 'important' && <span className="tag tag--solid">!</span>}
-                          {task.status === 'doing' && <span className="tag">Doing</span>}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </>
+              </ul>
             )}
             {moreTasks > 0 && (
               <Link to="/tasks" className="today-more">
@@ -379,8 +373,38 @@ export default function Home({ session }) {
             )}
           </section>
 
-          <QuickAddAll onChanged={() => setReload((n) => n + 1)} />
-          <DayBrief fallback={plainBrief()} />
+          {/* ------------------------------ plans: today and coming up ------------------------------ */}
+          <section className="today-card">
+            <SectionHead title="Plans" to="/plan" />
+            {planGroups.length === 0 ? (
+              <p className="muted small">
+                No plans for the next 7 days. <Link to="/plan">Plan something</Link>
+              </p>
+            ) : (
+              planGroups.map(([label, list]) => (
+                <div key={label} className="up-group">
+                  <h3 className={`up-day ${label === 'Overdue' ? 'is-late' : ''}`}>{label}</h3>
+                  <ul className="today-list">
+                    {list.map((it) => (
+                      <li key={it.key} className={it.done ? 'is-done' : ''}>
+                        <button className={`check ${it.done ? 'is-on' : ''}`} aria-label="Done" onClick={it.toggle}>
+                          {it.done ? '✓' : ''}
+                        </button>
+                        <span dir="auto" className="today-list__text">
+                          {it.time && <strong className="plan__time">{it.time}</strong>}
+                          {it.title}
+                        </span>
+                        {it.important && <span className="tag tag--solid">!</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))
+            )}
+          </section>
+
+          {/* ------------------------------ prayers: next one, and any missed ------------------------------ */}
+          <PrayerToday place={place} logs={prayerLogs} onMark={markPrayer} />
 
           {/* ------------------------------ habits ------------------------------ */}
           {todayHabits.length > 0 && (
@@ -486,6 +510,96 @@ export default function Home({ session }) {
         </button>
       </footer>
     </div>
+  )
+}
+
+/** "15:40", or "Tue 15:40" when it isn't today. */
+function whenShort(iso) {
+  const at = new Date(iso)
+  const time = hhmm(at)
+  return ymd(at) === today() ? time : `${at.toLocaleDateString(undefined, { weekday: 'short' })} ${time}`
+}
+
+/** Today's 5 prayers at a glance: done, late, now, missed or coming, with quick buttons for the ones not marked yet. */
+function PrayerToday({ place, logs, onMark }) {
+  const [, tick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => tick((n) => n + 1), 60 * 1000)
+    return () => clearInterval(id)
+  }, [])
+  if (place === undefined) return null
+  if (!place)
+    return (
+      <section className="today-card">
+        <SectionHead title="Prayers" to="/commit" />
+        <p className="muted small">
+          Choose your city in <Link to="/commit">Prayers</Link> to see prayer times here.
+        </p>
+      </section>
+    )
+
+  const day = placeToday(place.tz)
+  let times
+  try {
+    times = timesFor(place, day)
+  } catch {
+    return null
+  }
+  const now = Date.now()
+  const rows = PRAYERS.map((p, i) => {
+    const start = times[p.key].getTime()
+    const end = i < PRAYERS.length - 1 ? times[PRAYERS[i + 1].key].getTime() : start + 6 * 3600 * 1000
+    const log = logs?.get(p.key)
+    const state = log ? (log.late ? 'late' : 'done') : now < start ? 'coming' : now < end ? 'now' : 'missed'
+    return { ...p, at: times[p.key], state }
+  })
+  const next = nextPrayer(place, day)
+  const current = rows.find((r) => r.state === 'now')
+  const missed = rows.filter((r) => r.state === 'missed')
+  const word = { done: '✓', late: 'Late', now: 'Now', missed: 'Missed', coming: '' }
+  const clock = (date, tz) => {
+    try {
+      return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: tz || undefined })
+    } catch {
+      return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    }
+  }
+
+  return (
+    <section className="today-card">
+      <SectionHead title="Prayers" to="/commit" note={`Next: ${next.name} ${clock(next.at, place.tz)} · in ${inWords(next.inMs)}`} />
+      <ul className="pt-row" aria-label="Today's prayers">
+        {rows.map((r) => (
+          <li key={r.key} className={`pt pt--${r.state}`}>
+            <strong>{r.name}</strong>
+            <span>{word[r.state] || clock(r.at, place.tz)}</span>
+          </li>
+        ))}
+      </ul>
+      {current && (
+        <div className="pt-act">
+          <span>
+            It’s <b>{current.name}</b> time now
+          </span>
+          <button className="btn btn--sm" onClick={() => onMark(current.key, false)}>
+            ✓ Prayed
+          </button>
+        </div>
+      )}
+      {missed.map((r) => (
+        <div key={r.key} className="pt-act pt-act--missed">
+          <span>
+            Missed <b>{r.name}</b> ({clock(r.at, place.tz)})
+          </span>
+          <button className="btn btn--ghost btn--sm" onClick={() => onMark(r.key, true)}>
+            Prayed late
+          </button>
+        </div>
+      ))}
+      {!current && missed.length === 0 && rows.some((r) => r.state === 'done' || r.state === 'late') && (
+        <p className="muted small">All prayers so far are marked. ✓</p>
+      )}
+    </section>
   )
 }
 
