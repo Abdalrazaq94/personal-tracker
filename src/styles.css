@@ -992,7 +992,7 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
 }
 
-/* React Bits: GlareHover buttons on Home, ShapeGrid background everywhere */
+/* React Bits: GlareHover buttons on Home, Galaxy background everywhere */
 .app-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
 .shell > .content { position: relative; z-index: 1; }
 
@@ -1026,3 +1026,18 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .home-glare .home-tile__icon { background: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
 .home-glare .home-tile__text span { color: #555; }
 .home-glare:hover { border-color: #bdbdbd; }
+
+/* ===== black Galaxy background: text that sits straight on it turns white ===== */
+html:has(.shell), body:has(.shell) { background: #000; }
+.page-header h1, .home-header h1, .collection-head h2 { color: #fff; }
+.page-header .muted, .home-header .muted, .quick-all__hint, .home-footer .muted, .lang-pick > span,
+.toolbar .switch > span, .page > .empty, .page > .muted, .page > p { color: #c4c4c4; }
+.home-footer .btn--ghost, .collection-head .btn--ghost { color: #fff; border-color: rgba(255,255,255,.45); background: transparent; }
+.home-footer { border-top-color: rgba(255,255,255,.15); }
+.page > .loading-text { background-image: linear-gradient(100deg, #6f6f6f 40%, #ffffff 50%, #6f6f6f 60%); }
+.day-brief { border: 1px solid rgba(255,255,255,.18); }
+.toolbar .switch__track { box-shadow: 0 0 0 1px rgba(255,255,255,.35); }
+.quick-all__box { background: #fff; border-color: #fff; }
+.collections .chip.is-active { background: #fff; color: var(--fg); border-color: #fff; }
+.collections .chip.is-active .count { color: #555; }
+.collections .chip:not(.is-active) { background: rgba(255,255,255,.08); color: #e6e6e6; border-color: rgba(255,255,255,.35); }

@@ -3,7 +3,7 @@ import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from
 import { useBackToClose } from './lib/useBack'
 import PageGuard from './components/PageGuard'
 import AlarmOverlay from './components/AlarmOverlay'
-import ShapeGrid from './components/reactbits/ShapeGrid'
+import Galaxy from './components/reactbits/Galaxy'
 import { MotionConfig, motion } from 'motion/react'
 import InstallApp from './components/InstallApp'
 import { configured, supabase } from './lib/supabase'
@@ -61,22 +61,24 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user">
     <div className="shell">
-      {/* React Bits ShapeGrid: a slowly moving grid behind everything; squares light up under your finger */}
+      {/* React Bits Galaxy: a black starfield behind everything; stars drift away from your finger or mouse */}
       <div className="app-bg" aria-hidden>
-        <ShapeGrid
-          shape="square"
-          cellSize={44}
-          direction="diagonal"
-          speed={0.25}
-          lineColor="#ececec"
-          hoverColor="#0a0a0a"
-          fillOpacity={0.06}
-          glow={0}
-          trail={0.5}
-          radius={1.4}
-          fade={0.6}
-          clickCascade={false}
-          intro
+        <Galaxy
+          saturation={0}
+          density={1}
+          glowIntensity={0.3}
+          flareIntensity={0.8}
+          twinkleIntensity={0.4}
+          starSpeed={0.3}
+          speed={0.8}
+          rotationSpeed={0.05}
+          layers={4}
+          mouseRepulsion
+          repulsionStrength={2}
+          clickWarp={false}
+          transparent={false}
+          backgroundColor="#000000"
+          dpr={1.5}
         />
       </div>
       <MobileBar pathname={pathname} email={session.user.email} />
