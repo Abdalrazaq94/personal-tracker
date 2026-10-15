@@ -1021,3 +1021,8 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .home-glare .home-tile { border: 0; background: transparent; animation: none; width: 100%; height: 100%; box-sizing: border-box; justify-content: flex-start; }
 .home-glare .home-tile:hover, .home-glare .home-tile:active { transform: none; box-shadow: none; }
 .home-glare:hover .home-tile__icon { transform: scale(1.1) rotate(-4deg); }
+
+/* Home buttons: a little darker */
+.home-glare .home-tile__icon { background: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.home-glare .home-tile__text span { color: #555; }
+.home-glare:hover { border-color: #bdbdbd; }

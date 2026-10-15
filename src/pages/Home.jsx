@@ -342,11 +342,11 @@ export default function Home({ session }) {
             key={x.to}
             className="home-glare"
             style={{ '--i': i }}
-            background="#ffffff"
-            borderColor="var(--line)"
+            background="#f2f2f2"
+            borderColor="#dcdcdc"
             borderRadius="16px"
             glareColor="#0a0a0a"
-            glareOpacity={0.14}
+            glareOpacity={0.3}
             glareAngle={-35}
             glareSize={55}
             variant="sheen"
