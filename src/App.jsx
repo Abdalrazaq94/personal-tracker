@@ -41,7 +41,10 @@ export default function App() {
     return () => sub.subscription.unsubscribe()
   }, [])
 
-  useEffect(() => window.scrollTo(0, 0), [pathname])
+  // braces matter: newer Chrome's scrollTo returns a promise, which React would try to run as a clean-up function
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
 
   if (!configured) return <SetupNotice />
   if (session === undefined) return <div className="splash">Loading…</div>
