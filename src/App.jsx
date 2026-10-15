@@ -3,7 +3,7 @@ import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from
 import { useBackToClose } from './lib/useBack'
 import PageGuard from './components/PageGuard'
 import AlarmOverlay from './components/AlarmOverlay'
-import Effects from './components/bits/Effects'
+import ShapeGrid from './components/reactbits/ShapeGrid'
 import { MotionConfig, motion } from 'motion/react'
 import InstallApp from './components/InstallApp'
 import { configured, supabase } from './lib/supabase'
@@ -61,7 +61,24 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user">
     <div className="shell">
-      <Effects />
+      {/* React Bits ShapeGrid: a slowly moving grid behind everything; squares light up under your finger */}
+      <div className="app-bg" aria-hidden>
+        <ShapeGrid
+          shape="square"
+          cellSize={44}
+          direction="diagonal"
+          speed={0.25}
+          lineColor="#ececec"
+          hoverColor="#0a0a0a"
+          fillOpacity={0.06}
+          glow={0}
+          trail={0.5}
+          radius={1.4}
+          fade={0.6}
+          clickCascade={false}
+          intro
+        />
+      </div>
       <MobileBar pathname={pathname} email={session.user.email} />
       <AlarmOverlay />
       <nav className="topbar" aria-label="Sections">

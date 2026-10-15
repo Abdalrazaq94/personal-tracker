@@ -921,21 +921,16 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .pt-act--missed b { color: #b3261e; }
 
 /* ================= motion (black & white, React Bits style) ================= */
-.click-spark { position: fixed; inset: 0; z-index: 2000; pointer-events: none; }
 .blur-text { display: inline-block; }
 .blur-text__word { display: inline-block; will-change: transform, filter, opacity; }
 .page-header h1.blur-text, h1.display.blur-text { display: block; }
 
 /* home buttons: arrive one by one, lift on hover, soft spotlight under the pointer */
-.home-tile { position: relative; overflow: hidden; animation: tile-in .5s cubic-bezier(.22,1,.36,1) backwards; animation-delay: calc(var(--i, 0) * 45ms); transition: border-color .15s, transform .18s cubic-bezier(.22,1,.36,1), box-shadow .18s; }
+.home-tile { position: relative; animation: tile-in .5s cubic-bezier(.22,1,.36,1) backwards; animation-delay: calc(var(--i, 0) * 45ms); transition: border-color .15s, transform .18s cubic-bezier(.22,1,.36,1), box-shadow .18s; }
 .home-tile:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.07); }
 .home-tile:active { transform: scale(.97); }
 .home-tile__icon { transition: transform .25s cubic-bezier(.34,1.56,.64,1); }
 .home-tile:hover .home-tile__icon { transform: scale(1.1) rotate(-4deg); }
-.spot::before { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .25s;
-  background: radial-gradient(160px circle at var(--mx, 50%) var(--my, 50%), rgba(0,0,0,.07), transparent 70%); }
-.spot:hover::before { opacity: 1; }
-.spot > * { position: relative; }
 @keyframes tile-in { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: none; } }
 
 /* lists: rows rise in, one after another */
@@ -995,5 +990,12 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 /* people who ask their phone for less motion get none of this */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
-  .click-spark { display: none; }
 }
+
+/* React Bits: StarBorder buttons on Home, ShapeGrid background everywhere */
+.app-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.shell > .content { position: relative; z-index: 1; }
+.star-border.home-tile { display: flex; justify-content: flex-start; padding: 12px; border: 0; font-weight: inherit; line-height: inherit; gap: 10px; }
+.star-border.home-tile:hover { border-color: transparent; }
+@media (min-width: 720px) { .star-border.home-tile { flex-direction: column; align-items: flex-start; gap: 8px; } }
+.star-border.home-tile .home-tile__text { text-align: left; }

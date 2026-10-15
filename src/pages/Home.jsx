@@ -10,6 +10,7 @@ import TaskChart from '../components/TaskChart'
 import BlurText from '../components/bits/BlurText'
 import CountUp from '../components/bits/CountUp'
 import Reveal from '../components/bits/Reveal'
+import StarBorder from '../components/reactbits/StarBorder'
 import { currentStatus } from '../lib/push'
 
 const PRIORITY = { doing: 0, todo: 1 }
@@ -337,7 +338,23 @@ export default function Home({ session }) {
       {/* ------------------------------ all sections, two per row ------------------------------ */}
       <nav className="home-tiles" aria-label="Sections">
         {TILES.map((x, i) => (
-          <Link key={x.to} to={x.to} className="home-tile spot" style={{ '--i': i }}>
+          <StarBorder
+            key={x.to}
+            as={Link}
+            to={x.to}
+            className="home-tile"
+            style={{ '--i': i }}
+            theme="light"
+            radius={16}
+            thickness={1}
+            duration={5 + (i % 3)}
+            stars={1}
+            glow={0.5}
+            trailLength={0.35}
+            backgroundColor="#ffffff"
+            textColor="#0a0a0a"
+            borderColor="rgba(10,10,10,.12)"
+          >
             <span className="home-tile__icon" aria-hidden>
               {x.icon}
             </span>
@@ -345,7 +362,7 @@ export default function Home({ session }) {
               <strong>{x.label}</strong>
               <span>{tileNote(x.to)}</span>
             </span>
-          </Link>
+          </StarBorder>
         ))}
       </nav>
 
