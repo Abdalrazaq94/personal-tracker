@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { ErrorBar, PageHeader, Segmented } from '../components/ui'
 import { ADHAN_CHOICES, KINDS, playSound, SOUNDS, soundsWith } from '../lib/sounds'
 import { BUILTIN_ADHANS, getAdhan, isAdhan, playAdhan, removeAdhan, saveAdhan } from '../lib/adhan'
+import { getAppAdhan, isAppOwner, removeAppAdhan, uploadAppAdhan } from '../lib/appAdhan'
 import InstallApp from '../components/InstallApp'
 import { blockedHelp, currentStatus, disablePush, enablePush, loadSettings, saveSettings, sendTest } from '../lib/push'
 
@@ -49,6 +50,14 @@ export default function Reminders() {
 
   const sounds = soundsWith(settings?.sounds)
   const locked = busy || !settings || settings.needsSounds || settings.needsUpdate
+
+  // the adhan the app owner uploaded for everyone (if any), and whether you are the owner
+  const [appAdhan, setAppAdhan] = useState(null)
+  const [owner, setOwner] = useState(false)
+  useEffect(() => {
+    getAppAdhan().then(setAppAdhan)
+    isAppOwner().then(setOwner)
+  }, [])
 
   // preview an adhan (tap again to stop)
   const adhanStop = useRef(null)
@@ -161,7 +170,10 @@ export default function Reminders() {
               <div className="snd-row__controls">
                 <select className="rem-select" aria-label={`${k.label} sound`} value={v.sound} disabled={locked} onChange={(e) => setSound(k.id, { sound: e.target.value })}>
                   {k.id === 'prayer' &&
-                    ADHAN_CHOICES.map(([id, label]) => (
+                    (appAdhan
+                      ? [['adhan', `🕌 ${appAdhan.label}`], ['adhan1', '🕌 Adhan 1'], ...ADHAN_CHOICES.slice(1)]
+                      : ADHAN_CHOICES
+                    ).map(([id, label]) => (
                       <option key={id} value={id}>
                         {label}
                       </option>
@@ -237,6 +249,8 @@ export default function Reminders() {
         </p>
         {note === 'Saved.' && <p className="small rem-note">Saved.</p>}
       </section>
+
+      {owner && <OwnerAdhan current={appAdhan} onChange={setAppAdhan} />}
 
       <section className="card rem-card">
         <h2>Change the sound</h2>
@@ -417,5 +431,78 @@ function AdhanFiles() {
       {error && <p className="small error-text">{error}</p>}
       <p className="muted small">Your recording is kept on this phone only. If none is chosen, Adhan 1 plays.</p>
     </div>
+  )
+}
+
+/** App owner only: upload the adhan every user gets. */
+function OwnerAdhan({ current, onChange }) {
+  const [label, setLabel] = useState(current?.label || 'Madinah adhan')
+  const [file, setFile] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [err, setErr] = useState('')
+
+  const save = async () => {
+    if (!file) return setErr('Choose the recording first.')
+    setBusy(true)
+    setErr('')
+    setMsg('')
+    try {
+      onChange(await uploadAppAdhan(file, label))
+      setFile(null)
+      setMsg('Saved. Everyone now gets this adhan for prayers.')
+    } catch (e) {
+      setErr(e.message)
+    }
+    setBusy(false)
+  }
+
+  return (
+    <section className="card rem-card owner-adhan">
+      <h2>App adhan for everyone</h2>
+      <p className="muted small">
+        Only you see this (you own the app). Upload one adhan recording and every user gets it as their prayer sound. Only upload a recording you
+        have permission to share (for example from the mosque, the muezzin or the publisher).
+      </p>
+      {current && (
+        <p className="small">
+          Now: <b>{current.label}</b>
+        </p>
+      )}
+      <label className="field">
+        <span>Name users will see</span>
+        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Madinah adhan" />
+      </label>
+      <div className="adhan-row__btns">
+        <label className="btn btn--ghost btn--sm adhan-pick">
+          {file ? file.name : 'Choose recording (mp3)'}
+          <input type="file" accept="audio/*,.mp3,.m4a" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+        </label>
+        <button type="button" className="btn btn--sm" disabled={busy || !file} onClick={save}>
+          {busy ? 'Uploading…' : current ? 'Replace for everyone' : 'Use for everyone'}
+        </button>
+        {current && (
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true)
+              try {
+                onChange(await removeAppAdhan())
+                setMsg('Removed. Everyone is back to Adhan 1.')
+              } catch (e) {
+                setErr(e.message)
+              }
+              setBusy(false)
+            }}
+          >
+            Remove
+          </button>
+        )}
+      </div>
+      {msg && <p className="small rem-note">{msg}</p>}
+      {err && <p className="small error-text">{err}</p>}
+    </section>
   )
 }

@@ -2,6 +2,8 @@
  * Your own adhan recording(s), kept on this phone (IndexedDB), used for prayer reminders when you pick "Adhan".
  * Two slots: 'adhan' (all prayers) and 'adhan-fajr' (optional, used for Fajr only).
  */
+import { getAppAdhan } from './appAdhan'
+
 const DB = 'tracker-sounds'
 const STORE = 'files'
 
@@ -60,7 +62,8 @@ export const BUILTIN_ADHANS = {
     ],
   },
 }
-export const isAdhan = (id) => id === 'adhan' || id === 'adhan2' || id === 'adhan-mine'
+BUILTIN_ADHANS.adhan1 = BUILTIN_ADHANS.adhan // Adhan 1 by name, even when the app adhan takes the default spot
+export const isAdhan = (id) => ['adhan', 'adhan1', 'adhan2', 'adhan-mine'].includes(id)
 
 /** Plays audio from the first source that works. Resolves to stop(), or null if none could play. */
 function playFirst(sources, onEnd) {
@@ -104,6 +107,8 @@ async function playMine(prayer) {
  */
 export async function playAdhan(prayer, choice = 'adhan') {
   if (choice === 'adhan-mine') return (await playMine(prayer)) || playFirst(BUILTIN_ADHANS.adhan.sources)
+  // "adhan" (the default) = the app adhan when the owner has uploaded one, otherwise Adhan 1
+  const app = choice === 'adhan' ? await getAppAdhan() : null
   const first = BUILTIN_ADHANS[choice] || BUILTIN_ADHANS.adhan
-  return (await playFirst(first.sources)) || (await playMine(prayer))
+  return (await playFirst([...(app ? [app.url] : []), ...first.sources])) || (await playMine(prayer))
 }
