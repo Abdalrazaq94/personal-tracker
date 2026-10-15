@@ -478,10 +478,10 @@ export default function Home({ session }) {
                       <span dir="auto" className="today-list__text">
                         {h.name}
                       </span>
-                      <span className="tag">{c === 0 ? 'Clean today' : clean ? `${c} · within limit` : `${c} · over limit`}</span>
-                      <Link to="/habits" className="today-link" aria-label={`Open ${h.name}`}>
-                        →
-                      </Link>
+                      <span className="today-count">{c === 0 ? 'None today' : `${c} today`}</span>
+                      <button className="round-btn round-btn--sm" aria-label={`I did ${h.name} once more`} onClick={() => plusHabit(h)}>
+                        +
+                      </button>
                     </li>
                   )
                 })}
