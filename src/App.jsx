@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useBackToClose } from './lib/useBack'
+import PageGuard from './components/PageGuard'
 import { configured, supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Home from './pages/Home'
@@ -63,6 +64,7 @@ export default function App() {
       </nav>
 
       <main className="content">
+        <PageGuard resetKey={pathname}>
         <Routes>
           <Route path="/" element={<Home session={session} />} />
           <Route path="/words" element={<Words />} />
@@ -77,6 +79,7 @@ export default function App() {
           <Route path="/more" element={<More />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </PageGuard>
       </main>
 
       <nav className="tabbar" aria-label="Main">

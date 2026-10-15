@@ -804,3 +804,7 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .drawer__foot .muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @keyframes drawer-in { from { transform: translateX(-100%); } }
 @keyframes drawer-fade { from { opacity: 0; } }
+.crash { display: flex; flex-direction: column; gap: 10px; }
+.crash h2 { font-size: 18px; font-weight: 800; }
+.crash__msg { display: block; padding: 10px; white-space: pre-wrap; word-break: break-word; font-size: 13px; }
+.crash__acts { display: flex; gap: 8px; flex-wrap: wrap; }
