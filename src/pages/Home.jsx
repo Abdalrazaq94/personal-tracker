@@ -5,8 +5,37 @@ import { money, parseYmd, startOfMonth, today, ymd } from '../lib/dates'
 import { dayState, isBad, logOn, planned } from '../lib/habits'
 import { SpeakButton } from '../lib/speech'
 import { DayBrief, QuickAddAll } from '../components/TodayAI'
+import { inWords, nextPrayer, placeToday } from '../lib/prayer'
+import { currentStatus } from '../lib/push'
 
 const PRIORITY = { doing: 0, todo: 1 }
+
+// the buttons at the top of Home (two per row)
+const TILES = [
+  { to: '/tasks', icon: '✅', label: 'Tasks' },
+  { to: '/plan', icon: '🗓️', label: 'Plan' },
+  { to: '/habits', icon: '🔁', label: 'Habits' },
+  { to: '/spend', icon: '💷', label: 'Spend' },
+  { to: '/words', icon: '📖', label: 'Words' },
+  { to: '/commit', icon: '🕌', label: 'Prayers' },
+  { to: '/notes', icon: '📝', label: 'Notes' },
+  { to: '/links', icon: '🔗', label: 'Links' },
+  { to: '/jobs', icon: '💼', label: 'Jobs' },
+  { to: '/reminders', icon: '🔔', label: 'Reminders' },
+]
+
+const addDays = (ymdStr, n) => {
+  const d = parseYmd(ymdStr)
+  d.setDate(d.getDate() + n)
+  return ymd(d)
+}
+const hhmm = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+function dayWord(day, t) {
+  if (day < t) return 'Overdue'
+  if (day === t) return 'Today'
+  if (day === addDays(t, 1)) return 'Tomorrow'
+  return parseYmd(day).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })
+}
 
 /** Picks the same few words all day, different ones tomorrow. */
 function wordsOfTheDay(words, n = 3) {
@@ -24,13 +53,30 @@ export default function Home({ session }) {
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [reload, setReload] = useState(0)
+  const [prayer, setPrayer] = useState(null) // the next prayer, if a city is chosen
+  const [remind, setRemind] = useState(null) // reminders on / off on this phone
+
+  useEffect(() => {
+    currentStatus()
+      .then(setRemind)
+      .catch(() => {})
+    supabase.auth.getUser().then(({ data }) => {
+      const place = data?.user?.user_metadata?.prayer
+      if (!place) return
+      try {
+        setPrayer(nextPrayer(place, placeToday(place.tz)))
+      } catch {
+        /* no prayer times */
+      }
+    })
+  }, [])
 
   useEffect(() => {
     const t = today()
     const load = async () => {
       const [tasks, plans, habits, logs, words, spend, links, notes] = await Promise.all([
         supabase.from('tasks').select('*').neq('status', 'done'),
-        supabase.from('plans').select('*').lte('plan_date', t).eq('done', false),
+        supabase.from('plans').select('*').lte('plan_date', addDays(t, 7)).eq('done', false),
         supabase.from('habits').select('*').order('created_at', { ascending: true }),
         supabase.from('habit_logs').select('*').eq('day', t),
         supabase.from('words').select('id, word, translation, status').neq('status', 'memorized'),
@@ -113,21 +159,95 @@ export default function Home({ session }) {
   const goodHabits = todayHabits.filter((h) => !isBad(h))
   const badHabits = todayHabits.filter(isBad)
 
-  const shownTasks = d ? d.tasks.slice(0, 6) : []
-  const moreTasks = d ? Math.max(0, d.tasks.length - shownTasks.length) : 0
+  const t = today()
+  const weekEnd = addDays(t, 7)
+
+  // things with a day (and maybe a time): plans, and tasks with "Remind me"
+  const upcoming = d
+    ? [
+        ...d.plans.map((p) => ({
+          key: `p${p.id}`,
+          day: p.plan_date,
+          time: p.plan_time ? String(p.plan_time).slice(0, 5) : '',
+          title: p.title,
+          kind: 'Plan',
+          important: p.important,
+          done: p.done,
+          toggle: () => donePlan(p),
+        })),
+        ...d.tasks
+          .filter((x) => x.remind_at)
+          .map((x) => {
+            const at = new Date(x.remind_at)
+            return {
+              key: `t${x.id}`,
+              day: ymd(at),
+              time: hhmm(at),
+              title: x.title,
+              kind: 'Task',
+              important: x.priority === 'important',
+              done: x.status === 'done',
+              toggle: () => doneTask(x),
+            }
+          })
+          .filter((x) => x.day <= weekEnd),
+      ].sort((a, b) => (a.day !== b.day ? (a.day < b.day ? -1 : 1) : (a.time || '99').localeCompare(b.time || '99')))
+    : []
+  const groups = []
+  for (const it of upcoming) {
+    const label = dayWord(it.day, t)
+    const g = groups.find((x) => x[0] === label)
+    if (g) g[1].push(it)
+    else groups.push([label, [it]])
+  }
+  const allUntimed = d ? d.tasks.filter((x) => !x.remind_at) : []
+  const untimed = allUntimed.slice(0, 6)
+  const moreTasks = Math.max(0, allUntimed.length - untimed.length)
 
   const items = d
     ? [
-        ...shownTasks.map((t) => t.status === 'done'),
-        ...d.plans.map((p) => p.done),
+        ...upcoming.filter((x) => x.day <= t).map((x) => x.done),
+        ...untimed.map((x) => x.status === 'done'),
         ...goodHabits.map((h) => dayState(h, d.logs, now) === 'ok'),
       ]
     : []
   const doneCount = items.filter(Boolean).length
-
-  const t = today()
   const spentToday = d ? d.spend.filter((x) => x.spent_on === t).reduce((a, x) => a + Number(x.amount), 0) : 0
   const spentMonth = d ? d.spend.reduce((a, x) => a + Number(x.amount), 0) : 0
+
+  /** The small line under each button. */
+  function tileNote(to) {
+    if (!d) return '…'
+    switch (to) {
+      case '/tasks': {
+        const open = d.tasks.filter((x) => x.status !== 'done').length
+        return open ? `${open} to do` : 'All done'
+      }
+      case '/plan': {
+        const late = d.plans.filter((p) => !p.done && p.plan_date < t).length
+        const todayN = d.plans.filter((p) => !p.done && p.plan_date === t).length
+        return late ? `${late} overdue` : todayN ? `${todayN} today` : 'Nothing today'
+      }
+      case '/habits':
+        return goodHabits.length ? `${goodHabits.filter((h) => dayState(h, d.logs, now) === 'ok').length} of ${goodHabits.length} today` : 'Track habits'
+      case '/spend':
+        return `${money(spentToday)} today`
+      case '/words':
+        return d.wordsLeft ? `${d.wordsLeft} to learn` : 'Add words'
+      case '/commit':
+        return prayer ? `${prayer.name} in ${inWords(prayer.inMs)}` : 'Prayer times'
+      case '/notes':
+        return `${d.notes} notes`
+      case '/links':
+        return `${d.links} saved`
+      case '/jobs':
+        return 'Applications'
+      case '/reminders':
+        return remind === 'on' ? 'On' : remind === 'blocked' ? 'Blocked' : 'Off'
+      default:
+        return ''
+    }
+  }
 
   return (
     <div className="page">
@@ -135,9 +255,6 @@ export default function Home({ session }) {
         <p className="muted">{date}</p>
         <h1 className="display">{greet}.</h1>
       </header>
-
-      <QuickAddAll onChanged={() => setReload((n) => n + 1)} />
-      <DayBrief />
 
       {error && (
         <div className="error-bar" role="alert">
@@ -148,63 +265,91 @@ export default function Home({ session }) {
         </div>
       )}
 
+      {/* ------------------------------ all sections, two per row ------------------------------ */}
+      <nav className="home-tiles" aria-label="Sections">
+        {TILES.map((x) => (
+          <Link key={x.to} to={x.to} className="home-tile">
+            <span className="home-tile__icon" aria-hidden>
+              {x.icon}
+            </span>
+            <span className="home-tile__text">
+              <strong>{x.label}</strong>
+              <span>{tileNote(x.to)}</span>
+            </span>
+          </Link>
+        ))}
+      </nav>
+
       {!d ? (
         <div className="empty muted">Loading your day…</div>
       ) : (
         <>
-          {items.length > 0 && (
-            <div className="today-progress">
-              <div className="today-progress__text">
-                <strong>
-                  {doneCount} of {items.length}
-                </strong>{' '}
-                done today
-                {doneCount === items.length && ' — great work ✓'}
-              </div>
+          {/* ------------------------------ upcoming ------------------------------ */}
+          <section className="today-card">
+            <div className="today-head">
+              <h2>
+                Upcoming
+                {items.length > 0 && (
+                  <span className="muted small">
+                    {' '}
+                    · {doneCount} of {items.length} done today
+                  </span>
+                )}
+              </h2>
+              <Link to="/plan">Plan →</Link>
+            </div>
+            {items.length > 0 && (
               <div className="progress">
                 <span style={{ width: `${(doneCount / items.length) * 100}%` }} />
               </div>
-            </div>
-          )}
+            )}
 
-          {/* ------------------------------ tasks ------------------------------ */}
-          <section className="today-card">
-            <SectionHead title="Tasks" to="/tasks" />
-            {shownTasks.length === 0 && d.plans.length === 0 ? (
+            {upcoming.length === 0 && untimed.length === 0 ? (
               <p className="muted small">
-                Nothing to do. <Link to="/tasks">Add a task</Link> or <Link to="/plan">plan tomorrow</Link>.
+                Nothing coming up. <Link to="/tasks">Add a task</Link> or <Link to="/plan">plan something</Link>.
               </p>
             ) : (
-              <ul className="today-list">
-                {d.plans.map((p) => (
-                  <li key={`p${p.id}`} className={p.done ? 'is-done' : ''}>
-                    <button className={`check ${p.done ? 'is-on' : ''}`} aria-label="Done" onClick={() => donePlan(p)}>
-                      {p.done ? '✓' : ''}
-                    </button>
-                    <span dir="auto" className="today-list__text">
-                      {p.plan_time && <strong className="plan__time">{String(p.plan_time).slice(0, 5)}</strong>}
-                      {p.title}
-                    </span>
-                    <span className="tag">
-                      {p.plan_date < t
-                        ? `Overdue · ${parseYmd(p.plan_date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`
-                        : 'Planned'}
-                    </span>
-                  </li>
+              <>
+                {groups.map(([label, list]) => (
+                  <div key={label} className="up-group">
+                    <h3 className={`up-day ${label === 'Overdue' ? 'is-late' : ''}`}>{label}</h3>
+                    <ul className="today-list">
+                      {list.map((it) => (
+                        <li key={it.key} className={it.done ? 'is-done' : ''}>
+                          <button className={`check ${it.done ? 'is-on' : ''}`} aria-label="Done" onClick={it.toggle}>
+                            {it.done ? '✓' : ''}
+                          </button>
+                          <span dir="auto" className="today-list__text">
+                            {it.time && <strong className="plan__time">{it.time}</strong>}
+                            {it.title}
+                          </span>
+                          {it.important && <span className="tag tag--solid">!</span>}
+                          <span className="tag">{it.kind}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ))}
-                {shownTasks.map((task) => (
-                  <li key={task.id} className={task.status === 'done' ? 'is-done' : ''}>
-                    <button className={`check ${task.status === 'done' ? 'is-on' : ''}`} aria-label="Done" onClick={() => doneTask(task)}>
-                      {task.status === 'done' ? '✓' : ''}
-                    </button>
-                    <span dir="auto" className="today-list__text">
-                      {task.title}
-                    </span>
-                    {task.priority === 'important' && <span className="tag tag--solid">!</span>}
-                    {task.status === 'doing' && <span className="tag">Doing</span>}
-                  </li>
-                ))}
-              </ul>
+                {untimed.length > 0 && (
+                  <div className="up-group">
+                    <h3 className="up-day">To do</h3>
+                    <ul className="today-list">
+                      {untimed.map((task) => (
+                        <li key={task.id} className={task.status === 'done' ? 'is-done' : ''}>
+                          <button className={`check ${task.status === 'done' ? 'is-on' : ''}`} aria-label="Done" onClick={() => doneTask(task)}>
+                            {task.status === 'done' ? '✓' : ''}
+                          </button>
+                          <span dir="auto" className="today-list__text">
+                            {task.title}
+                          </span>
+                          {task.priority === 'important' && <span className="tag tag--solid">!</span>}
+                          {task.status === 'doing' && <span className="tag">Doing</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
             )}
             {moreTasks > 0 && (
               <Link to="/tasks" className="today-more">
@@ -212,6 +357,9 @@ export default function Home({ session }) {
               </Link>
             )}
           </section>
+
+          <QuickAddAll onChanged={() => setReload((n) => n + 1)} />
+          <DayBrief />
 
           {/* ------------------------------ habits ------------------------------ */}
           {todayHabits.length > 0 && (
@@ -307,13 +455,6 @@ export default function Home({ session }) {
             </form>
           </section>
 
-          {/* ------------------------------ everything else ------------------------------ */}
-          <nav className="today-more-grid" aria-label="More sections">
-            <Link to="/plan">Plan tomorrow →</Link>
-            <Link to="/notes">Notes · {d.notes}</Link>
-            <Link to="/links">Saved links · {d.links}</Link>
-            <Link to="/jobs">Jobs applied →</Link>
-          </nav>
         </>
       )}
 
