@@ -162,9 +162,10 @@ export function guessOne(raw, habits = []) {
 
   const t = takeTime(s)
   const d = takeDate(t.rest)
-  const title = tidy(d.rest)
+  const cap = (x) => (x ? x.charAt(0).toUpperCase() + x.slice(1) : x)
+  const title = cap(tidy(d.rest))
   if (t.time || d.date) return { type: 'plan', title, date: d.date || ymdOf(new Date()), time: t.time, important }
-  return { type: 'task', title: title || raw.trim(), important }
+  return { type: 'task', title: title || cap(raw.trim()), important }
 }
 
 /** A note with several things ("buy milk tomorrow, coffee 3.40") → several drafts. */

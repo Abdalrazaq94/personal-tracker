@@ -237,14 +237,6 @@ export default function Home({ session }) {
   const untimed = allUntimed.slice(0, 6)
   const moreTasks = d ? Math.max(0, d.tasks.length - openTasks.length) : 0
 
-  const items = d
-    ? [
-        ...upcoming.filter((x) => x.day <= t).map((x) => x.done),
-        ...untimed.map((x) => x.status === 'done'),
-        ...goodHabits.map((h) => dayState(h, d.logs, now) === 'ok'),
-      ]
-    : []
-  const doneCount = items.filter(Boolean).length
   const spentToday = d ? d.spend.filter((x) => x.spent_on === t).reduce((a, x) => a + Number(x.amount), 0) : 0
   const spentMonth = d ? d.spend.reduce((a, x) => a + Number(x.amount), 0) : 0
 

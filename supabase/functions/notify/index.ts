@@ -43,8 +43,8 @@ const concat = (...parts: Uint8Array[]) => {
 }
 
 async function hmac(key: Uint8Array, data: Uint8Array) {
-  const k = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
-  return new Uint8Array(await crypto.subtle.sign('HMAC', k, data))
+  const k = await crypto.subtle.importKey('raw', key as BufferSource, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  return new Uint8Array(await crypto.subtle.sign('HMAC', k, data as BufferSource))
 }
 // HKDF in two steps, as written in the RFCs
 const hkdfExtract = (salt: Uint8Array, ikm: Uint8Array) => hmac(salt, ikm)
@@ -79,7 +79,7 @@ async function encryptPayload(p256dh: string, auth: string, payload: Uint8Array,
 
   const local = localKeys ?? ((await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits'])) as CryptoKeyPair)
   const asPublic = new Uint8Array(await crypto.subtle.exportKey('raw', local.publicKey))
-  const uaKey = await crypto.subtle.importKey('raw', uaPublic, { name: 'ECDH', namedCurve: 'P-256' }, false, [])
+  const uaKey = await crypto.subtle.importKey('raw', uaPublic as BufferSource, { name: 'ECDH', namedCurve: 'P-256' }, false, [])
   const shared = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: uaKey }, local.privateKey, 256))
 
   // IKM = HKDF(auth, shared, "WebPush: info" || 0 || ua_public || as_public)

@@ -10,8 +10,12 @@ const FILE = 'adhan'
 let cached = null
 /** { label, url } or null when the owner hasn't uploaded one (or the database step isn't done). */
 export function getAppAdhan() {
-  if (!cached)
-    cached = supabase
+  if (!cached) cached = loadAppAdhan()
+  return cached
+}
+async function loadAppAdhan() {
+  try {
+    return await supabase
       .from('app_config')
       .select('adhan_label, adhan_version')
       .eq('id', 1)
@@ -21,19 +25,23 @@ export function getAppAdhan() {
         const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(FILE)
         return { label: data.adhan_label || 'App adhan', url: `${pub.publicUrl}?v=${data.adhan_version}` }
       })
-      .catch(() => null)
-  return cached
+  } catch {
+    return null // never let this break a page
+  }
 }
 export const refreshAppAdhan = () => {
   cached = null
   return getAppAdhan()
 }
 
-export const isAppOwner = () =>
-  supabase
-    .rpc('is_app_owner')
-    .then(({ data }) => data === true)
-    .catch(() => false)
+export async function isAppOwner() {
+  try {
+    const { data } = await supabase.rpc('is_app_owner')
+    return data === true
+  } catch {
+    return false
+  }
+}
 
 /** Owner only: upload (or replace) the app adhan. */
 export async function uploadAppAdhan(file, label) {
