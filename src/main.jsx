@@ -5,6 +5,10 @@ import App from './App.jsx'
 import PageGuard from './components/PageGuard'
 import './styles.css'
 import { registerWorker } from './lib/push'
+import { watchInstall } from './lib/install'
+
+// catch Chrome's "install" offer as early as possible, so our Install app button can use it
+watchInstall()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

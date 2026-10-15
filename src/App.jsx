@@ -3,6 +3,7 @@ import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from
 import { useBackToClose } from './lib/useBack'
 import PageGuard from './components/PageGuard'
 import AlarmOverlay from './components/AlarmOverlay'
+import InstallApp from './components/InstallApp'
 import { configured, supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Home from './pages/Home'
@@ -157,6 +158,7 @@ function MobileBar({ pathname, email }) {
                 )
               })}
             </ul>
+            <InstallApp compact />
             <div className="drawer__foot">
               <span className="muted small">{email}</span>
               <button className="btn btn--ghost btn--sm" onClick={() => supabase.auth.signOut()}>

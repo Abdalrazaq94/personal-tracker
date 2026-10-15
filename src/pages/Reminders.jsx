@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { ErrorBar, PageHeader, Segmented } from '../components/ui'
 import { KINDS, playSound, SOUNDS, soundsWith } from '../lib/sounds'
+import InstallApp from '../components/InstallApp'
 import { currentStatus, disablePush, enablePush, loadSettings, saveSettings, sendTest } from '../lib/push'
 
 /** Turn phone reminders on, test them, and choose prayer reminders. */
@@ -237,6 +238,7 @@ export default function Reminders() {
 
       <section className="card rem-card">
         <h2>Tips for reliable reminders</h2>
+        <InstallApp />
         <ul className="rem-tips small">
           <li>Add Tracker to your Home Screen (Chrome menu ⋮ → “Add to Home screen”).</li>
           <li>Android: Settings → Apps → Chrome → Battery → “Unrestricted”, so reminders aren’t delayed.</li>

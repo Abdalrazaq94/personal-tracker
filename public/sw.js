@@ -12,6 +12,24 @@ const VIBRATE = {
 }
 
 self.addEventListener('install', () => self.skipWaiting())
+
+// Opening pages: always from the internet (so you get the newest version); if you're offline, a short message instead.
+// (Having this also lets Chrome offer "Install app".)
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode !== 'navigate') return
+  event.respondWith(
+    fetch(event.request).catch(
+      () =>
+        new Response(
+          '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tracker</title>' +
+            '<body style="font-family:system-ui,sans-serif;padding:32px 20px;text-align:center;color:#0a0a0a;background:#fff">' +
+            '<h1 style="font-size:22px">You’re offline</h1><p>Tracker needs the internet. Check your connection, then try again.</p>' +
+            '<button onclick="location.reload()" style="font:inherit;padding:12px 22px;border-radius:999px;border:0;background:#0a0a0a;color:#fff">Try again</button></body>',
+          { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+        )
+    )
+  )
+})
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()))
 
 self.addEventListener('push', (event) => {
