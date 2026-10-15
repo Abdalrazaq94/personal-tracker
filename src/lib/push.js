@@ -114,12 +114,12 @@ export async function sendTest() {
 export async function saveSettings(patch) {
   const { data: u } = await supabase.auth.getUser()
   const { error } = await supabase.from('user_settings').upsert({ user_id: u.user.id, ...patch, updated_at: new Date().toISOString() })
-  if (error) throw new Error(/column|prayer_|tz/.test(error.message) ? 'Run supabase/migrations/008_reminders.sql in Supabase first.' : error.message)
+  if (error) throw new Error(/sounds|ring_every/.test(error.message) ? 'Run supabase/migrations/010_sounds.sql in Supabase first.' : /column|prayer_|tz/.test(error.message) ? 'Run supabase/migrations/008_reminders.sql in Supabase first.' : error.message)
 }
 
 export async function loadSettings() {
   const { data, error } = await supabase.from('user_settings').select('*').maybeSingle()
   if (error) return { needsUpdate: true }
   if (data && !('prayer_notify' in data)) return { ...data, needsUpdate: true }
-  return { ring_every: 2, ...(data || {}), needsRing: !!data && !('ring_every' in data) }
+  return { ring_every: 2, ...(data || {}), needsSounds: !!data && !('sounds' in data) }
 }

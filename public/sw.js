@@ -1,6 +1,16 @@
 /* Tracker service worker: shows reminders and handles their buttons (Done, Postpone, Prayed).
    It does not cache the app, so you always get the newest version. */
 
+const VIBRATE = {
+  chime: [200, 100, 200],
+  bell: [600, 400, 600],
+  alarm: [800, 300, 800, 300, 800, 300, 800, 300, 800, 300, 800],
+  digital: [100, 80, 100, 80, 100, 400, 100, 80, 100, 80, 100],
+  marimba: [150, 80, 150, 80, 150, 80, 400],
+  gentle: [1000],
+  ping: [120],
+}
+
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()))
 
@@ -20,22 +30,18 @@ self.addEventListener('push', (event) => {
     data: msg.data || {},
     icon: 'icons/icon-192.png',
     badge: 'icons/badge-96.png',
-    // alarms vibrate for about 6 seconds; normal reminders briefly
-    vibrate: msg.alarm
-      ? [800, 300, 800, 300, 800, 300, 800, 300, 800, 300, 800]
-      : msg.requireInteraction
-        ? [300, 120, 300, 120, 300]
-        : [200, 100, 200],
+    // each sound has its own vibration, so you can feel which kind of reminder it is (keep in sync with src/lib/sounds.js)
+    vibrate: VIBRATE[msg.sound] || (msg.ring ? VIBRATE.alarm : [200, 100, 200]),
     silent: false,
     timestamp: Date.now(),
   }
   const show = self.registration.showNotification(msg.title || 'Tracker', options)
-  // if the app is open, it plays a looping alarm sound until you answer
-  const tell = msg.alarm
-    ? self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) =>
-        list.forEach((c) => c.postMessage({ type: 'tracker-alarm', title: msg.title, body: msg.body, tag: msg.tag, actions: options.actions, data: options.data }))
-      )
-    : Promise.resolve()
+  // if the app is open, it plays the sound you picked (once, or ringing until you answer)
+  const tell = self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) =>
+    list.forEach((c) =>
+      c.postMessage({ type: 'tracker-alarm', title: msg.title, body: msg.body, tag: msg.tag, sound: msg.sound, ring: !!msg.ring, actions: options.actions, data: options.data })
+    )
+  )
   event.waitUntil(Promise.all([show, tell]))
 })
 

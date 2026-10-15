@@ -5,10 +5,38 @@ import { DeleteButton, Empty, ErrorBar, Loading, PageHeader, Segmented } from '.
 
 const STATUS_ORDER = { doing: 0, todo: 1, done: 2 }
 
+// "2026-10-15T15:40" for <input type="datetime-local">, in this phone's time
+const toLocalInput = (d) => {
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}
+const inAnHour = () => {
+  const d = new Date(Date.now() + 60 * 60 * 1000)
+  d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5, 0, 0)
+  return toLocalInput(d)
+}
+const remindPatch = (local) => ({
+  remind_at: local ? new Date(local).toISOString() : null,
+  notify_count: 0,
+  last_notified: null,
+  snoozed_until: null,
+})
+function whenLabel(iso) {
+  const d = new Date(iso)
+  const day = new Date(d).setHours(0, 0, 0, 0)
+  const today = new Date().setHours(0, 0, 0, 0)
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  if (day === today) return `Today ${time}`
+  if (day === today + 864e5) return `Tomorrow ${time}`
+  return `${d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })} ${time}`
+}
+
 export default function Tasks() {
   const { rows, loading, error, setError, insert, update, remove } = useRows('tasks')
   const [title, setTitle] = useState('')
   const [priority, setPriority] = useState('normal')
+  const [remind, setRemind] = useState('') // '' = no reminder
+  const [editing, setEditing] = useState(null) // task id whose reminder is being set
   const [filter, setFilter] = useState('all')
   const [importantTop, setImportantTop] = useState(() => {
     try {
@@ -44,10 +72,11 @@ export default function Tasks() {
   const add = async (e) => {
     e.preventDefault()
     if (!title.trim()) return
-    const ok = await insert({ title: title.trim(), priority })
+    const ok = await insert({ title: title.trim(), priority, ...(remind ? remindPatch(remind) : {}) })
     if (ok) {
       setTitle('')
       setPriority('normal')
+      setRemind('')
     }
   }
 
@@ -71,8 +100,17 @@ export default function Tasks() {
               { value: 'important', label: 'Important' },
             ]}
           />
+          <button type="button" className={`badge ${remind ? 'badge--solid' : ''}`} onClick={() => setRemind(remind ? '' : inAnHour())}>
+            ⏰ {remind ? 'Reminder on' : 'Remind me'}
+          </button>
           <button className="btn">Add</button>
         </div>
+        {remind && (
+          <label className="field">
+            <span>Remind me at</span>
+            <input type="datetime-local" value={remind} onChange={(e) => setRemind(e.target.value)} required />
+          </label>
+        )}
       </form>
 
       <AiPanel kind="tasks" examples={['What should I focus on tomorrow?', 'Which tasks am I avoiding?']} />
@@ -128,6 +166,22 @@ export default function Tasks() {
                 >
                   {t.priority === 'important' ? '! Important' : 'Normal'}
                 </button>
+                {t.remind_at && t.status !== 'done' ? (
+                  <span className="task__remind">
+                    <button type="button" className="badge" onClick={() => setEditing(editing === t.id ? null : t.id)}>
+                      ⏰ {whenLabel(t.remind_at)}
+                    </button>
+                    <button type="button" className="badge" aria-label="Remove reminder" onClick={() => update(t.id, remindPatch(null))}>
+                      ✕
+                    </button>
+                  </span>
+                ) : (
+                  t.status !== 'done' && (
+                    <button type="button" className="badge" aria-label="Add a reminder" onClick={() => setEditing(editing === t.id ? null : t.id)}>
+                      ⏰
+                    </button>
+                  )
+                )}
                 <Segmented
                   small
                   value={t.status}
@@ -139,6 +193,19 @@ export default function Tasks() {
                   ]}
                 />
               </div>
+              {editing === t.id && (
+                <form
+                  className="task__remind-form"
+                  onSubmit={async (e) => {
+                    e.preventDefault()
+                    const v = new FormData(e.currentTarget).get('at')
+                    if (v && (await update(t.id, remindPatch(v)))) setEditing(null)
+                  }}
+                >
+                  <input type="datetime-local" name="at" defaultValue={t.remind_at ? toLocalInput(new Date(t.remind_at)) : inAnHour()} required aria-label="Remind me at" />
+                  <button className="btn">Save</button>
+                </form>
+              )}
             </li>
           ))}
         </ul>

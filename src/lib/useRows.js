@@ -41,6 +41,7 @@ export function useRows(table, { order = 'created_at', ascending = false } = {})
       setError(error.message)
       reload()
     }
+    return !error
   }
 
   const remove = async (id) => {

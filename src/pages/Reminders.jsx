@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { ErrorBar, PageHeader } from '../components/ui'
+import { ErrorBar, PageHeader, Segmented } from '../components/ui'
+import { KINDS, playSound, SOUNDS, soundsWith } from '../lib/sounds'
 import { currentStatus, disablePush, enablePush, loadSettings, saveSettings, sendTest } from '../lib/push'
 
 /** Turn phone reminders on, test them, and choose prayer reminders. */
@@ -37,12 +38,30 @@ export default function Reminders() {
       const next = { ...settings, ...patch }
       await saveSettings({
         prayer_notify: !!next.prayer_notify,
-        prayer_repeat: next.prayer_repeat !== false,
+        prayer_repeat: soundsWith(next.sounds).prayer.ring,
         ...(place ? { prayer_place: place } : {}),
         tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
       })
       setSettings(next)
     })
+
+  const sounds = soundsWith(settings?.sounds)
+  const locked = busy || !settings || settings.needsSounds || settings.needsUpdate
+
+  const preview = (id) => {
+    playSound(id)
+    const vib = SOUNDS[id]?.vibrate
+    if (vib && navigator.vibrate) navigator.vibrate(vib)
+  }
+
+  const setSound = (kind, patch) => {
+    const next = { ...sounds, [kind]: { ...sounds[kind], ...patch } }
+    if (patch.sound) preview(patch.sound)
+    setSettings((s) => ({ ...s, sounds: next }))
+    run(async () => {
+      await saveSettings({ sounds: next, ...(kind === 'prayer' ? { prayer_repeat: next.prayer.ring } : {}) })
+    }, 'Saved.')
+  }
 
   const on = status === 'on'
   const isIphone = /iPhone|iPad/.test(navigator.userAgent)
@@ -57,12 +76,9 @@ export default function Reminders() {
           <span>Run supabase/migrations/008_reminders.sql in Supabase → SQL Editor, then refresh.</span>
         </div>
       )}
-      {settings?.needsRing && (
+      {settings?.needsSounds && !settings?.needsUpdate && (
         <div className="error-bar" role="alert">
-          <span>
-            To choose how often reminders ring, run this once in Supabase → SQL Editor, then refresh:{' '}
-            <code>alter table public.user_settings add column if not exists ring_every integer not null default 2;</code>
-          </span>
+          <span>To pick sounds and task reminders, run supabase/migrations/010_sounds.sql in Supabase → SQL Editor, then refresh.</span>
         </div>
       )}
 
@@ -101,20 +117,53 @@ export default function Reminders() {
             </>
           )}
         </div>
-        {note && <p className="small rem-note">{note}</p>}
+        {note && note !== 'Saved.' && <p className="small rem-note">{note}</p>}
       </section>
 
       <section className="card rem-card">
-        <h2>Ringing</h2>
+        <h2>Sounds</h2>
+        <p className="muted small">Pick a sound for each kind of reminder, and whether it rings until you answer or just once.</p>
+        {KINDS.map((k) => {
+          const v = sounds[k.id]
+          return (
+            <div key={k.id} className="snd-row">
+              <div className="snd-row__head">
+                <strong>{k.label}</strong>
+                <span className="muted small">{k.hint}</span>
+              </div>
+              <div className="snd-row__controls">
+                <select className="rem-select" aria-label={`${k.label} sound`} value={v.sound} disabled={locked} onChange={(e) => setSound(k.id, { sound: e.target.value })}>
+                  {Object.entries(SOUNDS).map(([id, x]) => (
+                    <option key={id} value={id}>
+                      {x.label}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" className="btn btn--ghost snd-play" aria-label={`Play ${SOUNDS[v.sound]?.label}`} onClick={() => preview(v.sound)}>
+                  ▶
+                </button>
+                <Segmented
+                  small
+                  value={v.ring ? 'ring' : 'once'}
+                  onChange={(m) => !locked && setSound(k.id, { ring: m === 'ring' })}
+                  options={[
+                    { value: 'ring', label: 'Ring until I answer' },
+                    { value: 'once', label: 'Once' },
+                  ]}
+                />
+              </div>
+            </div>
+          )
+        })}
         <label className="rem-row">
           <span>
             <strong>Ring again</strong>
-            <span className="muted small">For important plans and prayers, until you tap Done, Prayed or Postpone</span>
+            <span className="muted small">How often “Ring until I answer” repeats</span>
           </span>
           <select
             className="rem-select"
             value={settings?.ring_every ?? 2}
-            disabled={busy || !settings || settings.needsRing || settings.needsUpdate}
+            disabled={locked}
             onChange={(e) => {
               const ring_every = Number(e.target.value)
               run(async () => {
@@ -130,9 +179,11 @@ export default function Reminders() {
           </select>
         </label>
         <p className="muted small">
-          Each ring plays the sound and vibrates for about 6 seconds. If the app is open, it beeps nonstop until you answer. After an hour it slows
-          to every 15 minutes.
+          When the app is open you hear the exact sound you picked; “Ring until I answer” keeps playing until you tap a button. When the app is
+          closed, your phone plays its notification sound, and each sound above vibrates in its own pattern, so you can tell them apart. After an
+          hour without an answer, it slows to every 15 minutes.
         </p>
+        {note === 'Saved.' && <p className="small rem-note">Saved.</p>}
       </section>
 
       <section className="card rem-card">
@@ -153,10 +204,10 @@ export default function Reminders() {
       </section>
 
       <section className="card rem-card">
-        <h2>Plans</h2>
+        <h2>Plans and tasks</h2>
         <p className="muted small">
           Any plan with a time reminds you at that time. Mark it <b>Important</b> and choose <b>Remind me</b> (15 min, 1 hour or 1 day
-          before) when you add it. Important reminders ring again (see Ringing above) until you tap <b>Done</b> or <b>Postpone</b>.
+          before) when you add it. For tasks, tap <b>⏰ Remind me</b> when you add one.
         </p>
       </section>
 
@@ -175,16 +226,9 @@ export default function Reminders() {
             <label className="rem-row">
               <span>
                 <strong>Remind me at each prayer time</strong>
-                <span className="muted small">Fajr, Dhuhr, Asr, Maghrib and Isha</span>
+                <span className="muted small">Fajr, Dhuhr, Asr, Maghrib and Isha · sound under Sounds above</span>
               </span>
               <input type="checkbox" className="rem-switch" checked={!!settings?.prayer_notify} disabled={busy || !on} onChange={(e) => setPrayer({ prayer_notify: e.target.checked })} />
-            </label>
-            <label className="rem-row">
-              <span>
-                <strong>Keep reminding until I mark it</strong>
-                <span className="muted small">Rings again until you tap Prayed (or mark it in the app)</span>
-              </span>
-              <input type="checkbox" className="rem-switch" checked={settings?.prayer_repeat !== false} disabled={busy || !on || !settings?.prayer_notify} onChange={(e) => setPrayer({ prayer_repeat: e.target.checked })} />
             </label>
             {!on && <p className="muted small">Turn reminders on above first.</p>}
           </>

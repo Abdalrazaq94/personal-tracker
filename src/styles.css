@@ -862,3 +862,19 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 @media (prefers-reduced-motion: reduce) { .alarm__ring { animation: none; } }
 .rem-select { width: auto; flex: none; max-width: 52%; }
 .rem-tips code, .error-bar code { font-size: 12px; overflow-wrap: anywhere; }
+
+/* sound picker */
+.snd-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); }
+.snd-row__head { display: flex; flex-direction: column; gap: 2px; }
+.snd-row__controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.snd-row__controls .rem-select { flex: 1 1 130px; max-width: none; }
+.snd-play { flex: none; width: 44px; padding-left: 0; padding-right: 0; }
+.alarm-toast { position: fixed; z-index: 1000; left: 12px; right: 12px; top: 12px; margin: 0 auto; max-width: 480px; background: var(--fg); color: var(--bg); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 12px 30px rgba(0,0,0,.25); }
+.alarm-toast__text { display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+.alarm-toast__text span { opacity: .8; font-size: 14px; }
+.alarm-toast__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.alarm-toast .btn { background: var(--bg); color: var(--fg); border-color: var(--bg); padding-top: 8px; padding-bottom: 8px; }
+.alarm-toast .btn--ghost { background: transparent; color: var(--bg); }
+.task__remind { display: inline-flex; gap: 4px; }
+.task__remind-form { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.task__remind-form input { flex: 1 1 180px; min-width: 0; }

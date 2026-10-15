@@ -1,34 +1,37 @@
 import { useEffect, useRef, useState } from 'react'
+import { playSound, SOUNDS } from '../lib/sounds'
 
 /**
- * When a reminder arrives while the app is open, this plays a looping alarm
- * and shows the reminder with its buttons, until you answer it (or 2 minutes pass).
+ * When a reminder arrives while the app is open, this plays the sound you picked for that kind of reminder.
+ *  - "Ring until I answer": a full-screen alarm that keeps playing (up to 2 minutes) until you tap a button.
+ *  - "Once": the sound plays once and a small banner shows the reminder.
  */
 export default function AlarmOverlay() {
   const [alarm, setAlarm] = useState(null)
   const [busy, setBusy] = useState(false)
-  const sound = useRef(null)
+  const stopRef = useRef(null)
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
     const onMsg = (e) => {
       const m = e.data || {}
-      if (m.type === 'tracker-alarm') setAlarm(m)
+      if (m.type === 'tracker-alarm') setAlarm({ ...m, at: Date.now() })
       if (m.type === 'tracker-alarm-stop') setAlarm((a) => (a && (!m.tag || a.tag === m.tag) ? null : a))
     }
     navigator.serviceWorker.addEventListener('message', onMsg)
     return () => navigator.serviceWorker.removeEventListener('message', onMsg)
   }, [])
 
-  // the looping sound
   useEffect(() => {
     if (!alarm) return
-    const stop = startAlarmSound()
-    sound.current = stop
-    const limit = setTimeout(() => stop(), 2 * 60 * 1000)
-    if (navigator.vibrate) navigator.vibrate([800, 300, 800, 300, 800])
+    const stop = playSound(alarm.sound, { loop: !!alarm.ring })
+    stopRef.current = stop
+    const vib = SOUNDS[alarm.sound]?.vibrate
+    if (vib && navigator.vibrate) navigator.vibrate(vib)
+    // a ringing alarm stops by itself after 2 minutes; a one-time banner hides after 12 seconds
+    const t = setTimeout(() => (alarm.ring ? stop() : setAlarm(null)), alarm.ring ? 2 * 60 * 1000 : 12000)
     return () => {
-      clearTimeout(limit)
+      clearTimeout(t)
       stop()
     }
   }, [alarm])
@@ -36,10 +39,11 @@ export default function AlarmOverlay() {
   if (!alarm) return null
 
   const close = async () => {
+    const tag = alarm.tag
     setAlarm(null)
     try {
       const reg = await navigator.serviceWorker.getRegistration()
-      const list = (await reg?.getNotifications({ tag: alarm.tag })) || []
+      const list = (await reg?.getNotifications({ tag })) || []
       list.forEach((n) => n.close())
     } catch {
       /* fine */
@@ -65,6 +69,28 @@ export default function AlarmOverlay() {
     await close()
   }
 
+  const buttons = (alarm.actions || []).map((a) => (
+    <button key={a.action} className={`btn ${a.action === 'snooze' ? 'btn--ghost' : ''}`} disabled={busy} onClick={() => answer(a.action)}>
+      {a.title}
+    </button>
+  ))
+
+  if (!alarm.ring)
+    return (
+      <div className="alarm-toast" role="status" aria-live="polite">
+        <div className="alarm-toast__text">
+          <strong>{alarm.title}</strong>
+          {alarm.body && <span>{alarm.body}</span>}
+        </div>
+        <div className="alarm-toast__actions">
+          {buttons}
+          <button className="btn btn--ghost" onClick={close} aria-label="Close">
+            ✕
+          </button>
+        </div>
+      </div>
+    )
+
   return (
     <div className="alarm" role="alertdialog" aria-live="assertive" aria-label={alarm.title}>
       <div className="alarm__card">
@@ -73,59 +99,11 @@ export default function AlarmOverlay() {
         </div>
         <strong className="alarm__title">{alarm.title}</strong>
         {alarm.body && <p className="alarm__body">{alarm.body}</p>}
-        <div className="alarm__actions">
-          {(alarm.actions || []).map((a) => (
-            <button key={a.action} className={`btn ${a.action === 'snooze' ? 'btn--ghost' : ''}`} disabled={busy} onClick={() => answer(a.action)}>
-              {a.title}
-            </button>
-          ))}
-        </div>
-        <button className="alarm__mute" onClick={() => sound.current?.()}>
+        <div className="alarm__actions">{buttons}</div>
+        <button className="alarm__mute" onClick={() => stopRef.current?.()}>
           Stop the sound
         </button>
       </div>
     </div>
   )
-}
-
-/** Beep-beep-beep… every 1.5 seconds until stopped. Returns stop(). */
-function startAlarmSound() {
-  const AC = window.AudioContext || window.webkitAudioContext
-  if (!AC) return () => {}
-  let ctx
-  try {
-    ctx = new AC()
-  } catch {
-    return () => {}
-  }
-  ctx.resume?.().catch(() => {})
-  const beep = (at, freq) => {
-    const o = ctx.createOscillator()
-    const g = ctx.createGain()
-    o.type = 'square'
-    o.frequency.value = freq
-    g.gain.setValueAtTime(0, at)
-    g.gain.linearRampToValueAtTime(0.25, at + 0.02)
-    g.gain.setValueAtTime(0.25, at + 0.16)
-    g.gain.linearRampToValueAtTime(0, at + 0.2)
-    o.connect(g).connect(ctx.destination)
-    o.start(at)
-    o.stop(at + 0.22)
-  }
-  const ring = () => {
-    const t = ctx.currentTime + 0.05
-    beep(t, 880)
-    beep(t + 0.28, 1175)
-    beep(t + 0.56, 880)
-    beep(t + 0.84, 1175)
-  }
-  ring()
-  const id = setInterval(ring, 1500)
-  let stopped = false
-  return () => {
-    if (stopped) return
-    stopped = true
-    clearInterval(id)
-    ctx.close?.().catch(() => {})
-  }
 }

@@ -145,6 +145,22 @@ const PRAYERS = [
 // deno-lint-ignore no-explicit-any
 type Any = any
 
+/* ------------------------------ sounds ------------------------------ */
+// The sound and "ring until I answer / once" for each kind of reminder (Reminders page). Keep in sync with src/lib/sounds.js.
+const DEFAULT_SOUNDS: Record<string, { sound: string; ring: boolean }> = {
+  plan: { sound: 'chime', ring: false },
+  important: { sound: 'alarm', ring: true },
+  task: { sound: 'marimba', ring: false },
+  prayer: { sound: 'bell', ring: true },
+}
+function soundFor(setting: Any, kind: string) {
+  const saved = setting?.sounds?.[kind]
+  const out = { ...DEFAULT_SOUNDS[kind], ...(saved || {}) }
+  // before sounds existed, prayers used "Keep reminding until I mark it"
+  if (kind === 'prayer' && !saved && setting && 'prayer_repeat' in setting) out.ring = setting.prayer_repeat !== false
+  return out
+}
+
 /* ------------------------------ time zones ------------------------------ */
 
 /** Minutes the zone is ahead of UTC at that moment. */
@@ -209,13 +225,17 @@ Deno.serve(async (req) => {
         if (!user) return json({ error: 'Please sign in again.' }, 401)
         const { data: subs } = await db.from('push_subscriptions').select('*').eq('user_id', user)
         const problems: string[] = []
+        const { data: mySet } = await db.from('user_settings').select('*').eq('user_id', user).maybeSingle()
+        const kind = DEFAULT_SOUNDS[body.kind] ? body.kind : 'important'
+        const snd = soundFor(mySet, kind)
         const sent = await sendToUser(db, cfg, user, (sub) => ({
           title: '🔔 Reminders are on',
           body: 'This is how your reminders will look. Tap Done to try the button.',
           tag: 'test',
           renotify: true,
           requireInteraction: false,
-          alarm: true,
+          sound: snd.sound,
+          ring: false,
           actions: [{ action: 'done', title: '✓ Done' }],
           data: { kind: 'test', secret: sub.secret, url: '/#/reminders', api: API() },
         }), subs ?? [], problems)
@@ -283,7 +303,7 @@ async function tick(db: Any, cfg: Any) {
   for (const s of subs) byUser.set(s.user_id, [...(byUser.get(s.user_id) ?? []), s])
   const users = [...byUser.keys()]
   const { data: settings } = await db.from('user_settings').select('*').in('user_id', users)
-  const setOf = new Map((settings ?? []).map((s: Any) => [s.user_id, s]))
+  const setOf = new Map<string, Any>((settings ?? []).map((s: Any) => [s.user_id, s]))
   let sent = 0
 
   // ---- plans with a time ----
@@ -308,8 +328,9 @@ async function tick(db: Any, cfg: Any) {
     let why = ''
     if (count === 0 && now - remindAt < 6 * 3600 * 1000) why = now < due ? 'early' : 'now'
     else if (count > 0 && p.remind_before > 0 && now >= due && last < due) why = 'now' // the early one was sent; now it's time
-    else if (p.important && now >= due && now - last >= ringGap(setOf.get(p.user_id), 5, now - due) - 20_000 && now - due < 12 * 3600 * 1000) why = 'again'
+    else if (soundFor(setOf.get(p.user_id), p.important ? 'important' : 'plan').ring && now >= due && now - last >= ringGap(setOf.get(p.user_id), 5, now - due) - 20_000 && now - due < 12 * 3600 * 1000) why = 'again'
     if (!why) continue
+    const snd = soundFor(setOf.get(p.user_id), p.important ? 'important' : 'plan')
 
     const at = clock(due, tz)
     const dueDay = localDay(due, tz)
@@ -338,8 +359,9 @@ async function tick(db: Any, cfg: Any) {
         body,
         tag: `plan-${p.id}`,
         renotify: true,
-        requireInteraction: !!p.important,
-        alarm: !!p.important && why !== 'early',
+        requireInteraction: snd.ring || !!p.important,
+        sound: snd.sound,
+        ring: snd.ring && why !== 'early',
         actions: [
           { action: 'done', title: '✓ Done' },
           { action: 'snooze', title: 'Postpone 1 h' },
@@ -349,6 +371,49 @@ async function tick(db: Any, cfg: Any) {
       byUser.get(p.user_id)
     )
     await db.from('plans').update({ notify_count: count + 1, last_notified: new Date(now).toISOString() }).eq('id', p.id)
+  }
+
+  // ---- tasks with "Remind me" ----
+  const { data: tasks } = await db
+    .from('tasks')
+    .select('*')
+    .in('user_id', users)
+    .neq('status', 'done')
+    .not('remind_at', 'is', null)
+    .lte('remind_at', new Date(now).toISOString())
+    .gte('remind_at', new Date(now - 12 * 3600 * 1000).toISOString())
+  for (const t of tasks ?? []) {
+    const set = setOf.get(t.user_id)
+    const tz = safeTz(set?.tz || 'Europe/London')
+    const due = Date.parse(t.remind_at)
+    if (t.snoozed_until && now < Date.parse(t.snoozed_until)) continue
+    const last = t.last_notified ? Date.parse(t.last_notified) : 0
+    const count = t.notify_count || 0
+    const snd = soundFor(set, 'task')
+    const first = count === 0
+    const again = !first && snd.ring && now - last >= ringGap(set, 5, now - due) - 20_000
+    if (!first && !again) continue
+    sent += await sendToUser(
+      db,
+      cfg,
+      t.user_id,
+      (sub) => ({
+        title: `${t.priority === 'important' ? '❗' : '📝'} ${t.title}`,
+        body: first ? `Task · ${clock(due, tz)}` : `Still not done (since ${clock(due, tz)}). Tap Done or Postpone.`,
+        tag: `task-${t.id}`,
+        renotify: true,
+        requireInteraction: snd.ring,
+        sound: snd.sound,
+        ring: snd.ring,
+        actions: [
+          { action: 'done', title: '✓ Done' },
+          { action: 'snooze', title: 'Postpone 1 h' },
+        ],
+        data: { kind: 'task', id: t.id, secret: sub.secret, url: '/#/tasks', api: API() },
+      }),
+      byUser.get(t.user_id)
+    )
+    await db.from('tasks').update({ notify_count: count + 1, last_notified: new Date(now).toISOString() }).eq('id', t.id)
   }
 
   // ---- prayers ----
@@ -372,7 +437,8 @@ async function tick(db: Any, cfg: Any) {
       if (a.snoozed_until && now < Date.parse(a.snoozed_until)) continue
       const last = a.last_at ? Date.parse(a.last_at) : 0
       const first = a.count === 0 && now - start < 60 * MIN
-      const again = a.count > 0 && s.prayer_repeat && now - last >= ringGap(s, 10, now - start) - 20_000
+      const snd = soundFor(s, 'prayer')
+      const again = a.count > 0 && snd.ring && now - last >= ringGap(s, 10, now - start) - 20_000
       if (!first && !again) continue
       sent += await sendToUser(
         db,
@@ -383,8 +449,9 @@ async function tick(db: Any, cfg: Any) {
           body: first ? `Time for ${name}${place.name ? ` (${place.name})` : ''}` : `${name} isn't marked yet. Did you pray?`,
           tag: `prayer-${day}-${key}`,
           renotify: true,
-          requireInteraction: !!s.prayer_repeat,
-          alarm: true,
+          requireInteraction: snd.ring,
+          sound: snd.sound,
+          ring: snd.ring,
           actions: [
             { action: 'ontime', title: '✓ Prayed' },
             { action: 'snooze', title: 'Remind in 10 min' },
@@ -420,6 +487,11 @@ async function act(db: Any, b: Any) {
   const user = sub.user_id
   const now = Date.now()
 
+  if (b.kind === 'task' && b.id) {
+    if (b.what === 'done') await db.from('tasks').update({ status: 'done' }).eq('id', b.id).eq('user_id', user)
+    if (b.what === 'snooze') await db.from('tasks').update({ snoozed_until: new Date(now + 60 * MIN).toISOString(), last_notified: new Date(now).toISOString() }).eq('id', b.id).eq('user_id', user)
+    return { ok: true }
+  }
   if (b.kind === 'plan' && b.id) {
     if (b.what === 'done') await db.from('plans').update({ done: true }).eq('id', b.id).eq('user_id', user)
     if (b.what === 'snooze') await db.from('plans').update({ snoozed_until: new Date(now + 60 * MIN).toISOString(), last_notified: new Date(now).toISOString() }).eq('id', b.id).eq('user_id', user)
