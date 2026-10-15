@@ -10,7 +10,7 @@ import TaskChart from '../components/TaskChart'
 import BlurText from '../components/bits/BlurText'
 import CountUp from '../components/bits/CountUp'
 import Reveal from '../components/bits/Reveal'
-import StarBorder from '../components/reactbits/StarBorder'
+import GlareHover from '../components/reactbits/GlareHover'
 import { currentStatus } from '../lib/push'
 
 const PRIORITY = { doing: 0, todo: 1 }
@@ -338,23 +338,22 @@ export default function Home({ session }) {
       {/* ------------------------------ all sections, two per row ------------------------------ */}
       <nav className="home-tiles" aria-label="Sections">
         {TILES.map((x, i) => (
-          <StarBorder
+          <GlareHover
             key={x.to}
-            as={Link}
-            to={x.to}
-            className="home-tile"
+            className="home-glare"
             style={{ '--i': i }}
-            theme="light"
-            radius={16}
-            thickness={1}
-            duration={5 + (i % 3)}
-            stars={1}
-            glow={0.5}
-            trailLength={0.35}
-            backgroundColor="#ffffff"
-            textColor="#0a0a0a"
-            borderColor="rgba(10,10,10,.12)"
+            background="#ffffff"
+            borderColor="var(--line)"
+            borderRadius="16px"
+            glareColor="#0a0a0a"
+            glareOpacity={0.14}
+            glareAngle={-35}
+            glareSize={55}
+            variant="sheen"
+            blendMode="multiply"
+            transitionDuration={700}
           >
+            <Link to={x.to} className="home-tile">
             <span className="home-tile__icon" aria-hidden>
               {x.icon}
             </span>
@@ -362,7 +361,8 @@ export default function Home({ session }) {
               <strong>{x.label}</strong>
               <span>{tileNote(x.to)}</span>
             </span>
-          </StarBorder>
+                      </Link>
+          </GlareHover>
         ))}
       </nav>
 

@@ -992,13 +992,9 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
 }
 
-/* React Bits: StarBorder buttons on Home, ShapeGrid background everywhere */
+/* React Bits: GlareHover buttons on Home, ShapeGrid background everywhere */
 .app-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
 .shell > .content { position: relative; z-index: 1; }
-.star-border.home-tile { display: flex; justify-content: flex-start; padding: 12px; border: 0; font-weight: inherit; line-height: inherit; gap: 10px; }
-.star-border.home-tile:hover { border-color: transparent; }
-@media (min-width: 720px) { .star-border.home-tile { flex-direction: column; align-items: flex-start; gap: 8px; } }
-.star-border.home-tile .home-tile__text { text-align: left; }
 
 /* boxes sit on the moving grid: give them solid backgrounds (white by default, soft colours for the three main ones) */
 .card, .today-card, .item, .ai-panel, .toolbar .segmented { background: var(--bg); }
@@ -1018,3 +1014,10 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .today-card--prayers .pt--missed { background: #fbe9e7; }
 .today-card--prayers .pt-act { border-top-color: rgba(10, 10, 10, .08); }
 .today-card--prayers .btn--ghost { background: #fff; }
+
+.glare-hover.home-glare { display: grid; place-items: stretch; width: 100%; animation: tile-in .5s cubic-bezier(.22,1,.36,1) backwards; animation-delay: calc(var(--i, 0) * 45ms); transition: transform .18s cubic-bezier(.22,1,.36,1), box-shadow .18s, border-color .18s; }
+.home-glare:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.07); border-color: #cfcfcf; }
+.home-glare:active { transform: scale(.97); }
+.home-glare .home-tile { border: 0; background: transparent; animation: none; width: 100%; height: 100%; box-sizing: border-box; justify-content: flex-start; }
+.home-glare .home-tile:hover, .home-glare .home-tile:active { transform: none; box-shadow: none; }
+.home-glare:hover .home-tile__icon { transform: scale(1.1) rotate(-4deg); }
