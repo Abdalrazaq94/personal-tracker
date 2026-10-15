@@ -215,6 +215,27 @@ export default function Home({ session }) {
   const spentToday = d ? d.spend.filter((x) => x.spent_on === t).reduce((a, x) => a + Number(x.amount), 0) : 0
   const spentMonth = d ? d.spend.reduce((a, x) => a + Number(x.amount), 0) : 0
 
+  /** A plain summary of today, used when the AI can't answer. */
+  function plainBrief() {
+    if (!d) return ''
+    const late = upcoming.filter((x) => x.day < t && !x.done)
+    const todays = upcoming.filter((x) => x.day === t && !x.done)
+    const next = todays.find((x) => x.time && x.time >= hhmm(new Date())) || todays[0]
+    const important = d.tasks.filter((x) => x.priority === 'important' && x.status !== 'done')
+    const parts = []
+    parts.push(
+      todays.length || untimed.length
+        ? `You have **${todays.length + allUntimed.length} things** to do today.`
+        : 'Nothing planned for today.'
+    )
+    if (next) parts.push(`Next: **${next.title}**${next.time ? ` at ${next.time}` : ''}.`)
+    if (late.length) parts.push(`**${late.length} overdue**: ${late.slice(0, 2).map((x) => x.title).join(', ')}.`)
+    if (important.length) parts.push(`Important: ${important.slice(0, 2).map((x) => `**${x.title}**`).join(', ')}.`)
+    if (goodHabits.length) parts.push(`Habits: ${goodHabits.filter((h) => dayState(h, d.logs, now) === 'ok').length} of ${goodHabits.length} done.`)
+    parts.push(`Spent ${money(spentToday)} today.`)
+    return parts.join(' ')
+  }
+
   /** The small line under each button. */
   function tileNote(to) {
     if (!d) return '…'
@@ -359,7 +380,7 @@ export default function Home({ session }) {
           </section>
 
           <QuickAddAll onChanged={() => setReload((n) => n + 1)} />
-          <DayBrief />
+          <DayBrief fallback={plainBrief()} />
 
           {/* ------------------------------ habits ------------------------------ */}
           {todayHabits.length > 0 && (

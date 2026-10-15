@@ -904,3 +904,4 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .up-group { display: flex; flex-direction: column; gap: 6px; }
 .up-day { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #666; margin: 4px 0 0; }
 .up-day.is-late { color: #b3261e; }
+.day-brief__note { margin: 0; color: #bdbdbd; font-size: 13px; }

@@ -262,7 +262,9 @@ const readCache = () => {
   }
 }
 
-export function DayBrief() {
+/** "Your day": a short AI summary of today. Refresh asks the AI again; otherwise it updates once a day.
+ *  If the AI can't answer, it shows `fallback` (a plain summary made in the app). */
+export function DayBrief({ fallback }) {
   const [brief, setBrief] = useState(readCache)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -278,7 +280,7 @@ export function DayBrief() {
         localStorage.setItem(KEY(), JSON.stringify(b))
       } catch {}
     } catch (e) {
-      setError(e.message)
+      setError(/unknown request/i.test(e.message) ? 'The AI part needs updating on the server, so here’s a simple summary.' : e.message)
     }
     setBusy(false)
   }
@@ -305,15 +307,15 @@ export function DayBrief() {
         </button>
       </div>
       {busy && !brief && <div className="ai-loading">Looking at your day…</div>}
+      {brief ? <Markdown text={brief.text} /> : !busy && fallback ? <Markdown text={fallback} /> : null}
       {error && (
-        <p className="error-text">
+        <p className="day-brief__note small">
           {error}{' '}
           <button className="link small" onClick={load}>
             Try again
           </button>
         </p>
       )}
-      {brief && <Markdown text={brief.text} />}
     </section>
   )
 }
