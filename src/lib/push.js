@@ -118,7 +118,8 @@ export async function saveSettings(patch) {
 }
 
 export async function loadSettings() {
-  const { data, error } = await supabase.from('user_settings').select('tz, prayer_place, prayer_notify, prayer_repeat').maybeSingle()
-  if (error) return { needsUpdate: /column|prayer_|tz/.test(error.message) }
-  return data || {}
+  const { data, error } = await supabase.from('user_settings').select('*').maybeSingle()
+  if (error) return { needsUpdate: true }
+  if (data && !('prayer_notify' in data)) return { ...data, needsUpdate: true }
+  return { ring_every: 2, ...(data || {}), needsRing: !!data && !('ring_every' in data) }
 }

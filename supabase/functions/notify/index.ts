@@ -128,8 +128,12 @@ const cors = {
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
 const MIN = 60_000
-const REPEAT_PLAN = 5 * MIN // important plans: again every 5 minutes until Done / Postpone
-const REPEAT_PRAYER = 10 * MIN // prayers (if "keep reminding" is on): every 10 minutes until marked
+// How often an unanswered reminder rings again: the user's choice (Reminders page, "Ring again"),
+// for the first hour; after that at most every 15 minutes so the phone isn't ringing all night.
+function ringGap(setting: Any, fallbackMin: number, sinceFirst: number) {
+  const chosen = Number(setting?.ring_every) || fallbackMin
+  return (sinceFirst > 60 * MIN ? Math.max(chosen, 15) : chosen) * MIN
+}
 const PRAYERS = [
   ['fajr', 'Fajr'],
   ['dhuhr', 'Dhuhr'],
@@ -209,7 +213,9 @@ Deno.serve(async (req) => {
           title: '🔔 Reminders are on',
           body: 'This is how your reminders will look. Tap Done to try the button.',
           tag: 'test',
+          renotify: true,
           requireInteraction: false,
+          alarm: true,
           actions: [{ action: 'done', title: '✓ Done' }],
           data: { kind: 'test', secret: sub.secret, url: '/#/reminders', api: API() },
         }), subs ?? [], problems)
@@ -276,7 +282,7 @@ async function tick(db: Any, cfg: Any) {
   const byUser = new Map<string, Any[]>()
   for (const s of subs) byUser.set(s.user_id, [...(byUser.get(s.user_id) ?? []), s])
   const users = [...byUser.keys()]
-  const { data: settings } = await db.from('user_settings').select('user_id, tz, prayer_place, prayer_notify, prayer_repeat').in('user_id', users)
+  const { data: settings } = await db.from('user_settings').select('*').in('user_id', users)
   const setOf = new Map((settings ?? []).map((s: Any) => [s.user_id, s]))
   let sent = 0
 
@@ -302,7 +308,7 @@ async function tick(db: Any, cfg: Any) {
     let why = ''
     if (count === 0 && now - remindAt < 6 * 3600 * 1000) why = now < due ? 'early' : 'now'
     else if (count > 0 && p.remind_before > 0 && now >= due && last < due) why = 'now' // the early one was sent; now it's time
-    else if (p.important && now >= due && now - last >= REPEAT_PLAN && now - due < 12 * 3600 * 1000) why = 'again'
+    else if (p.important && now >= due && now - last >= ringGap(setOf.get(p.user_id), 5, now - due) - 20_000 && now - due < 12 * 3600 * 1000) why = 'again'
     if (!why) continue
 
     const at = clock(due, tz)
@@ -333,6 +339,7 @@ async function tick(db: Any, cfg: Any) {
         tag: `plan-${p.id}`,
         renotify: true,
         requireInteraction: !!p.important,
+        alarm: !!p.important && why !== 'early',
         actions: [
           { action: 'done', title: '✓ Done' },
           { action: 'snooze', title: 'Postpone 1 h' },
@@ -365,7 +372,7 @@ async function tick(db: Any, cfg: Any) {
       if (a.snoozed_until && now < Date.parse(a.snoozed_until)) continue
       const last = a.last_at ? Date.parse(a.last_at) : 0
       const first = a.count === 0 && now - start < 60 * MIN
-      const again = a.count > 0 && s.prayer_repeat && now - last >= REPEAT_PRAYER
+      const again = a.count > 0 && s.prayer_repeat && now - last >= ringGap(s, 10, now - start) - 20_000
       if (!first && !again) continue
       sent += await sendToUser(
         db,
@@ -377,6 +384,7 @@ async function tick(db: Any, cfg: Any) {
           tag: `prayer-${day}-${key}`,
           renotify: true,
           requireInteraction: !!s.prayer_repeat,
+          alarm: true,
           actions: [
             { action: 'ontime', title: '✓ Prayed' },
             { action: 'snooze', title: 'Remind in 10 min' },

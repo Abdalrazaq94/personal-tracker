@@ -20,16 +20,30 @@ self.addEventListener('push', (event) => {
     data: msg.data || {},
     icon: 'icons/icon-192.png',
     badge: 'icons/badge-96.png',
-    vibrate: msg.requireInteraction ? [300, 120, 300, 120, 300] : [200, 100, 200],
+    // alarms vibrate for about 6 seconds; normal reminders briefly
+    vibrate: msg.alarm
+      ? [800, 300, 800, 300, 800, 300, 800, 300, 800, 300, 800]
+      : msg.requireInteraction
+        ? [300, 120, 300, 120, 300]
+        : [200, 100, 200],
+    silent: false,
     timestamp: Date.now(),
   }
-  event.waitUntil(self.registration.showNotification(msg.title || 'Tracker', options))
+  const show = self.registration.showNotification(msg.title || 'Tracker', options)
+  // if the app is open, it plays a looping alarm sound until you answer
+  const tell = msg.alarm
+    ? self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) =>
+        list.forEach((c) => c.postMessage({ type: 'tracker-alarm', title: msg.title, body: msg.body, tag: msg.tag, actions: options.actions, data: options.data }))
+      )
+    : Promise.resolve()
+  event.waitUntil(Promise.all([show, tell]))
 })
 
 self.addEventListener('notificationclick', (event) => {
   const n = event.notification
   const data = n.data || {}
   n.close()
+  self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => list.forEach((c) => c.postMessage({ type: 'tracker-alarm-stop', tag: n.tag })))
   const action = event.action
   if (action && data.api && data.secret) {
     // a button: tell the server, no need to open the app

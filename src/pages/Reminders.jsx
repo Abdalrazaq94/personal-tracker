@@ -57,6 +57,14 @@ export default function Reminders() {
           <span>Run supabase/migrations/008_reminders.sql in Supabase → SQL Editor, then refresh.</span>
         </div>
       )}
+      {settings?.needsRing && (
+        <div className="error-bar" role="alert">
+          <span>
+            To choose how often reminders ring, run this once in Supabase → SQL Editor, then refresh:{' '}
+            <code>alter table public.user_settings add column if not exists ring_every integer not null default 2;</code>
+          </span>
+        </div>
+      )}
 
       <section className="card rem-card">
         <div className="rem-head">
@@ -97,10 +105,58 @@ export default function Reminders() {
       </section>
 
       <section className="card rem-card">
+        <h2>Ringing</h2>
+        <label className="rem-row">
+          <span>
+            <strong>Ring again</strong>
+            <span className="muted small">For important plans and prayers, until you tap Done, Prayed or Postpone</span>
+          </span>
+          <select
+            className="rem-select"
+            value={settings?.ring_every ?? 2}
+            disabled={busy || !settings || settings.needsRing || settings.needsUpdate}
+            onChange={(e) => {
+              const ring_every = Number(e.target.value)
+              run(async () => {
+                await saveSettings({ ring_every })
+                setSettings((s) => ({ ...s, ring_every }))
+              }, 'Saved.')
+            }}
+          >
+            <option value={1}>Every 1 min</option>
+            <option value={2}>Every 2 min</option>
+            <option value={5}>Every 5 min</option>
+            <option value={10}>Every 10 min</option>
+          </select>
+        </label>
+        <p className="muted small">
+          Each ring plays the sound and vibrates for about 6 seconds. If the app is open, it beeps nonstop until you answer. After an hour it slows
+          to every 15 minutes.
+        </p>
+      </section>
+
+      <section className="card rem-card">
+        <h2>Change the sound</h2>
+        <p className="muted small">Phones don’t let websites pick the sound, but you can choose a louder or longer one (an alarm or ringtone) for Tracker:</p>
+        <ol className="rem-tips small">
+          <li>
+            Open your phone’s <b>Settings → Apps → Chrome → Notifications</b> (or <b>Apps → Tracker</b> if you added it to your Home Screen).
+          </li>
+          <li>
+            Find <b>Sites</b> → <b>personal-tracker-black-xi.vercel.app</b> (on some phones it’s listed straight under Notifications).
+          </li>
+          <li>
+            Tap <b>Sound</b> and choose a long one, such as an alarm tone. Also turn on <b>Override Do Not Disturb</b> if you want prayers to
+            ring at night.
+          </li>
+        </ol>
+      </section>
+
+      <section className="card rem-card">
         <h2>Plans</h2>
         <p className="muted small">
           Any plan with a time reminds you at that time. Mark it <b>Important</b> and choose <b>Remind me</b> (15 min, 1 hour or 1 day
-          before) when you add it. Important reminders repeat every 5 minutes until you tap <b>Done</b> or <b>Postpone</b>.
+          before) when you add it. Important reminders ring again (see Ringing above) until you tap <b>Done</b> or <b>Postpone</b>.
         </p>
       </section>
 
@@ -126,7 +182,7 @@ export default function Reminders() {
             <label className="rem-row">
               <span>
                 <strong>Keep reminding until I mark it</strong>
-                <span className="muted small">Again every 10 minutes until you tap Prayed (or mark it in the app)</span>
+                <span className="muted small">Rings again until you tap Prayed (or mark it in the app)</span>
               </span>
               <input type="checkbox" className="rem-switch" checked={settings?.prayer_repeat !== false} disabled={busy || !on || !settings?.prayer_notify} onChange={(e) => setPrayer({ prayer_repeat: e.target.checked })} />
             </label>

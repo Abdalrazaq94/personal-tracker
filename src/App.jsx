@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useBackToClose } from './lib/useBack'
 import PageGuard from './components/PageGuard'
+import AlarmOverlay from './components/AlarmOverlay'
 import { configured, supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Home from './pages/Home'
@@ -57,6 +58,7 @@ export default function App() {
   return (
     <div className="shell">
       <MobileBar pathname={pathname} email={session.user.email} />
+      <AlarmOverlay />
       <nav className="topbar" aria-label="Sections">
         <NavLink to="/" end className={({ isActive }) => (isActive ? 'is-active' : '')}>
           Home
