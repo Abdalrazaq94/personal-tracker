@@ -7,6 +7,9 @@ import { SpeakButton } from '../lib/speech'
 import { DayBrief, QuickAddAll } from '../components/TodayAI'
 import { inWords, nextPrayer, placeToday, PRAYERS, timesFor } from '../lib/prayer'
 import TaskChart from '../components/TaskChart'
+import BlurText from '../components/bits/BlurText'
+import CountUp from '../components/bits/CountUp'
+import Reveal from '../components/bits/Reveal'
 import { currentStatus } from '../lib/push'
 
 const PRIORITY = { doing: 0, todo: 1 }
@@ -271,7 +274,13 @@ export default function Home({ session }) {
     switch (to) {
       case '/tasks': {
         const open = d.tasks.filter((x) => x.status !== 'done').length
-        return open ? `${open} to do` : 'All done'
+        return open ? (
+          <>
+            <CountUp to={open} /> to do
+          </>
+        ) : (
+          'All done'
+        )
       }
       case '/plan': {
         const late = d.plans.filter((p) => !p.done && p.plan_date < t).length
@@ -281,9 +290,19 @@ export default function Home({ session }) {
       case '/habits':
         return goodHabits.length ? `${goodHabits.filter((h) => dayState(h, d.logs, now) === 'ok').length} of ${goodHabits.length} today` : 'Track habits'
       case '/spend':
-        return `${money(spentToday)} today`
+        return (
+          <>
+            <CountUp to={spentToday} format={money} /> today
+          </>
+        )
       case '/words':
-        return d.wordsLeft ? `${d.wordsLeft} to learn` : 'Add words'
+        return d.wordsLeft ? (
+          <>
+            <CountUp to={d.wordsLeft} /> to learn
+          </>
+        ) : (
+          'Add words'
+        )
       case '/commit':
         return prayer ? `${prayer.name} in ${inWords(prayer.inMs)}` : 'Prayer times'
       case '/notes':
@@ -303,7 +322,7 @@ export default function Home({ session }) {
     <div className="page">
       <header className="home-header">
         <p className="muted">{date}</p>
-        <h1 className="display">{greet}.</h1>
+        <BlurText as="h1" className="display" text={`${greet}.`} />
       </header>
 
       {error && (
@@ -317,8 +336,8 @@ export default function Home({ session }) {
 
       {/* ------------------------------ all sections, two per row ------------------------------ */}
       <nav className="home-tiles" aria-label="Sections">
-        {TILES.map((x) => (
-          <Link key={x.to} to={x.to} className="home-tile">
+        {TILES.map((x, i) => (
+          <Link key={x.to} to={x.to} className="home-tile spot" style={{ '--i': i }}>
             <span className="home-tile__icon" aria-hidden>
               {x.icon}
             </span>
@@ -331,7 +350,7 @@ export default function Home({ session }) {
       </nav>
 
       {!d ? (
-        <div className="empty muted">Loading your day…</div>
+        <div className="empty muted loading-text">Loading your day…</div>
       ) : (
         <>
           {/* ------------------------------ microphone + AI summary ------------------------------ */}
@@ -339,7 +358,7 @@ export default function Home({ session }) {
           <DayBrief fallback={plainBrief()} />
 
           {/* ------------------------------ daily tasks: chart, then the list ------------------------------ */}
-          <section className="today-card">
+          <Reveal as="section" className="today-card">
             <SectionHead title="Daily tasks" to="/tasks" note={`${d.tasks.filter((x) => x.status !== 'done').length} to do`} />
             <TaskChart tasks={d.allTasks} today={t} />
             {d.allTasks.length > 0 && !d.allTasks.some((x) => 'done_at' in x) && (
@@ -371,10 +390,10 @@ export default function Home({ session }) {
                 +{moreTasks} more tasks →
               </Link>
             )}
-          </section>
+          </Reveal>
 
           {/* ------------------------------ plans: today and coming up ------------------------------ */}
-          <section className="today-card">
+          <Reveal as="section" className="today-card">
             <SectionHead title="Plans" to="/plan" />
             {planGroups.length === 0 ? (
               <p className="muted small">
@@ -401,14 +420,14 @@ export default function Home({ session }) {
                 </div>
               ))
             )}
-          </section>
+          </Reveal>
 
           {/* ------------------------------ prayers: next one, and any missed ------------------------------ */}
           <PrayerToday place={place} logs={prayerLogs} onMark={markPrayer} />
 
           {/* ------------------------------ habits ------------------------------ */}
           {todayHabits.length > 0 && (
-            <section className="today-card">
+            <Reveal as="section" className="today-card">
               <SectionHead title="Habits" to="/habits" />
               <ul className="today-list">
                 {goodHabits.map((h) => {
@@ -450,12 +469,12 @@ export default function Home({ session }) {
                   )
                 })}
               </ul>
-            </section>
+            </Reveal>
           )}
 
           {/* ------------------------------ words ------------------------------ */}
           {d.words.length > 0 && (
-            <section className="today-card">
+            <Reveal as="section" className="today-card">
               <SectionHead title="Words to practise" to="/words" note={`${d.wordsLeft} not memorized`} />
               <ul className="today-words">
                 {d.words.map((w) => (
@@ -475,20 +494,24 @@ export default function Home({ session }) {
               <Link to="/words" className="btn btn--ghost btn--sm today-cta">
                 ✦ Practise these words
               </Link>
-            </section>
+            </Reveal>
           )}
 
           {/* ------------------------------ spending ------------------------------ */}
-          <section className="today-card">
+          <Reveal as="section" className="today-card">
             <SectionHead title="Spending" to="/spend" />
             <div className="today-money">
               <div>
                 <span>Today</span>
-                <strong>{money(spentToday)}</strong>
+                <strong>
+                  <CountUp to={spentToday} format={money} />
+                </strong>
               </div>
               <div>
                 <span>This month</span>
-                <strong>{money(spentMonth)}</strong>
+                <strong>
+                  <CountUp to={spentMonth} format={money} />
+                </strong>
               </div>
             </div>
             <form className="today-spend" onSubmit={addSpend}>
@@ -498,7 +521,7 @@ export default function Home({ session }) {
                 Add
               </button>
             </form>
-          </section>
+          </Reveal>
 
         </>
       )}
@@ -530,12 +553,12 @@ function PrayerToday({ place, logs, onMark }) {
   if (place === undefined) return null
   if (!place)
     return (
-      <section className="today-card">
+      <Reveal as="section" className="today-card">
         <SectionHead title="Prayers" to="/commit" />
         <p className="muted small">
           Choose your city in <Link to="/commit">Prayers</Link> to see prayer times here.
         </p>
-      </section>
+      </Reveal>
     )
 
   const day = placeToday(place.tz)
@@ -566,7 +589,7 @@ function PrayerToday({ place, logs, onMark }) {
   }
 
   return (
-    <section className="today-card">
+    <Reveal as="section" className="today-card">
       <SectionHead title="Prayers" to="/commit" note={`Next: ${next.name} ${clock(next.at, place.tz)} · in ${inWords(next.inMs)}`} />
       <ul className="pt-row" aria-label="Today's prayers">
         {rows.map((r) => (
@@ -599,7 +622,7 @@ function PrayerToday({ place, logs, onMark }) {
       {!current && missed.length === 0 && rows.some((r) => r.state === 'done' || r.state === 'late') && (
         <p className="muted small">All prayers so far are marked. ✓</p>
       )}
-    </section>
+    </Reveal>
   )
 }
 

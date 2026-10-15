@@ -11,6 +11,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
     "adhan": "^4.4.3",
+    "motion": "^12.43.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.30.6"

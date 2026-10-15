@@ -1,8 +1,9 @@
+import BlurText from './bits/BlurText'
 export function PageHeader({ title, subtitle, right }) {
   return (
     <header className="page-header">
       <div>
-        <h1>{title}</h1>
+        {typeof title === 'string' ? <BlurText as="h1" text={title} /> : <h1>{title}</h1>}
         {subtitle && <p className="muted">{subtitle}</p>}
       </div>
       {right}
@@ -49,7 +50,7 @@ export function ErrorBar({ error, onClose }) {
 }
 
 export function Loading() {
-  return <div className="empty muted">Loading…</div>
+  return <div className="empty muted loading-text">Loading…</div>
 }
 
 export function DeleteButton({ onClick, label = 'Delete' }) {

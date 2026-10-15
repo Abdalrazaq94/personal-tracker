@@ -3,6 +3,8 @@ import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from
 import { useBackToClose } from './lib/useBack'
 import PageGuard from './components/PageGuard'
 import AlarmOverlay from './components/AlarmOverlay'
+import Effects from './components/bits/Effects'
+import { MotionConfig, motion } from 'motion/react'
 import InstallApp from './components/InstallApp'
 import { configured, supabase } from './lib/supabase'
 import Login from './pages/Login'
@@ -57,7 +59,9 @@ export default function App() {
   const inMore = pathname === '/more' || (!MOBILE.includes(pathname) && pathname !== '/')
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="shell">
+      <Effects />
       <MobileBar pathname={pathname} email={session.user.email} />
       <AlarmOverlay />
       <nav className="topbar" aria-label="Sections">
@@ -73,6 +77,13 @@ export default function App() {
 
       <main className="content">
         <PageGuard resetKey={pathname}>
+        <motion.div
+          key={pathname}
+          className="page-anim"
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        >
         <Routes>
           <Route path="/" element={<Home session={session} />} />
           <Route path="/words" element={<Words />} />
@@ -88,6 +99,7 @@ export default function App() {
           <Route path="/more" element={<More />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </motion.div>
         </PageGuard>
       </main>
 
@@ -105,6 +117,7 @@ export default function App() {
         </NavLink>
       </nav>
     </div>
+    </MotionConfig>
   )
 }
 

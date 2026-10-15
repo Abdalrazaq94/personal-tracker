@@ -919,3 +919,81 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .pt--missed span { color: #b3261e; font-weight: 700; }
 .pt-act { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
 .pt-act--missed b { color: #b3261e; }
+
+/* ================= motion (black & white, React Bits style) ================= */
+.click-spark { position: fixed; inset: 0; z-index: 2000; pointer-events: none; }
+.blur-text { display: inline-block; }
+.blur-text__word { display: inline-block; will-change: transform, filter, opacity; }
+.page-header h1.blur-text, h1.display.blur-text { display: block; }
+
+/* home buttons: arrive one by one, lift on hover, soft spotlight under the pointer */
+.home-tile { position: relative; overflow: hidden; animation: tile-in .5s cubic-bezier(.22,1,.36,1) backwards; animation-delay: calc(var(--i, 0) * 45ms); transition: border-color .15s, transform .18s cubic-bezier(.22,1,.36,1), box-shadow .18s; }
+.home-tile:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.07); }
+.home-tile:active { transform: scale(.97); }
+.home-tile__icon { transition: transform .25s cubic-bezier(.34,1.56,.64,1); }
+.home-tile:hover .home-tile__icon { transform: scale(1.1) rotate(-4deg); }
+.spot::before { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .25s;
+  background: radial-gradient(160px circle at var(--mx, 50%) var(--my, 50%), rgba(0,0,0,.07), transparent 70%); }
+.spot:hover::before { opacity: 1; }
+.spot > * { position: relative; }
+@keyframes tile-in { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: none; } }
+
+/* lists: rows rise in, one after another */
+.today-list li, .list > li { animation: row-in .45s cubic-bezier(.22,1,.36,1) backwards; }
+.today-list li:nth-child(2), .list > li:nth-child(2) { animation-delay: .04s; }
+.today-list li:nth-child(3), .list > li:nth-child(3) { animation-delay: .08s; }
+.today-list li:nth-child(4), .list > li:nth-child(4) { animation-delay: .12s; }
+.today-list li:nth-child(5), .list > li:nth-child(5) { animation-delay: .16s; }
+.today-list li:nth-child(6), .list > li:nth-child(6) { animation-delay: .2s; }
+.today-list li:nth-child(n+7), .list > li:nth-child(n+7) { animation-delay: .24s; }
+@keyframes row-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ticking something done: the circle pops, the text fades */
+.check { transition: background .2s, color .2s, transform .2s; }
+.check:active { transform: scale(.88); }
+.check.is-on { animation: check-pop .38s cubic-bezier(.34,1.56,.64,1); }
+@keyframes check-pop { 0% { transform: scale(.7); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+.today-list li .today-list__text, .task__title { transition: opacity .25s, color .25s; }
+
+/* buttons press in */
+.btn, .badge, .chip, .round-btn, .segmented button { transition: transform .15s cubic-bezier(.22,1,.36,1), background .15s, color .15s, border-color .15s, opacity .15s; }
+.btn:active, .badge:active, .chip:active, .round-btn:active { transform: scale(.96); }
+.segmented button.is-active { animation: seg-in .25s ease-out; }
+@keyframes seg-in { from { transform: scale(.92); } to { transform: none; } }
+
+/* charts draw from left to right */
+.prayer-chart svg, .habit-chart svg { animation: chart-wipe 1s cubic-bezier(.22,1,.36,1) both; }
+@keyframes chart-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+
+/* AI thinking / loading: shiny text */
+.ai-loading, .loading-text, .splash {
+  background: linear-gradient(100deg, #9a9a9a 40%, #0a0a0a 50%, #9a9a9a 60%) 0 0 / 250% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent !important; animation: shine 1.6s linear infinite;
+}
+.day-brief .ai-loading { background-image: linear-gradient(100deg, #8a8a8a 40%, #ffffff 50%, #8a8a8a 60%); }
+@keyframes shine { from { background-position: 125% 0; } to { background-position: -125% 0; } }
+.day-brief .ai-result, .ai-result { animation: fade-up .5s cubic-bezier(.22,1,.36,1) both; }
+@keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* menu and pop-ups */
+.drawer { animation: drawer-slide .32s cubic-bezier(.22,1,.36,1); }
+@keyframes drawer-slide { from { transform: translateX(-100%); } to { transform: none; } }
+.drawer li { animation: row-in .4s cubic-bezier(.22,1,.36,1) backwards; }
+.drawer li:nth-child(2) { animation-delay: .03s; } .drawer li:nth-child(3) { animation-delay: .06s; } .drawer li:nth-child(4) { animation-delay: .09s; }
+.drawer li:nth-child(5) { animation-delay: .12s; } .drawer li:nth-child(6) { animation-delay: .15s; } .drawer li:nth-child(n+7) { animation-delay: .18s; }
+.alarm { animation: drawer-fade .2s ease-out; }
+.alarm__card { animation: pop-in .35s cubic-bezier(.34,1.56,.64,1); }
+.alarm-toast { animation: toast-in .35s cubic-bezier(.22,1,.36,1); }
+@keyframes pop-in { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: none; } }
+.progress span { transition: width .6s cubic-bezier(.22,1,.36,1); }
+.pt { animation: tile-in .45s cubic-bezier(.22,1,.36,1) backwards; }
+.pt:nth-child(2) { animation-delay: .05s; } .pt:nth-child(3) { animation-delay: .1s; } .pt:nth-child(4) { animation-delay: .15s; } .pt:nth-child(5) { animation-delay: .2s; }
+.pt--now { animation: tile-in .45s backwards, now-pulse 2s ease-in-out .6s infinite; }
+@keyframes now-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(10,10,10,.25); } 50% { box-shadow: 0 0 0 6px rgba(10,10,10,0); } }
+
+/* people who ask their phone for less motion get none of this */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
+  .click-spark { display: none; }
+}
