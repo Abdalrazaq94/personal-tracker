@@ -15,8 +15,17 @@ export default class PageGuard extends Component {
   }
 
   componentDidCatch(error, info) {
-    // keep a copy so it can be read later (and in the browser console)
     console.error('Page crashed:', error, info?.componentStack)
+    this.setState({ stack: info?.componentStack || '' })
+    // a reload always fixes it, so do that once by itself; only show this screen if it happens again straight away
+    try {
+      const last = Number(sessionStorage.getItem('tracker-auto-reload') || 0)
+      if (Date.now() - last > 20000) {
+        sessionStorage.setItem('tracker-auto-reload', String(Date.now()))
+        sessionStorage.setItem('tracker-last-crash', `${error?.message || error}`)
+        window.location.reload()
+      }
+    } catch {}
   }
 
   componentDidUpdate(prev) {
@@ -33,6 +42,10 @@ export default class PageGuard extends Component {
           <h2>This page had a problem</h2>
           <p className="muted small">Tap Reload. If it keeps happening, send this message to the developer:</p>
           <code className="crash__msg">{text}</code>
+          <details className="crash__more" open>
+            <summary className="small">Details for the developer (screenshot this)</summary>
+            <pre>{`${(error?.stack || '').split('\n').slice(0, 8).join('\n')}\n—\n${(this.state.stack || '').trim().split('\n').slice(0, 8).join('\n')}`}</pre>
+          </details>
           <div className="crash__acts">
             <button className="btn" onClick={() => window.location.reload()}>
               Reload
