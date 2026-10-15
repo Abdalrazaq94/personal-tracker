@@ -3,6 +3,7 @@ import { useRows } from '../lib/useRows'
 import { dayLabel, money, startOfMonth, startOfWeek, today, ymd } from '../lib/dates'
 import AiPanel from '../components/AiPanel'
 import WalletSetup from '../components/WalletSetup'
+import BudgetCard from '../components/BudgetCard'
 import { DeleteButton, Empty, ErrorBar, Loading, PageHeader } from '../components/ui'
 import { T, LOCALE } from '../lib/i18n'
 
@@ -70,6 +71,8 @@ export default function Spend() {
           <strong>{money(totals.all)}</strong>
         </div>
       </div>
+
+      {!loading && <BudgetCard expenses={rows} />}
 
       <WalletSetup onTestAdded={reload} />
 

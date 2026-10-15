@@ -10,6 +10,7 @@ import { ErrorBar, PageHeader, Segmented } from '../components/ui'
 import { Markdown } from '../components/AiPanel'
 import Reveal from '../components/bits/Reveal'
 import CountUp from '../components/bits/CountUp'
+import { loadBudget } from '../lib/budget'
 
 const PRESETS = [
   { id: '2w', n: 2, unit: 'week', label: 'Last 2 weeks' },
@@ -39,6 +40,12 @@ export default function Review() {
   const [preset, setPreset] = useState('2m')
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
+  const [budget, setBudget] = useState(null)
+  useEffect(() => {
+    loadBudget()
+      .then((b) => setBudget(b.budget))
+      .catch(() => {})
+  }, [])
 
   const period = kind === 'custom' ? custom : periodFor(kind, offset)
   const prev = useMemo(() => previousOf(period), [period.from, period.to, period.kind]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -56,7 +63,7 @@ export default function Review() {
         supabase.from('plans').select('plan_date, done').gte('plan_date', from).lte('plan_date', to),
         supabase.from('habits').select('*'),
         supabase.from('habit_logs').select('habit_id, day, count, skipped, resisted').gte('day', from).lte('day', to),
-        supabase.from('prayer_logs').select('day, prayer, late').gte('day', from).lte('day', to),
+        supabase.from('prayer_logs').select('*').gte('day', from).lte('day', to),
         supabase.from('prayer_logs').select('day').order('day', { ascending: true }).limit(1),
         supabase.from('expenses').select('amount, note, spent_on').gte('spent_on', from).lte('spent_on', to),
         supabase.from('words').select('created_at').gte('created_at', from),
@@ -239,6 +246,9 @@ export default function Review() {
               <h2>{T('Prayers')}</h2>
               <p className="review-note">
                 {T('{0} of {1} prayed · {2} on time', [now.prayers.prayed, now.prayers.possible, now.prayers.onTime])}
+                {now.prayers.late ? T(' · {0} late', [now.prayers.late]) : ''}
+                {now.prayers.qada ? T(' · {0} Qada', [now.prayers.qada]) : ''}
+                {now.prayers.missed ? T(' · {0} not prayed', [now.prayers.missed]) : ''}
               </p>
               {now.prayers.perPrayer.map((x) => (
                 <Meter
@@ -246,7 +256,11 @@ export default function Review() {
                   name={prayerName(PRAYERS.find((p) => p.key === x.key))}
                   rate={x.possible ? x.prayed / x.possible : null}
                   inner={x.possible ? x.onTime / x.possible : null}
-                  note={T('{0} of {1} · {2} on time', [x.prayed, x.possible, x.onTime])}
+                  note={
+                    T('{0} of {1} · {2} on time', [x.prayed, x.possible, x.onTime]) +
+                    (x.qada ? T(' · {0} Qada', [x.qada]) : '') +
+                    (x.missed ? T(' · {0} not prayed', [x.missed]) : '')
+                  }
                 />
               ))}
             </Reveal>
@@ -261,6 +275,18 @@ export default function Review() {
                 [T('Payments'), now.spending.count, before.spending.count],
               ]}
             />
+            {budget && period.kind === 'month' && (
+              <Meter
+                name={T('Monthly budget')}
+                rate={now.spending.total / budget}
+                bad={now.spending.total > budget}
+                note={
+                  now.spending.total > budget
+                    ? T('{0} of {1} · {2} over', [money(now.spending.total), money(budget), money(now.spending.total - budget)])
+                    : T('{0} of {1} · {2} left', [money(now.spending.total), money(budget), money(budget - now.spending.total)])
+                }
+              />
+            )}
             {now.spending.top.length > 0 && (
               <>
                 <h3 className="review-sub">{T('Where it went')}</h3>
@@ -359,7 +385,7 @@ function Meter({ name, rate, inner, note, bad }) {
         <strong>{pct(rate)}</strong>
       </div>
       <div className={`review-meter__bar ${bad ? 'is-bad' : ''}`} aria-hidden>
-        <span style={{ width: `${(rate || 0) * 100}%` }} />
+        <span style={{ width: `${Math.min(1, rate || 0) * 100}%` }} />
         {inner != null && <span className="is-inner" style={{ width: `${inner * 100}%` }} />}
       </div>
       {note && <span className="muted small">{note}</span>}
@@ -489,7 +515,7 @@ function summaryText(n, b) {
     `Bad habits clean days: ${p(n.habits.cleanRate)} (before ${p(b.habits.cleanRate)}); slips ${n.habits.slips} (before ${b.habits.slips}); money saved ${n.habits.saved.toFixed(2)}`,
     ...n.habits.bad.map((h) => `  - ${h.name}: ${h.good}/${h.plannedDays} clean days, ${h.total} times, ${h.resisted} urges resisted`),
     n.prayers.possible
-      ? `Prayers: ${n.prayers.prayed}/${n.prayers.possible} prayed, ${n.prayers.onTime} on time (before ${b.prayers.prayed}/${b.prayers.possible}, ${b.prayers.onTime} on time); by prayer: ${n.prayers.perPrayer.map((x) => `${x.key} ${x.prayed}/${x.possible} (${x.onTime} on time)`).join(', ')}`
+      ? `Prayers: ${n.prayers.prayed}/${n.prayers.possible} prayed — ${n.prayers.onTime} on time, ${n.prayers.late} late, ${n.prayers.qada} Qada (made up after its time); ${n.prayers.missed} marked as not prayed (before ${b.prayers.prayed}/${b.prayers.possible}, ${b.prayers.onTime} on time, ${b.prayers.qada} Qada, ${b.prayers.missed} not prayed); by prayer: ${n.prayers.perPrayer.map((x) => `${x.key} ${x.prayed}/${x.possible} (${x.onTime} on time, ${x.late} late, ${x.qada} Qada, ${x.missed} not prayed)`).join(', ')}`
       : 'Prayers: not tracked in this period',
     `Spending: total ${n.spending.total.toFixed(2)} (before ${b.spending.total.toFixed(2)}), per day ${n.spending.perDay.toFixed(2)}, ${n.spending.count} payments; top: ${n.spending.top.map((g) => `${g.name} ${g.amount.toFixed(2)}`).join(', ') || 'none'}`,
     `New words: ${n.words.added}; notes: ${n.notes}; links: ${n.links}`,

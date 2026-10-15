@@ -3,6 +3,8 @@
  * (used by pages/Review.jsx). Dates are "YYYY-MM-DD" strings in your own time zone.
  */
 
+import { statusOf } from './prayerStatus'
+
 const DAY = 864e5
 const ymdOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const parse = (s) => {
@@ -131,11 +133,23 @@ export function statsFor(data, p, today) {
   const pFrom = first && first > p.from ? first : p.from
   const pDays = first && pFrom <= to ? daysBetween(pFrom, to) : 0
   const logs = data.prayerLogs.filter((l) => within(l.day, pFrom, to))
-  const perPrayer = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].map((key) => {
-    const mine = logs.filter((l) => l.prayer === key)
-    return { key, prayed: mine.length, onTime: mine.filter((l) => !l.late).length, possible: pDays }
-  })
-  const prayers = { prayed: logs.length, onTime: logs.filter((l) => !l.late).length, possible: pDays * 5, perPrayer }
+  // on time / late / Qada (made up after its time) / missed (didn't pray). "prayed" = the first three.
+  const count = (list) => {
+    const c = { prayed: 0, onTime: 0, late: 0, qada: 0, missed: 0 }
+    for (const l of list) {
+      const st = statusOf(l)
+      if (st === 'missed') c.missed++
+      else {
+        c.prayed++
+        if (st === 'ontime') c.onTime++
+        else if (st === 'late') c.late++
+        else c.qada++
+      }
+    }
+    return c
+  }
+  const perPrayer = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].map((key) => ({ key, ...count(logs.filter((l) => l.prayer === key)), possible: pDays }))
+  const prayers = { ...count(logs), possible: pDays * 5, perPrayer }
 
   // ---- spending
   const spend = data.expenses.filter((x) => within(x.spent_on, p.from, to))
@@ -197,7 +211,7 @@ export function trend(data, p, today) {
     key: r.key,
     spend: data.expenses.filter((x) => within(x.spent_on, r.from, r.to)).reduce((a, x) => a + Number(x.amount), 0),
     tasks: data.tasks.filter((t) => t.done_at && within(dayOfTs(t.done_at), r.from, r.to)).length,
-    prayed: data.prayerLogs.filter((l) => within(l.day, r.from, r.to)).length,
+    prayed: data.prayerLogs.filter((l) => within(l.day, r.from, r.to) && statusOf(l) !== 'missed').length,
   }))
   return { unit, buckets }
 }

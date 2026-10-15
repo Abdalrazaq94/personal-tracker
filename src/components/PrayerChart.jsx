@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { PRAYERS, prayerName } from '../lib/prayer'
 import { T, Tr, LOCALE } from '../lib/i18n'
+import { isPrayed, statusOf } from '../lib/prayerStatus'
 import { chartColors, useTheme } from '../lib/theme'
 
 const W = 340
@@ -39,11 +40,9 @@ export default function PrayerChart({ logs, today, days = 30 }) {
       let prayed = 0
       let onTime = 0
       for (const p of PRAYERS) {
-        const l = logs.get(`${day}|${p.key}`)
-        if (l) {
-          prayed++
-          if (!l.late) onTime++
-        }
+        const st = statusOf(logs.get(`${day}|${p.key}`))
+        if (st && st !== 'missed') prayed++
+        if (st === 'ontime') onTime++
       }
       return { day, prayed, onTime }
     })
@@ -54,20 +53,20 @@ export default function PrayerChart({ logs, today, days = 30 }) {
     return PRAYERS.map((p) => {
       let done = 0
       let late = 0
+      let qada = 0
       for (const day of tracked) {
-        const l = logs.get(`${day}|${p.key}`)
-        if (l) {
-          done++
-          if (l.late) late++
-        }
+        const st = statusOf(logs.get(`${day}|${p.key}`))
+        if (st && st !== 'missed') done++
+        if (st === 'late') late++
+        if (st === 'qada') qada++
       }
-      return { ...p, done, late, of: tracked.length }
+      return { ...p, done, late, qada, of: tracked.length }
     })
   }, [data, logs])
 
   const tracked = data.filter((d) => d.prayed !== null)
   const finished = tracked.filter((d) => d.day !== today) // whole days only, for averages
-  const todayDone = PRAYERS.filter((p) => logs.has(`${today}|${p.key}`)).length
+  const todayDone = PRAYERS.filter((p) => isPrayed(logs.get(`${today}|${p.key}`))).length
   const lastIdx = (() => {
     for (let i = days - 1; i >= 0; i--) if (data[i].prayed !== null) return i
     return -1
@@ -185,12 +184,14 @@ export default function PrayerChart({ logs, today, days = 30 }) {
           <li key={p.key}>
             <span className="prayer-rates__name">{prayerName(p)}</span>
             <span className="prayer-rates__bar" aria-hidden>
-              <span className="is-ontime" style={{ width: `${p.of ? ((p.done - p.late) / p.of) * 100 : 0}%` }} />
+              <span className="is-ontime" style={{ width: `${p.of ? ((p.done - p.late - p.qada) / p.of) * 100 : 0}%` }} />
               <span className="is-late" style={{ width: `${p.of ? (p.late / p.of) * 100 : 0}%` }} />
+              <span className="is-qada" style={{ width: `${p.of ? (p.qada / p.of) * 100 : 0}%` }} />
             </span>
             <span className="prayer-rates__num">
               {p.done}/{p.of}
               {p.late ? <span className="muted">{T(' · {0} late', [p.late])}</span> : null}
+              {p.qada ? <span className="muted">{T(' · {0} Qada', [p.qada])}</span> : null}
             </span>
           </li>
         ))}

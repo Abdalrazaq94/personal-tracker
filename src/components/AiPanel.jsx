@@ -4,6 +4,24 @@ import { today } from '../lib/dates'
 import { T, Tr } from '../lib/i18n'
 
 const CURRENCY = import.meta.env.VITE_CURRENCY || 'GBP'
+const FRESH_MS = 30 * 60e3 // reuse an answer for 30 minutes, so opening the box again is instant
+
+const cacheKey = (kind, q) => `ai-answer|${kind}|${today()}|${(q || '').trim().toLowerCase()}`
+function cached(kind, q) {
+  try {
+    const j = JSON.parse(sessionStorage.getItem(cacheKey(kind, q)) || 'null')
+    return j && Date.now() - j.at < FRESH_MS ? j.text : null
+  } catch {
+    return null
+  }
+}
+function remember(kind, q, text) {
+  try {
+    sessionStorage.setItem(cacheKey(kind, q), JSON.stringify({ at: Date.now(), text }))
+  } catch {
+    /* fine */
+  }
+}
 
 /** "Analyse with AI" box used on the Tasks and Spending pages. */
 export default function AiPanel({ kind, examples = [], children, extra = {}, label }) {
@@ -13,12 +31,19 @@ export default function AiPanel({ kind, examples = [], children, extra = {}, lab
   const [text, setText] = useState('')
   const [error, setError] = useState(null)
 
-  const run = async (q = question) => {
+  const run = async (q = question, fresh = false) => {
+    const hit = !fresh && cached(kind, q)
+    if (hit) {
+      setError(null)
+      setText(hit)
+      return
+    }
     setBusy(true)
     setError(null)
     try {
       const data = await callAi({ kind, question: q, today: today(), currency: CURRENCY, ...extra })
       setText(data?.text || T('No answer.'))
+      if (data?.text) remember(kind, q, data.text)
     } catch (e) {
       setError(e.message)
     }
@@ -86,6 +111,11 @@ export default function AiPanel({ kind, examples = [], children, extra = {}, lab
       {busy && <div className="ai-loading">{T("Thinking…")}</div>}
       {error && <p className="error-text">{error}</p>}
       {text && !busy && <Markdown text={text} />}
+      {text && !busy && (
+        <button type="button" className="btn btn--ghost small" onClick={() => run(question, true)}>
+          {T("Ask again")}
+        </button>
+      )}
     </section>
   );
 }

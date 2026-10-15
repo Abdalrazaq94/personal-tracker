@@ -8,6 +8,7 @@ import { callAi } from '../lib/ai'
 import PrayerChart from '../components/PrayerChart'
 import { METHODS, PRAYERS, clock, currentPrayer, findPlaces, hijri, inWords, nextPrayer, placeToday, prayerName, timesFor } from '../lib/prayer'
 import { T, Tr, isAr, LOCALE } from '../lib/i18n'
+import { STATUSES, STATUS_HINT, isPrayed, savePrayerLog, statusLabel, statusOf } from '../lib/prayerStatus'
 
 const NEEDS_TABLE =
   'Prayer needs a small database update: in Supabase open SQL Editor, paste the file supabase/migrations/006_prayers.sql and press Run. Then refresh this page.'
@@ -63,11 +64,11 @@ export default function Commit() {
     return m
   }, [rows])
 
-  const mark = async (prayer, late) => {
+  const mark = async (prayer, status) => {
     const k = `${shown}|${prayer}`
     const old = logs.get(k)
     setError(null)
-    if (old && old.late === late) {
+    if (old && statusOf(old) === status) {
       // tapping the chosen answer again = not prayed
       setRows((r) => r.filter((x) => x !== old))
       const q = old.id ? supabase.from('prayer_logs').delete().eq('id', old.id) : supabase.from('prayer_logs').delete().eq('day', shown).eq('prayer', prayer)
@@ -75,10 +76,13 @@ export default function Commit() {
       if (error) setError(error.message)
       return
     }
-    const row = { day: shown, prayer, late }
+    const row = { day: shown, prayer, status, late: status !== 'ontime' }
     setRows((r) => [{ ...old, ...row }, ...r.filter((x) => x !== old)])
-    const { data, error } = await supabase.from('prayer_logs').upsert(row, { onConflict: 'user_id,day,prayer' }).select().single()
-    if (error) setError(error.message)
+    const { data, error } = await savePrayerLog(supabase, row, { select: true })
+    if (error) {
+      setError(error.message)
+      setRows((r) => (old ? [old, ...r.filter((x) => !(x.day === shown && x.prayer === prayer))] : r.filter((x) => !(x.day === shown && x.prayer === prayer))))
+    }
     else if (data) setRows((r) => [data, ...r.filter((x) => !(x.day === data.day && x.prayer === data.prayer))])
   }
 
@@ -180,7 +184,7 @@ function PrayerCard({ place, today, day, setDay, logs, mark, onChangePlace, show
   const now = Date.now()
   const next = isToday ? nextPrayer(place, today) : null
   const current = isToday ? currentPrayer(place, today) : null
-  const done = PRAYERS.filter((p) => logs.has(`${day}|${p.key}`)).length
+  const done = PRAYERS.filter((p) => isPrayed(logs.get(`${day}|${p.key}`))).length
   const method = METHODS.find((m) => m.key === place.method)?.label || 'Moonsighting Committee'
 
   return (
@@ -225,14 +229,21 @@ function PrayerCard({ place, today, day, setDay, logs, mark, onChangePlace, show
       <ul className="prayer__list">
         {PRAYERS.map((p) => {
           const log = logs.get(`${day}|${p.key}`)
+          const st = statusOf(log)
           const notYet = isToday && times[p.key].getTime() > now
+          // still in its time: on time / late. After its time has passed: Qada / didn't pray are offered too.
+          const passed =
+            !isToday ||
+            PRAYERS.findIndex((x) => x.key === p.key) < PRAYERS.findIndex((x) => x.key === current) ||
+            (p.key === 'fajr' && now > times.sunrise.getTime()) // Fajr's time ends at sunrise
+          const choices = passed || st === 'qada' || st === 'missed' ? STATUSES : ['ontime', 'late']
           return (
             <li
               key={p.key}
-              className={`prayer-row${log ? ' is-done' : ''}${log?.late ? ' is-late' : ''}${current === p.key && !log ? ' is-now' : ''}`}
+              className={`prayer-row${isPrayed(log) ? ' is-done' : ''}${st ? ` is-${st}` : ''}${current === p.key && !log ? ' is-now' : ''}`}
             >
               <span className="prayer-row__check" aria-hidden>
-                {log ? '✓' : ''}
+                {st === 'missed' ? '✕' : log ? '✓' : ''}
               </span>
               <span className="prayer-row__name">
                 <strong>{prayerName(p)}</strong>
@@ -246,9 +257,12 @@ function PrayerCard({ place, today, day, setDay, logs, mark, onChangePlace, show
               {notYet ? (
                 <span className="prayer-row__wait muted small">{T("Not yet")}</span>
               ) : (
-                <span className="prayer-row__acts" role="group" aria-label={T('{0}: prayed?', [prayerName(p)])}>
-                  <button className={log && !log.late ? 'is-on' : ''} aria-pressed={!!log && !log.late} onClick={() => mark(p.key, false)}>{T("On time")}</button>
-                  <button className={log?.late ? 'is-on' : ''} aria-pressed={!!log?.late} onClick={() => mark(p.key, true)}>{T("Late")}</button>
+                <span className={`prayer-row__acts${choices.length > 2 ? ' is-four' : ''}`} role="group" aria-label={T('{0}: prayed?', [prayerName(p)])}>
+                  {choices.map((c) => (
+                    <button key={c} className={`act-${c}${st === c ? ' is-on' : ''}`} aria-pressed={st === c} title={T(STATUS_HINT[c])} onClick={() => mark(p.key, c)}>
+                      {statusLabel(c)}
+                    </button>
+                  ))}
                 </span>
               )}
             </li>
@@ -256,7 +270,7 @@ function PrayerCard({ place, today, day, setDay, logs, mark, onChangePlace, show
         })}
       </ul>
       <p className="muted small prayer__sunrise">{Tr(
-          "Sunrise {0} · Tap a chosen answer again to undo.",
+          "Sunrise {0} · Qada = prayed after its time. Tap a chosen answer again to undo.",
           clock(times.sunrise, place.tz)
         )}</p>
 
@@ -296,24 +310,26 @@ function PrayerWeek({ place, today, logs, onPick, picked }) {
   const days = Array.from({ length: 7 }, (_, i) => shiftDay(today, i - 6))
   let prayed = 0
   let late = 0
+  let qada = 0
+  let missed = 0
   let possible = 0
   for (const d of days) {
     const t = d === today ? timesFor(place, d) : null
     for (const p of PRAYERS) {
       if (t && t[p.key].getTime() > Date.now()) continue
       possible++
-      const l = logs.get(`${d}|${p.key}`)
-      if (l) {
-        prayed++
-        if (l.late) late++
-      }
+      const st = statusOf(logs.get(`${d}|${p.key}`))
+      if (st && st !== 'missed') prayed++
+      if (st === 'late') late++
+      if (st === 'qada') qada++
+      if (st === 'missed') missed++
     }
   }
   // days in a row with all 5 prayed (today counts once it's complete)
   let streak = 0
   for (let i = 0; i < 400; i++) {
     const d = shiftDay(today, -i)
-    const all = PRAYERS.every((p) => logs.has(`${d}|${p.key}`))
+    const all = PRAYERS.every((p) => isPrayed(logs.get(`${d}|${p.key}`)))
     if (all) streak++
     else if (i === 0) continue
     else break
@@ -324,7 +340,7 @@ function PrayerWeek({ place, today, logs, onPick, picked }) {
       <div className="prayer-sec">
         <h2>{T("Last 7 days")}</h2>
         <span className="muted small">
-          {T('{0} of {1} prayed', [prayed, possible])}{late ? T(" · {0} late", [late]) : ''}
+          {T('{0} of {1} prayed', [prayed, possible])}{late ? T(" · {0} late", [late]) : ''}{qada ? T(' · {0} Qada', [qada]) : ''}{missed ? T(' · {0} not prayed', [missed]) : ''}
           {streak > 1 ? T(" · {0} full days in a row", [streak]) : ''}
         </span>
       </div>
@@ -343,9 +359,11 @@ function PrayerWeek({ place, today, logs, onPick, picked }) {
         ))}
       </div>
       <p className="prayer-legend muted small">{Tr(
-          "{0} On time {1} Late {2} Not marked",
-          <span className="prayer-dot is-done" />,
+          "{0} On time {1} Late {2} Qada {3} Didn’t pray {4} Not marked",
+          <span className="prayer-dot is-ontime" />,
           <span className="prayer-dot is-late" />,
+          <span className="prayer-dot is-qada" />,
+          <span className="prayer-dot is-missed" />,
           <span className="prayer-dot" />
         )}</p>
     </section>
@@ -358,10 +376,10 @@ function Row({ p, days, logs, place, today }) {
     <>
       <span className="prayer-week__name">{prayerName(p)}</span>
       {days.map((d) => {
-        const l = logs.get(`${d}|${p.key}`)
+        const st = statusOf(logs.get(`${d}|${p.key}`))
         const future = d === today && t[p.key].getTime() > Date.now()
-        const cls = l ? (l.late ? 'is-late' : 'is-done') : future ? 'is-future' : ''
-        return <span key={d} className={`prayer-dot ${cls}`} title={`${prayerName(p)} ${d}: ${l ? (l.late ? T('late') : T('on time')) : future ? T('not yet') : T('not marked')}`} />
+        const cls = st ? `is-${st}` : future ? 'is-future' : ''
+        return <span key={d} className={`prayer-dot ${cls}`} title={`${prayerName(p)} ${d}: ${st ? statusLabel(st) : future ? T('not yet') : T('not marked')}`} />
       })}
     </>
   )

@@ -13,6 +13,8 @@ import Reveal from '../components/bits/Reveal'
 import GlareHover from '../components/reactbits/GlareHover'
 import { currentStatus } from '../lib/push'
 import { T, Tr, LOCALE } from '../lib/i18n'
+import { savePrayerLog, statusOf } from '../lib/prayerStatus'
+import { budgetStats, loadBudget } from '../lib/budget'
 
 const PRIORITY = { doing: 0, todo: 1 }
 
@@ -64,10 +66,14 @@ export default function Home({ session }) {
   const [place, setPlace] = useState(undefined) // the city for prayer times (null = not chosen)
   const [prayerLogs, setPrayerLogs] = useState(null) // today's marked prayers: Map prayer → row
   const [remind, setRemind] = useState(null) // reminders on / off on this phone
+  const [budget, setBudget] = useState(null) // monthly budget (null = none set)
 
   useEffect(() => {
     currentStatus()
       .then(setRemind)
+      .catch(() => {})
+    loadBudget()
+      .then((b) => setBudget(b.budget))
       .catch(() => {})
     supabase.auth.getUser().then(async ({ data }) => {
       const pl = data?.user?.user_metadata?.prayer || null
@@ -79,17 +85,21 @@ export default function Home({ session }) {
       } catch {
         /* no prayer times */
       }
-      const { data: rows } = await supabase.from('prayer_logs').select('prayer, late').eq('day', day)
+      const { data: rows } = await supabase.from('prayer_logs').select('*').eq('day', day)
       setPrayerLogs(new Map((rows || []).map((r) => [r.prayer, r])))
     })
   }, [])
 
-  // mark a prayer from Home (late = prayed after its time)
-  const markPrayer = async (key, late) => {
+  // mark a prayer from Home: on time / late (in its time), Qada (prayed after its time) or didn't pray
+  const markPrayer = async (key, status) => {
     const day = placeToday(place?.tz)
-    setPrayerLogs((m) => new Map(m || []).set(key, { prayer: key, late }))
-    const { error } = await supabase.from('prayer_logs').upsert({ day, prayer: key, late }, { onConflict: 'user_id,day,prayer' })
-    if (error) setError(error.message)
+    const before = prayerLogs
+    setPrayerLogs((m) => new Map(m || []).set(key, { prayer: key, status, late: status !== 'ontime' }))
+    const { error } = await savePrayerLog(supabase, { day, prayer: key, status })
+    if (error) {
+      setError(error.message)
+      setPrayerLogs(before)
+    }
   }
 
   useEffect(() => {
@@ -241,6 +251,7 @@ export default function Home({ session }) {
 
   const spentToday = d ? d.spend.filter((x) => x.spent_on === t).reduce((a, x) => a + Number(x.amount), 0) : 0
   const spentMonth = d ? d.spend.reduce((a, x) => a + Number(x.amount), 0) : 0
+  const bud = d && budget ? budgetStats(d.spend, budget, t) : null
 
   /** A plain summary of today, used when the AI can't answer. */
   function plainBrief() {
@@ -298,6 +309,7 @@ export default function Home({ session }) {
           goodHabits.length
         ]) : T("Track habits");
       case '/spend':
+        if (bud) return bud.left < 0 ? T('{0} over budget', [money(-bud.left)]) : Tr('{0} left', <CountUp to={bud.left} format={money} />)
         return (
           Tr('{0} today', <CountUp to={spentToday} format={money} />)
         )
@@ -531,6 +543,19 @@ export default function Home({ session }) {
                 </strong>
               </div>
             </div>
+            {bud && (
+              <div className={`today-budget budget--${bud.state}`}>
+                <div className="budget__bar" aria-hidden>
+                  <span className="budget__fill" style={{ width: `${Math.min(100, bud.pct * 100)}%` }} />
+                  <span className="budget__mark" style={{ insetInlineStart: `${Math.min(100, bud.share * 100)}%` }} />
+                </div>
+                <p>
+                  {bud.left < 0
+                    ? T('{0} over your {1} budget', [money(-bud.left), money(bud.budget)])
+                    : T('{0} left of {1} · about {2} a day', [money(bud.left), money(bud.budget), money(bud.perDay)])}
+                </p>
+              </div>
+            )}
             <form className="today-spend" onSubmit={addSpend}>
               <input inputMode="decimal" placeholder="0.00" aria-label={T("Amount")} value={amount} onChange={(e) => setAmount(e.target.value)} />
               <input dir="auto" placeholder={T("What for?")} aria-label={T("What for")} value={note} onChange={(e) => setNote(e.target.value)} />
@@ -585,15 +610,18 @@ function PrayerToday({ place, logs, onMark }) {
   const now = Date.now()
   const rows = PRAYERS.map((p, i) => {
     const start = times[p.key].getTime()
-    const end = i < PRAYERS.length - 1 ? times[PRAYERS[i + 1].key].getTime() : start + 6 * 3600 * 1000
-    const log = logs?.get(p.key)
-    const state = log ? (log.late ? 'late' : 'done') : now < start ? 'coming' : now < end ? 'now' : 'missed'
+    // Fajr's time ends at sunrise, the others when the next prayer starts
+    const end = p.key === 'fajr' ? times.sunrise.getTime() : i < PRAYERS.length - 1 ? times[PRAYERS[i + 1].key].getTime() : start + 6 * 3600 * 1000
+    const st = statusOf(logs?.get(p.key))
+    const STATE = { ontime: 'done', late: 'late', qada: 'qada', missed: 'notprayed' }
+    // after Fajr's time but before Dhuhr, Fajr still waits for an answer ("missed" = passed, not marked)
+    const state = st ? STATE[st] : now < start ? 'coming' : now < end ? 'now' : 'missed'
     return { ...p, at: times[p.key], state }
   })
   const next = nextPrayer(place, day)
   const current = rows.find((r) => r.state === 'now')
   const missed = rows.filter((r) => r.state === 'missed')
-  const word = { done: '✓', late: T('Late'), now: T('Now'), missed: T('Missed'), coming: '' }
+  const word = { done: '✓', late: T('Late'), qada: T('Qada'), notprayed: '✕', now: T('Now'), missed: T('Not marked'), coming: '' }
   const clock = (date, tz) => {
     try {
       return date.toLocaleTimeString(LOCALE || 'en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: tz || undefined })
@@ -619,16 +647,22 @@ function PrayerToday({ place, logs, onMark }) {
       {current && (
         <div className="pt-act">
           <span>{Tr("It’s {0} time now", <b>{prayerName(current)}</b>)}</span>
-          <button className="btn btn--sm" onClick={() => onMark(current.key, false)}>{T("✓ Prayed")}</button>
+          <span className="pt-act__btns">
+            <button className="btn btn--sm" onClick={() => onMark(current.key, 'ontime')}>{T("✓ On time")}</button>
+            <button className="btn btn--ghost btn--sm" onClick={() => onMark(current.key, 'late')}>{T("Late")}</button>
+          </span>
         </div>
       )}
       {missed.map((r) => (
         <div key={r.key} className="pt-act pt-act--missed">
-          <span>{Tr("Missed {0} ({1})", <b>{prayerName(r)}</b>, clock(r.at, place.tz))}</span>
-          <button className="btn btn--ghost btn--sm" onClick={() => onMark(r.key, true)}>{T("Prayed late")}</button>
+          <span>{Tr("{0} ({1}) has passed", <b>{prayerName(r)}</b>, clock(r.at, place.tz))}</span>
+          <span className="pt-act__btns">
+            <button className="btn btn--ghost btn--sm" title={T('Made up later, after its time')} onClick={() => onMark(r.key, 'qada')}>{T("Prayed Qada")}</button>
+            <button className="btn btn--ghost btn--sm" onClick={() => onMark(r.key, 'missed')}>{T("Didn’t pray")}</button>
+          </span>
         </div>
       ))}
-      {!current && missed.length === 0 && rows.some((r) => r.state === 'done' || r.state === 'late') && (
+      {!current && missed.length === 0 && rows.some((r) => r.state !== 'coming') && (
         <p className="muted small">{T("All prayers so far are marked. ✓")}</p>
       )}
     </Reveal>

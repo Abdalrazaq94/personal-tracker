@@ -201,18 +201,36 @@ const shiftDay = (day: string, n: number) => {
 }
 const WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+/** The monthly budget, or null (none set, or 015_budget.sql not run yet). */
+// deno-lint-ignore no-explicit-any
+async function budgetOf(db: any): Promise<number | null> {
+  try {
+    const { data, error } = await db.from('user_settings').select('budget').maybeSingle()
+    return !error && Number(data?.budget) > 0 ? Number(data.budget) : null
+  } catch {
+    return null
+  }
+}
+const budgetLine = (budget: number | null, monthSpent: number, today: string) => {
+  if (!budget) return ''
+  const [y, m, d] = today.split('-').map(Number)
+  const daysLeft = new Date(Date.UTC(y, m, 0)).getUTCDate() - d + 1
+  return `MONTHLY BUDGET: ${budget.toFixed(2)}; spent this month ${monthSpent.toFixed(2)} (${Math.round((monthSpent / budget) * 100)}%), ${(budget - monthSpent).toFixed(2)} left for ${daysLeft} days including today.`
+}
+
 // deno-lint-ignore no-explicit-any
 async function brief(db: any, b: Body) {
   const today = /^\d{4}-\d{2}-\d{2}$/.test(b.today ?? '') ? b.today! : isoDay(new Date())
   const currency = clip(b.currency, 5) || 'GBP'
   const hour = Number.isFinite(b.hour) ? Number(b.hour) : 9
-  const [tasks, plans, habits, logs, spend, words] = await Promise.all([
+  const [tasks, plans, habits, logs, spend, words, budget] = await Promise.all([
     db.from('tasks').select('title, priority, status').neq('status', 'done').limit(40),
     db.from('plans').select('title, plan_date, done').gte('plan_date', shiftDay(today, -7)).lte('plan_date', shiftDay(today, 1)),
     db.from('habits').select('*'),
     db.from('habit_logs').select('*').gte('day', shiftDay(today, -6)),
     db.from('expenses').select('amount, note, spent_on').gte('spent_on', shiftDay(today, -30)),
     db.from('words').select('status'),
+    budgetOf(db),
   ])
   for (const r of [tasks, plans, habits, logs, spend, words]) if (r.error) throw new Error(r.error.message)
 
@@ -246,8 +264,11 @@ async function brief(db: any, b: Body) {
     'PLANNED TOMORROW: ' + (plans.data.filter((p: any) => p.plan_date === shiftDay(today, 1)).map((p: any) => p.title).join('; ') || 'none'),
     'HABITS: ' + (habitLines.join(' | ') || 'none'),
     `SPENDING (${currency}): today ${todaySpend.toFixed(2)}, this month ${monthSpend.toFixed(2)}, usual per day ${avgDay.toFixed(2)}`,
+    budgetLine(budget, monthSpend, today),
     `WORDS: ${wordCounts.new ?? 0} not yet, ${wordCounts.learning ?? 0} learning, ${wordCounts.memorized ?? 0} memorized`,
-  ].join('\n')
+  ]
+    .filter(Boolean)
+    .join('\n')
 
   const part = hour < 12 ? 'morning briefing' : hour < 18 ? 'afternoon check-in' : 'evening recap (what got done, what is left, and what to prepare for tomorrow)'
   const text = await askText(
@@ -350,7 +371,7 @@ async function analyse(db: any, b: Body) {
     const since = new Date(today)
     since.setDate(since.getDate() - 29)
     const sinceKey = since.toISOString().slice(0, 10)
-    const { data: logs, error } = await db.from('prayer_logs').select('day, prayer, late').gte('day', sinceKey)
+    const { data: logs, error } = await db.from('prayer_logs').select('*').gte('day', sinceKey)
     if (error) throw new Error(error.message)
     const days: string[] = []
     for (let i = 0; i < 30; i++) {
@@ -364,7 +385,8 @@ async function analyse(db: any, b: Body) {
     data =
       'MY 5 DAILY PRAYERS, last 30 days, oldest first, ending today' +
       ` (first day is a ${names[new Date(days[0] + 'T00:00:00Z').getUTCDay()]}). ` +
-      'Y = prayed on time, L = prayed late, x = not marked as prayed, - = before I started tracking (' + first + '). ' +
+      'Y = prayed on time, L = prayed late (still in its time), Q = Qada (made up later, after its time), ' +
+      'M = did not pray it, x = not marked, - = before I started tracking (' + first + '). ' +
       "Today's later prayers may not have come yet.\n" +
       ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha']
         .map((p) => {
@@ -372,7 +394,8 @@ async function analyse(db: any, b: Body) {
             if (d < first) return '-'
             // deno-lint-ignore no-explicit-any
             const l = (logs as any[]).find((x) => x.day === d && x.prayer === p)
-            return l ? (l.late ? 'L' : 'Y') : 'x'
+            const st = l?.status || (l?.late ? 'late' : 'ontime')
+            return !l ? 'x' : st === 'missed' ? 'M' : st === 'qada' ? 'Q' : st === 'late' ? 'L' : 'Y'
           })
           return `${p[0].toUpperCase() + p.slice(1)}: ${marks.join('')}`
         })
@@ -430,14 +453,21 @@ async function analyse(db: any, b: Body) {
   } else {
     const since = new Date(today)
     since.setDate(since.getDate() - 180)
-    const { data: rows, error } = await db
-      .from('expenses')
-      .select('amount, note, spent_on')
-      .gte('spent_on', since.toISOString().slice(0, 10))
-      .order('spent_on', { ascending: false })
-      .limit(1000)
+    const [{ data: rows, error }, budget] = await Promise.all([
+      db
+        .from('expenses')
+        .select('amount, note, spent_on')
+        .gte('spent_on', since.toISOString().slice(0, 10))
+        .order('spent_on', { ascending: false })
+        .limit(1000),
+      budgetOf(db),
+    ])
     if (error) throw new Error(error.message)
+    // deno-lint-ignore no-explicit-any
+    const monthSpent = (rows ?? []).filter((r: any) => r.spent_on.slice(0, 7) === today.slice(0, 7)).reduce((a: number, r: any) => a + Number(r.amount), 0)
+    const bl = budgetLine(budget, monthSpent, today)
     data =
+      (bl ? bl + ' Say clearly whether I am on track for the budget and how much I can spend per day.\n\n' : '') +
       `SPENDING, last 180 days, currency ${currency} (date | amount | what for):\n` +
       // deno-lint-ignore no-explicit-any
       (rows.map((r: any) => `${r.spent_on} | ${Number(r.amount).toFixed(2)} | ${r.note || '-'}`).join('\n') || '(none)')
@@ -452,7 +482,7 @@ async function analyse(db: any, b: Body) {
   const task =
     kind === 'prayers'
       ? 'Analyse my prayer commitment: overall consistency (prayed and on time), compare the last 7 days with the week before, ' +
-        'which prayer is strongest and which is most often late or missed, my best and weakest days of the week, my current streak of full days. ' +
+        'which prayer is strongest and which is most often late, made up as Qada or not prayed (count Qada as prayed, but note it was after its time), my best and weakest days of the week, my current streak of full days. ' +
         'Then give 3 gentle, practical tips for the weakest prayer (for example sleep and alarm habits for Fajr, planning around work for Dhuhr and Asr). ' +
         'Be warm, respectful and encouraging, never judgmental.'
       : kind === 'habits'
@@ -523,7 +553,7 @@ async function askModel(system: string, prompt: string, wantJson: boolean, fast 
       headers: { 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
         model: Deno.env.get('ANTHROPIC_MODEL') || 'claude-haiku-5-5',
-        max_tokens: 1500,
+        max_tokens: 1536,
         system,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -540,11 +570,19 @@ async function askModel(system: string, prompt: string, wantJson: boolean, fast 
     const models = (fast ? [lite, main, 'gemini-2.5-flash'] : [main, lite, 'gemini-2.5-flash']).filter(
       (m, i, all) => all.indexOf(m) === i
     )
-    const payload = JSON.stringify({
-      systemInstruction: { parts: [{ text: system }] },
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      ...(wantJson ? { generationConfig: { responseMimeType: 'application/json' } } : {}),
-    })
+    // Speed: these models "think" before answering by default (medium/high), which adds seconds and isn't needed
+    // for short summaries. Ask for low thinking; if a model doesn't accept that setting, we retry without it.
+    const payloadFor = (thinking: boolean) =>
+      JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          maxOutputTokens: wantJson ? 3072 : 1536, // room for Arabic, which takes more tokens
+          ...(wantJson ? { responseMimeType: 'application/json' } : {}),
+          ...(thinking ? { thinkingConfig: { thinkingLevel: 'low' } } : {}),
+        },
+      })
+    let lowThinking = Deno.env.get('GEMINI_THINKING') !== 'default'
     let lastError = 'The AI is busy right now. Please try again in a minute.'
     for (const model of models) {
       for (let attempt = 0; attempt < 2; attempt++) {
@@ -553,7 +591,7 @@ async function askModel(system: string, prompt: string, wantJson: boolean, fast 
           res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
             method: 'POST',
             headers: { 'x-goog-api-key': geminiKey, 'content-type': 'application/json' },
-            body: payload,
+            body: payloadFor(lowThinking),
             signal: AbortSignal.timeout(fast ? 20000 : 40000), // don't wait forever on a stuck model
           })
         } catch {
@@ -568,6 +606,11 @@ async function askModel(system: string, prompt: string, wantJson: boolean, fast 
           break
         }
         lastError = out?.error?.message ?? `AI error ${res.status}`
+        if (res.status === 400 && lowThinking && /think/i.test(lastError)) {
+          lowThinking = false // this model doesn't take the thinking setting: same model, without it
+          attempt--
+          continue
+        }
         if (res.status === 400 || res.status === 401 || res.status === 403) throw new Error(lastError) // bad key/request: don't retry
         if ((res.status === 503 || res.status === 500 || res.status === 429) && attempt === 0) {
           await new Promise((r) => setTimeout(r, 1500)) // busy: wait a moment and retry the same model

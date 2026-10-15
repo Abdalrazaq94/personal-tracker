@@ -152,6 +152,7 @@ const DEFAULT_SOUNDS: Record<string, { sound: string; ring: boolean }> = {
   important: { sound: 'alarm', ring: true },
   task: { sound: 'marimba', ring: false },
   prayer: { sound: 'adhan', ring: true },
+  budget: { sound: 'ping', ring: false },
 }
 function soundFor(setting: Any, kind: string) {
   const saved = setting?.sounds?.[kind]
@@ -446,7 +447,8 @@ async function tick(db: Any, cfg: Any) {
     for (let i = 0; i < PRAYERS.length; i++) {
       const [key, name] = PRAYERS[i]
       const start = times[key]
-      const end = i < PRAYERS.length - 1 ? times[PRAYERS[i + 1][0]] : start + 4 * 3600 * 1000
+      // Fajr's time ends at sunrise (after that it's Qada), the others when the next prayer starts
+      const end = key === 'fajr' ? times.sunrise : i < PRAYERS.length - 1 ? times[PRAYERS[i + 1][0]] : start + 4 * 3600 * 1000
       if (now < start || now >= end || done.has(key)) continue
       const a: Any = alertOf.get(key) ?? { count: 0 }
       if (a.snoozed_until && now < Date.parse(a.snoozed_until)) continue
@@ -480,7 +482,77 @@ async function tick(db: Any, cfg: Any) {
       await db.from('prayer_alerts').upsert({ user_id: s.user_id, day, prayer: key, count: (a.count || 0) + 1, last_at: new Date(now).toISOString(), snoozed_until: null })
     }
   }
+
+  // ---- monthly budget: one warning at 80%, one when it's gone over (per month) ----
+  sent += await budgetWarnings(db, cfg, settings ?? [], byUser, now)
   return { users: users.length, sent }
+}
+
+const money = (n: number) => {
+  const cur = Deno.env.get('CURRENCY') || 'GBP'
+  try {
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency: cur }).format(n)
+  } catch {
+    return `${n.toFixed(2)} ${cur}`
+  }
+}
+
+async function budgetWarnings(db: Any, cfg: Any, settings: Any[], byUser: Map<string, Any[]>, now: number) {
+  const withBudget = settings.filter((s) => Number(s.budget) > 0 && s.budget_notify !== false)
+  if (!withBudget.length) return 0
+  let sent = 0
+  // one query for everyone: this month's spending (a day either side covers every time zone)
+  const earliest = new Date(now - 32 * 864e5).toISOString().slice(0, 10)
+  const { data: rows, error } = await db
+    .from('expenses')
+    .select('user_id, amount, spent_on')
+    .in('user_id', withBudget.map((s) => s.user_id))
+    .gte('spent_on', earliest)
+  if (error) return 0
+  for (const s of withBudget) {
+    const tz = safeTz(s.tz || 'Europe/London')
+    const day = localDay(now, tz)
+    const month = day.slice(0, 7)
+    const spent = (rows ?? []).filter((r: Any) => r.user_id === s.user_id && String(r.spent_on).startsWith(month)).reduce((a: number, r: Any) => a + Number(r.amount), 0)
+    const budget = Number(s.budget)
+    const level = spent >= budget ? 100 : spent >= budget * 0.8 ? 80 : 0
+    if (!level) continue
+    const [lastMonth, lastLevel] = String(s.budget_alerted || '').split(':')
+    if (lastMonth === month && Number(lastLevel) >= level) continue
+    // quiet hours: don't wake anyone for money
+    const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', hourCycle: 'h23' }).format(new Date(now)))
+    if (hour < 8 || hour >= 22) continue
+    const [y, m] = month.split('-').map(Number)
+    const daysLeft = new Date(y, m, 0).getDate() - Number(day.slice(8)) + 1
+    const left = budget - spent
+    const snd = soundFor(s, 'budget')
+    sent += await sendToUser(
+      db,
+      cfg,
+      s.user_id,
+      (sub) => ({
+        title:
+          level === 100
+            ? L(s, '💷 Over your monthly budget', '💷 تجاوزت ميزانيتك الشهرية')
+            : L(s, '💷 80% of your budget is spent', '💷 صرفت 80% من ميزانيتك'),
+        body:
+          level === 100
+            ? L(s, `You've spent ${money(spent)} of ${money(budget)}, ${money(-left)} over. ${daysLeft} days to go.`,
+                `صرفت ${money(spent)} من ${money(budget)}، أي أكثر بـ ${money(-left)}. باقي ${daysLeft} يومًا.`)
+            : L(s, `${money(left)} left for ${daysLeft} days — about ${money(left / daysLeft)} a day.`,
+                `باقي ${money(left)} لمدة ${daysLeft} يومًا — حوالي ${money(left / daysLeft)} في اليوم.`),
+        tag: `budget-${month}`,
+        renotify: true,
+        requireInteraction: false,
+        sound: snd.sound,
+        ring: false,
+        data: { kind: 'budget', secret: sub.secret, url: '/#/spend', api: API() },
+      }),
+      byUser.get(s.user_id)
+    )
+    await db.from('user_settings').update({ budget_alerted: `${month}:${level}` }).eq('user_id', s.user_id)
+  }
+  return sent
 }
 
 function prayerTimes(place: Any, day: string) {
@@ -491,7 +563,7 @@ function prayerTimes(place: Any, day: string) {
   params.madhab = place.madhab === 'hanafi' ? Madhab.Hanafi : Madhab.Shafi
   params.highLatitudeRule = HighLatitudeRule.recommended(coords)
   const t = new PrayerTimes(coords, new Date(y, m - 1, d), params)
-  return { fajr: +t.fajr, dhuhr: +t.dhuhr, asr: +t.asr, maghrib: +t.maghrib, isha: +t.isha } as Record<string, number>
+  return { fajr: +t.fajr, sunrise: +t.sunrise, dhuhr: +t.dhuhr, asr: +t.asr, maghrib: +t.maghrib, isha: +t.isha } as Record<string, number>
 }
 
 /* --------------------- buttons on the notification ---------------------- */
@@ -515,8 +587,12 @@ async function act(db: Any, b: Any) {
     return { ok: true }
   }
   if (b.kind === 'prayer' && b.day && PRAYERS.some(([k]) => k === b.prayer)) {
-    if (b.what === 'ontime' || b.what === 'late')
-      await db.from('prayer_logs').upsert({ user_id: user, day: b.day, prayer: b.prayer, late: b.what === 'late' }, { onConflict: 'user_id,day,prayer' })
+    if (['ontime', 'late', 'qada', 'missed'].includes(b.what)) {
+      const row = { user_id: user, day: b.day, prayer: b.prayer, late: b.what !== 'ontime' }
+      const { error } = await db.from('prayer_logs').upsert({ ...row, status: b.what }, { onConflict: 'user_id,day,prayer' })
+      // database without the "status" column yet (014 not run): save the old way
+      if (error && b.what !== 'missed') await db.from('prayer_logs').upsert(row, { onConflict: 'user_id,day,prayer' })
+    }
     if (b.what === 'snooze')
       await db.from('prayer_alerts').upsert({ user_id: user, day: b.day, prayer: b.prayer, snoozed_until: new Date(now + 10 * MIN).toISOString(), last_at: new Date(now).toISOString(), count: 1 })
     return { ok: true }

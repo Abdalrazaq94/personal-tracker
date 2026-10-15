@@ -1,5 +1,7 @@
 /* ===== Personal Tracker — black & white ===== */
 :root {
+  --qada: #a86a12; --qada-bg: #fbf3e4; --qada-line: #ecd3a6;
+  --missed: #b23a2a; --missed-bg: #fcefec; --missed-line: #efc4bc;
   --bg: #ffffff;
   --fg: #0a0a0a;
   --muted: #737373;
@@ -707,6 +709,21 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .prayer-row__acts button { height: 30px; padding: 0 11px; border: 0; border-radius: 999px; background: transparent; font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .prayer-row__acts button.is-on { background: var(--w-memorized-ink); color: #fff; }
 .prayer-row.is-late .prayer-row__acts button.is-on { background: #6f8f75; }
+.prayer-row__acts button.act-qada.is-on { background: var(--qada); color: #fff; }
+.prayer-row__acts button.act-missed.is-on { background: var(--missed); color: #fff; }
+.prayer-row.is-qada { background: var(--qada-bg); border-color: var(--qada-line); }
+.prayer-row.is-qada .prayer-row__check { background: var(--qada); border-color: var(--qada); }
+.prayer-row.is-qada .prayer-row__name span { color: var(--qada); }
+.prayer-row.is-missed { background: var(--missed-bg); border-color: var(--missed-line); }
+.prayer-row.is-missed .prayer-row__check { background: var(--missed); border-color: var(--missed); }
+.prayer-row.is-missed .prayer-row__acts, .prayer-row.is-qada .prayer-row__acts { background: rgba(255, 255, 255, .7); }
+.prayer-dot.is-ontime { background: var(--w-memorized-ink); border-color: var(--w-memorized-ink); }
+.prayer-dot.is-qada { background: var(--qada); border-color: var(--qada); }
+.prayer-dot.is-missed { background: var(--missed-bg); border-color: var(--missed); position: relative; }
+.prayer-dot.is-missed::after { content: '×'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; line-height: 1; font-weight: 800; color: var(--missed); }
+.prayer-legend .prayer-dot.is-missed::after { font-size: 10px; }
+.prayer-rates__bar .is-qada { background: var(--qada); }
+@media (max-width: 420px) { .prayer-row__acts.is-four button { padding: 0 8px; font-size: 12.5px; } }
 .prayer__sunrise { margin-top: -4px; }
 .prayer__settings { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
 .prayer__settings select { height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg); font: inherit; font-size: 15px; }
@@ -919,6 +936,7 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .pt--missed span { color: #b3261e; font-weight: 700; }
 .pt-act { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
 .pt-act--missed b { color: #b3261e; }
+.pt-act__btns { display: inline-flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
 
 /* ================= motion (black & white, React Bits style) ================= */
 .blur-text { display: inline-block; }
@@ -1280,3 +1298,54 @@ html.theme-anim, html.theme-anim * { transition: background-color .3s ease, bord
 .reveal { opacity: 0; transform: translateY(18px); transition: opacity .55s cubic-bezier(.22,1,.36,1), transform .55s cubic-bezier(.22,1,.36,1); }
 .reveal.is-shown { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; } }
+
+/* prayer statuses in dark mode */
+[data-theme='dark'] { --qada: #d9a441; --qada-bg: #2b2414; --qada-line: #5a4622; --missed: #e0705d; --missed-bg: #2d1916; --missed-line: #5c2c25; }
+[data-theme='dark'] .prayer-row.is-missed .prayer-row__acts, [data-theme='dark'] .prayer-row.is-qada .prayer-row__acts { background: rgba(255, 255, 255, .06); }
+[data-theme='dark'] .prayer-row__acts button.act-qada.is-on, [data-theme='dark'] .prayer-row__acts button.act-missed.is-on { color: #111; }
+
+/* Home prayer chips: Qada / didn't pray (kept last so they win over the card colours above) */
+.pt--qada, .today-card--prayers .pt--qada { background: var(--qada-bg); }
+.pt--qada span { color: var(--qada); font-weight: 700; }
+.pt--notprayed, .today-card--prayers .pt--notprayed { background: var(--missed-bg); }
+.pt--notprayed span { color: var(--missed); font-weight: 800; }
+[data-theme='dark'] .pt--qada, [data-theme='dark'] .today-card--prayers .pt--qada { background: var(--qada-bg); }
+[data-theme='dark'] .pt--notprayed, [data-theme='dark'] .today-card--prayers .pt--notprayed { background: var(--missed-bg); }
+[data-theme='dark'] .pt--qada span { color: var(--qada); }
+[data-theme='dark'] .pt--notprayed span { color: var(--missed); }
+[data-theme='dark'] .prayer-row.is-qada { border-color: var(--qada-line); }
+
+/* ---------- monthly budget ---------- */
+.budget { display: grid; gap: 12px; }
+.budget h2 { margin: 0; font-size: 17px; }
+.budget--empty { grid-template-columns: 1fr auto; align-items: center; }
+.budget--empty p { margin: 4px 0 0; }
+.budget__head { display: flex; justify-content: space-between; align-items: baseline; }
+.budget__big { margin: 0; font-size: 15px; }
+.budget__big strong { font-size: 26px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.budget--over .budget__big strong { color: var(--missed); }
+.budget__bar { position: relative; height: 12px; border-radius: 999px; background: var(--soft); overflow: visible; }
+.budget__fill { position: absolute; inset-block: 0; inset-inline-start: 0; border-radius: 999px; background: var(--w-memorized-ink); transition: width .6s cubic-bezier(.22,1,.36,1); }
+.budget--watch .budget__fill { background: var(--qada); }
+.budget--over .budget__fill { background: var(--missed); }
+.budget__mark { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-inline-start: -1px; background: var(--fg); border-radius: 2px; }
+.budget__scale { display: flex; justify-content: space-between; margin: -4px 0 0; }
+.budget__facts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.budget__facts li { display: grid; gap: 2px; padding: 10px 12px; border-radius: 12px; background: var(--soft); }
+.budget__facts li > span:first-child { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.budget__facts strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+.budget__facts strong.is-bad { color: var(--missed); }
+.budget__facts strong.is-good { color: var(--w-memorized-ink); }
+.budget__top { display: grid; gap: 6px; }
+.budget__top p { margin: 0; }
+.budget__row { display: grid; grid-template-columns: minmax(0, 7rem) 1fr auto; align-items: center; gap: 10px; font-size: 14px; }
+.budget__row > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.budget__rowbar { height: 6px; border-radius: 999px; background: var(--soft); overflow: hidden; }
+.budget__rowbar span { display: block; height: 100%; background: var(--fg); opacity: .55; border-radius: 999px; }
+.budget__row strong { font-variant-numeric: tabular-nums; font-size: 13.5px; }
+.budget__check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
+.budget__check input { width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; accent-color: var(--fg); }
+.budget__btns { display: inline-flex; gap: 8px; }
+.today-budget { display: grid; gap: 6px; margin-top: 10px; }
+.today-budget .budget__bar { height: 8px; }
+.today-budget p { margin: 0; font-size: 13.5px; }

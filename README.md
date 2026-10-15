@@ -102,8 +102,10 @@ The key only lets someone **add** spending to your account, not read anything; u
 ## Commitments: prayer times
 
 **Commit** → choose any city (search, or "Use my location"). It shows the 5 prayer times for that day
-(Fajr, Dhuhr, Asr, Maghrib, Isha), the next prayer, and the Hijri date. Tap **On time** or **Late** on each prayer
-to mark it prayed (it turns green); tap the same answer again to undo. **Last 7 days** shows every prayer at a glance.
+(Fajr, Dhuhr, Asr, Maghrib, Isha), the next prayer, and the Hijri date. Mark each prayer as **On time**, **Late**
+(still in its time), **Qada** (made up after its time) or **Didn't pray**; tap the same answer again to undo.
+Qada and Didn't pray appear once a prayer's time has passed (Fajr's ends at sunrise). **Last 7 days** shows every
+prayer at a glance. Needs `supabase/migrations/014_prayer_status.sql` (without it only On time / Late work).
 
 Times are calculated on your device with the free [adhan](https://github.com/batoulapps/adhan-js) library; pick the
 method your mosque uses (default: Moonsighting Committee) and Standard or Hanafi Asr. City search uses the free
@@ -113,6 +115,13 @@ Open-Meteo geocoding service.
 how often each prayer was prayed or late, and an AI review with tips. It needs the updated `ai` Edge Function.
 
 Setup (once): run `supabase/migrations/006_prayers.sql` in Supabase → SQL Editor, and redeploy the `ai` function.
+
+## Monthly budget
+
+**Spend** → **Set budget**. The card shows what's left, how much you can spend per day for the rest of the month,
+where your current pace ends up, and what most of the money went on. Home shows "£X left". With Reminders on, you
+get one warning at 80% and one when you go over (each once a month, between 08:00 and 22:00).
+Setup: run `supabase/migrations/015_budget.sql` and redeploy the `notify` and `ai` functions.
 
 ## Reminders (phone notifications)
 
