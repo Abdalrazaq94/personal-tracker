@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { T } from './i18n'
 
 const Recognition = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition)
 
@@ -87,15 +88,15 @@ export function MicButton({ listen, label = 'Speak' }) {
       type="button"
       className={`mic-btn ${listen.listening ? 'is-on' : ''}`}
       onClick={listen.toggle}
-      aria-label={listen.listening ? 'Stop listening' : label}
-      title={listen.listening ? 'Stop' : label}
+      aria-label={listen.listening ? T("Stop listening") : label}
+      title={listen.listening ? T("Stop") : label}
     >
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <rect x="9" y="3" width="6" height="11" rx="3" />
         <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
       </svg>
     </button>
-  )
+  );
 }
 
 /** Small speaker button that reads text aloud. */

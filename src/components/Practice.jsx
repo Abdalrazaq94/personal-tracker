@@ -4,6 +4,7 @@ import { MicButton, SpeakButton, useListen } from '../lib/speech'
 import { Sheet } from './Collections'
 import { Segmented } from './ui'
 import { StatusPicker } from './StatusPicker'
+import { T, Tr } from '../lib/i18n'
 
 const shuffle = (a) => {
   const x = [...a]
@@ -83,24 +84,24 @@ export default function Practice({ words, onStatus, onClose, lang = 'Arabic' }) 
   const score = Object.values(results).filter(Boolean).length
 
   return (
-    <Sheet title="Practise" onClose={onClose}>
+    <Sheet title={T("Practise")} onClose={onClose}>
       {stage === 'setup' && (
         <div className="form">
           <div className="field">
-            <span>How</span>
+            <span>{T("How")}</span>
             <div className="mode-cards">
               <button type="button" className={`mode-card ${mode === 'gap' ? 'is-active' : ''}`} onClick={() => setMode('gap')}>
-                <strong>Fill the gap</strong>
-                <span>AI writes a sentence with a missing word. Type or say the word.</span>
+                <strong>{T("Fill the gap")}</strong>
+                <span>{T("AI writes a sentence with a missing word. Type or say the word.")}</span>
               </button>
               <button type="button" className={`mode-card ${mode === 'sentence' ? 'is-active' : ''}`} onClick={() => setMode('sentence')}>
-                <strong>Make a sentence</strong>
-                <span>Write or say your own sentence. AI corrects you.</span>
+                <strong>{T("Make a sentence")}</strong>
+                <span>{T("Write or say your own sentence. AI corrects you.")}</span>
               </button>
             </div>
           </div>
           <div className="field">
-            <span>Which words</span>
+            <span>{T("Which words")}</span>
             <Segmented
               small
               value={pool}
@@ -112,7 +113,7 @@ export default function Practice({ words, onStatus, onClose, lang = 'Arabic' }) 
             />
           </div>
           <div className="field">
-            <span>How many</span>
+            <span>{T("How many")}</span>
             <Segmented
               small
               value={count}
@@ -121,30 +122,26 @@ export default function Practice({ words, onStatus, onClose, lang = 'Arabic' }) 
             />
           </div>
           {error && <p className="error-text">{error}</p>}
-          <button className="btn btn--block" onClick={start}>
-            Start
-          </button>
+          <button className="btn btn--block" onClick={start}>{T("Start")}</button>
         </div>
       )}
 
       {stage === 'loading' && (
         <>
-          <div className="ai-loading">Writing sentences for your words… (usually 5–15 seconds)</div>
+          <div className="ai-loading">{T("Writing sentences for your words… (usually 5–15 seconds)")}</div>
           <button
             className="btn btn--ghost btn--block"
             onClick={() => {
               runId.current++
               setStage('setup')
             }}
-          >
-            Cancel
-          </button>
+          >{T("Cancel")}</button>
         </>
       )}
 
       {stage === 'run' && rounds[index] && (
         <>
-          <div className="progress" aria-label={`Question ${index + 1} of ${rounds.length}`}>
+          <div className="progress" aria-label={T("Question {0} of {1}", [index + 1, rounds.length])}>
             <span style={{ width: `${((index + (results[index] !== undefined ? 1 : 0)) / rounds.length) * 100}%` }} />
           </div>
           <p className="muted small">
@@ -164,9 +161,9 @@ export default function Practice({ words, onStatus, onClose, lang = 'Arabic' }) 
             <strong>
               {score} / {rounds.length}
             </strong>
-            <span>{score === rounds.length ? 'Perfect! 🎉' : score >= rounds.length / 2 ? 'Good work — keep going.' : 'Keep practising, you’ll get there.'}</span>
+            <span>{score === rounds.length ? T("Perfect! 🎉") : score >= rounds.length / 2 ? T("Good work — keep going.") : T("Keep practising, you’ll get there.")}</span>
           </div>
-          <p className="muted small">Update how well you know each word:</p>
+          <p className="muted small">{T("Update how well you know each word:")}</p>
           <ul className="list list--tight">
             {rounds.map((r, i) => (
               <li key={i} className="item done-row">
@@ -182,17 +179,13 @@ export default function Practice({ words, onStatus, onClose, lang = 'Arabic' }) 
             ))}
           </ul>
           <div className="form-foot">
-            <button className="btn btn--ghost" onClick={() => setStage('setup')}>
-              Practise again
-            </button>
-            <button className="btn" onClick={onClose}>
-              Done
-            </button>
+            <button className="btn btn--ghost" onClick={() => setStage('setup')}>{T("Practise again")}</button>
+            <button className="btn" onClick={onClose}>{T("Done")}</button>
           </div>
         </div>
       )}
     </Sheet>
-  )
+  );
 }
 
 /* ------------------------------ fill the gap ----------------------------- */
@@ -232,9 +225,9 @@ function GapRound({ round, onResult, onNext, last, lang }) {
         {after}
       </div>
       <div className="row-actions">
-        <SpeakButton text={checked === null ? item.sentence : full} label="Hear the sentence" />
+        <SpeakButton text={checked === null ? item.sentence : full} label={T("Hear the sentence")} />
         <button type="button" className="link small" onClick={() => setShowAr(!showAr)}>
-          {showAr ? `Hide ${lang}` : `Show ${lang} hint`}
+          {showAr ? T("Hide {0}", [lang]) : T("Show {0} hint", [lang])}
         </button>
       </div>
       {showAr && (
@@ -249,14 +242,14 @@ function GapRound({ round, onResult, onNext, last, lang }) {
             <input
               value={listen.listening ? listen.interim || answer : answer}
               onChange={(e) => setAnswer(e.target.value)}
-              placeholder={listen.listening ? 'Listening…' : 'Type or say the missing word'}
+              placeholder={listen.listening ? T("Listening…") : T("Type or say the missing word")}
               autoCapitalize="none"
               autoComplete="off"
               autoFocus
             />
-            <MicButton listen={listen} label="Say the answer" />
+            <MicButton listen={listen} label={T("Say the answer")} />
           </div>
-          {heard && <p className="muted small">We heard: “{heard}”</p>}
+          {heard && <p className="muted small">{Tr("We heard: “{0}”", heard)}</p>}
           {listen.error && <p className="error-text">{listen.error}</p>}
           <div className="form-foot">
             <button
@@ -267,29 +260,25 @@ function GapRound({ round, onResult, onNext, last, lang }) {
                 setChecked(false)
                 onResult(false)
               }}
-            >
-              Show answer
-            </button>
-            <button className="btn" disabled={!answer.trim()}>
-              Check
-            </button>
+            >{T("Show answer")}</button>
+            <button className="btn" disabled={!answer.trim()}>{T("Check")}</button>
           </div>
         </form>
       ) : (
         <>
           <div className={`verdict ${checked ? 'verdict--ok' : ''}`}>
-            <strong>{checked ? 'Correct!' : answer ? `Not quite — the answer is “${item.answer}”.` : `The answer is “${item.answer}”.`}</strong>
+            <strong>{checked ? T("Correct!") : answer ? T("Not quite — the answer is “{0}”.", [item.answer]) : T("The answer is “{0}”.", [item.answer])}</strong>
             <p dir="auto" className="small">
               {item.arabic}
             </p>
           </div>
           <button className="btn btn--block" onClick={onNext} autoFocus>
-            {last ? 'See results' : 'Next'}
+            {last ? T("See results") : T("Next")}
           </button>
         </>
       )}
     </div>
-  )
+  );
 }
 
 /* ----------------------------- make a sentence ---------------------------- */
@@ -340,7 +329,7 @@ function SentenceRound({ round, onResult, onNext, last }) {
         </div>
         <SpeakButton text={w.word} />
       </div>
-      <p className="muted small">Write or say a sentence using this word.</p>
+      <p className="muted small">{T("Write or say a sentence using this word.")}</p>
 
       {!res ? (
         <form className="form" onSubmit={check}>
@@ -349,12 +338,12 @@ function SentenceRound({ round, onResult, onNext, last }) {
               rows={3}
               value={listen.listening && listen.interim ? `${text} ${listen.interim}`.trim() : text}
               onChange={(e) => setText(e.target.value)}
-              placeholder={listen.listening ? 'Listening… speak your sentence' : `e.g. a sentence with “${w.word}”`}
+              placeholder={listen.listening ? T("Listening… speak your sentence") : T("e.g. a sentence with “{0}”", [w.word])}
               autoCapitalize="sentences"
             />
-            <MicButton listen={listen} label="Say your sentence" />
+            <MicButton listen={listen} label={T("Say your sentence")} />
           </div>
-          {heard && <p className="muted small">We heard: “{heard}”</p>}
+          {heard && <p className="muted small">{Tr("We heard: “{0}”", heard)}</p>}
           {listen.error && <p className="error-text">{listen.error}</p>}
           {error && <p className="error-text">{error}</p>}
           <div className="form-foot">
@@ -365,23 +354,21 @@ function SentenceRound({ round, onResult, onNext, last }) {
                 if (!recorded) onResult(false)
                 onNext()
               }}
-            >
-              Skip
-            </button>
+            >{T("Skip")}</button>
             <button className="btn" disabled={busy || !text.trim()}>
-              {busy ? 'Checking…' : 'Check with AI'}
+              {busy ? T("Checking…") : T("Check with AI")}
             </button>
           </div>
         </form>
       ) : (
         <>
           <div className={`verdict ${res.correct ? 'verdict--ok' : ''}`}>
-            <strong>{res.correct ? 'Great sentence!' : res.used_word ? 'Almost — here’s a better way:' : `Try to use “${w.word}” in your sentence.`}</strong>
-            <p className="yours">You: {text}</p>
+            <strong>{res.correct ? T("Great sentence!") : res.used_word ? T("Almost — here’s a better way:") : T("Try to use “{0}” in your sentence.", [w.word])}</strong>
+            <p className="yours">{Tr("You: {0}", text)}</p>
             {res.corrected && norm(res.corrected) !== norm(text) && (
               <div className="corrected">
                 <span>{res.corrected}</span>
-                <SpeakButton text={res.corrected} label="Hear the correct sentence" />
+                <SpeakButton text={res.corrected} label={T("Hear the correct sentence")} />
               </div>
             )}
             {res.feedback && <p className="small">{res.feedback}</p>}
@@ -400,15 +387,13 @@ function SentenceRound({ round, onResult, onNext, last }) {
                 setText('')
                 setHeard('')
               }}
-            >
-              Try again
-            </button>
+            >{T("Try again")}</button>
             <button className="btn" onClick={onNext}>
-              {last ? 'See results' : 'Next word'}
+              {last ? T("See results") : T("Next word")}
             </button>
           </div>
         </>
       )}
     </div>
-  )
+  );
 }

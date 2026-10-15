@@ -8,11 +8,12 @@ import { Sheet } from '../components/Collections'
 import Practice from '../components/Practice'
 import { STATUSES, StatusPicker } from '../components/StatusPicker'
 import { DeleteButton, Empty, ErrorBar, Loading, PageHeader, Segmented } from '../components/ui'
+import { T } from '../lib/i18n'
 
 /** "Resilient." → "resilient" (keeps "I" and names that look like names). */
 const cleanSpoken = (t) => {
   const s = t.trim().replace(/[.,!?;:]+$/g, '')
-  return /^[A-Z][a-z]/.test(s) && !/\s/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s
+  return /^[A-Z][a-z]/.test(s) && !/\s/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s;
 }
 
 export default function Words() {
@@ -78,15 +79,15 @@ export default function Words() {
         <input
           type="search"
           className="search"
-          placeholder={`Search ${rows.length} words…`}
+          placeholder={T("Search {0} words…", [rows.length])}
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
       </div>
 
       <PageHeader
-        title="Words"
-        subtitle={`${counts.memorized} of ${counts.all} memorized`}
+        title={T("Words")}
+        subtitle={T("{0} of {1} memorized", [counts.memorized, counts.all])}
         right={
           rows.length > 0 && (
             <button className="btn btn--sm" onClick={() => setPractising(true)}>
@@ -96,7 +97,7 @@ export default function Words() {
         }
       />
       <label className="lang-pick">
-        <span>Translate to</span>
+        <span>{T("Translate to")}</span>
         <select value={lang} onChange={(e) => setLang(e.target.value)}>
           {LANGUAGES.map((l) => (
             <option key={l.name} value={l.name}>
@@ -115,18 +116,16 @@ export default function Words() {
         }}
       >
         <input
-          aria-label="New word"
+          aria-label={T("New word")}
           value={listen.listening ? listen.interim || word : word}
           onChange={(e) => setWord(e.target.value)}
-          placeholder={listen.listening ? 'Listening…' : 'Type or say a new word'}
+          placeholder={listen.listening ? T("Listening…") : T("Type or say a new word")}
           autoCapitalize="none"
           autoComplete="off"
           enterKeyHint="done"
         />
-        <MicButton listen={listen} label="Say the word" />
-        <button className="btn" disabled={!word.trim()}>
-          Add
-        </button>
+        <MicButton listen={listen} label={T("Say the word")} />
+        <button className="btn" disabled={!word.trim()}>{T("Add")}</button>
       </form>
 
       <div className="scroll-x">
@@ -143,7 +142,7 @@ export default function Words() {
       {loading ? (
         <Loading />
       ) : shown.length === 0 ? (
-        <Empty>{rows.length ? 'No words match.' : 'No words yet. Type or say your first one above.'}</Empty>
+        <Empty>{rows.length ? T("No words match.") : T("No words yet. Type or say your first one above.")}</Empty>
       ) : (
         <div className="word-grid">
           {shown.map((w) =>
@@ -163,26 +162,24 @@ export default function Words() {
                   <div className="word__line">
                     <h3 className="word__word">{w.word}</h3>
                     {translating.has(w.id) ? (
-                      <span className="word__tr word__tr--pending">Translating…</span>
+                      <span className="word__tr word__tr--pending">{T("Translating…")}</span>
                     ) : w.translation ? (
                       <span className="word__tr" dir="auto">
                         {w.translation}
                       </span>
                     ) : (
-                      <button type="button" className="link word__translate" onClick={() => translate(w)}>
-                        Translate
-                      </button>
+                      <button type="button" className="link word__translate" onClick={() => translate(w)}>{T("Translate")}</button>
                     )}
                   </div>
                   <div className="word__actions">
-                    <SpeakButton text={w.word} label={`Hear "${w.word}"`} />
-                    <button type="button" className="icon-btn" aria-label="Explain with AI" title="Explain with AI" onClick={() => setExplain(w)}>
+                    <SpeakButton text={w.word} label={T("Hear \"{0}\"", [w.word])} />
+                    <button type="button" className="icon-btn" aria-label={T("Explain with AI")} title={T("Explain with AI")} onClick={() => setExplain(w)}>
                       ✦
                     </button>
-                    <button type="button" className="icon-btn" aria-label="Edit" onClick={() => setEditing(w.id)}>
+                    <button type="button" className="icon-btn" aria-label={T("Edit")} onClick={() => setEditing(w.id)}>
                       ✎
                     </button>
-                    <DeleteButton label={`Delete "${w.word}"`} onClick={() => remove(w.id)} />
+                    <DeleteButton label={T("Delete \"{0}\"", [w.word])} onClick={() => remove(w.id)} />
                   </div>
                 </div>
                 <StatusPicker value={w.status} onChange={(s) => update(w.id, { status: s })} />
@@ -197,7 +194,7 @@ export default function Words() {
         <Practice lang={lang} words={rows} onStatus={(id, s) => update(id, { status: s })} onClose={() => setPractising(false)} />
       )}
     </div>
-  )
+  );
 }
 
 function ExplainSheet({ word, lang, onClose }) {
@@ -221,11 +218,11 @@ function ExplainSheet({ word, lang, onClose }) {
           </span>
         )}
       </div>
-      {state.loading && <div className="ai-loading">Thinking…</div>}
+      {state.loading && <div className="ai-loading">{T("Thinking…")}</div>}
       {state.error && <p className="error-text">{state.error}</p>}
       {state.text && <Markdown text={state.text} />}
     </Sheet>
-  )
+  );
 }
 
 function EditWord({ w, onSave, onCancel }) {
@@ -240,13 +237,11 @@ function EditWord({ w, onSave, onCancel }) {
       }}
     >
       <input className="input-plain" value={word} onChange={(e) => setWord(e.target.value)} autoFocus />
-      <input className="input-plain" dir="auto" value={tr} onChange={(e) => setTr(e.target.value)} placeholder="Translation" />
+      <input className="input-plain" dir="auto" value={tr} onChange={(e) => setTr(e.target.value)} placeholder={T("Translation")} />
       <div className="form-foot">
-        <button type="button" className="btn btn--ghost btn--sm" onClick={onCancel}>
-          Cancel
-        </button>
-        <button className="btn btn--sm">Save</button>
+        <button type="button" className="btn btn--ghost btn--sm" onClick={onCancel}>{T("Cancel")}</button>
+        <button className="btn btn--sm">{T("Save")}</button>
       </div>
     </form>
-  )
+  );
 }

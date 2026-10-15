@@ -1,4 +1,5 @@
 import { Component } from 'react'
+import { T } from '../lib/i18n'
 
 /**
  * If a page crashes, show what happened and a Reload button instead of a blank white screen.
@@ -39,29 +40,25 @@ export default class PageGuard extends Component {
     return (
       <div className="page">
         <div className="card crash">
-          <h2>This page had a problem</h2>
-          <p className="muted small">Tap Reload. If it keeps happening, send this message to the developer:</p>
+          <h2>{T("This page had a problem")}</h2>
+          <p className="muted small">{T("Tap Reload. If it keeps happening, send this message to the developer:")}</p>
           <code className="crash__msg">{text}</code>
           <details className="crash__more" open>
-            <summary className="small">Details for the developer (screenshot this)</summary>
+            <summary className="small">{T("Details for the developer (screenshot this)")}</summary>
             <pre>{`${(error?.stack || '').split('\n').slice(0, 8).join('\n')}\n—\n${(this.state.stack || '').trim().split('\n').slice(0, 8).join('\n')}`}</pre>
           </details>
           <div className="crash__acts">
-            <button className="btn" onClick={() => window.location.reload()}>
-              Reload
-            </button>
+            <button className="btn" onClick={() => window.location.reload()}>{T("Reload")}</button>
             <button
               className="btn btn--ghost"
               onClick={() => {
                 const full = `${text}\n${window.location.href}\n${navigator.userAgent}\n${(error?.stack || '').slice(0, 800)}`
                 navigator.clipboard?.writeText(full).catch(() => window.prompt('Copy this:', full))
               }}
-            >
-              Copy message
-            </button>
+            >{T("Copy message")}</button>
           </div>
         </div>
       </div>
-    )
+    );
   }
 }

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { isBad, series, success } from '../lib/habits'
+import { T } from '../lib/i18n'
 
 const W = 320
 const H = 132
@@ -69,7 +70,7 @@ function HabitChart({ habit, logs, days }) {
         <span className="habit-chart__name" dir="auto">
           {habit.name}
         </span>
-        <span className={`tag ${bad ? '' : 'tag--solid'}`}>{bad ? 'Bad' : 'Good'}</span>
+        <span className={`tag ${bad ? '' : 'tag--solid'}`}>{bad ? T("Bad") : T("Good")}</span>
       </figcaption>
       <p className="habit-chart__info">
         {hv
@@ -81,7 +82,7 @@ function HabitChart({ habit, logs, days }) {
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`${habit.name}: daily count over the last ${days} days. ${trend}.`}
+        aria-label={T("{0}: daily count over the last {1} days. {2}.", [habit.name, days, trend])}
         onPointerMove={onMove}
         onPointerDown={onMove}
         onPointerLeave={() => setHover(null)}
@@ -119,10 +120,8 @@ function HabitChart({ habit, logs, days }) {
         <text x={PAD.l} y={H - 4} className="hc-tick">
           {label(data[0])}
         </text>
-        <text x={W - PAD.r} y={H - 4} className="hc-tick" textAnchor="end">
-          Today
-        </text>
+        <text x={W - PAD.r} y={H - 4} className="hc-tick" textAnchor="end">{T("Today")}</text>
       </svg>
     </figure>
-  )
+  );
 }

@@ -6,6 +6,7 @@ import { BUILTIN_ADHANS, getAdhan, isAdhan, playAdhan, removeAdhan, saveAdhan } 
 import { getAppAdhan, isAppOwner, removeAppAdhan, uploadAppAdhan } from '../lib/appAdhan'
 import InstallApp from '../components/InstallApp'
 import { blockedHelp, currentStatus, disablePush, enablePush, loadSettings, saveSettings, sendTest } from '../lib/push'
+import { T, Tr } from '../lib/i18n'
 
 /** Turn phone reminders on, test them, and choose prayer reminders. */
 export default function Reminders() {
@@ -104,16 +105,20 @@ export default function Reminders() {
 
   return (
     <div className="page">
-      <PageHeader title="Reminders" subtitle="Notifications on this phone for plans and prayers" />
+      <PageHeader title={T("Reminders")} subtitle={T("Notifications on this phone for plans and prayers")} />
       <ErrorBar error={error} onClose={() => setError(null)} />
       {settings?.needsUpdate && (
         <div className="error-bar" role="alert">
-          <span>Run supabase/migrations/008_reminders.sql in Supabase → SQL Editor, then refresh.</span>
+          <span>{T(
+            "Run supabase/migrations/008_reminders.sql in Supabase → SQL Editor, then refresh."
+          )}</span>
         </div>
       )}
       {settings?.needsSounds && !settings?.needsUpdate && (
         <div className="error-bar" role="alert">
-          <span>To pick sounds and task reminders, run supabase/migrations/010_sounds.sql in Supabase → SQL Editor, then refresh.</span>
+          <span>{T(
+            "To pick sounds and task reminders, run supabase/migrations/010_sounds.sql in Supabase → SQL Editor, then refresh."
+          )}</span>
         </div>
       )}
 
@@ -121,34 +126,34 @@ export default function Reminders() {
         <div className="rem-head">
           <span className={`rem-dot ${on ? 'is-on' : ''}`} aria-hidden />
           <div>
-            <h2>{on ? 'Reminders are on' : status === 'blocked' ? 'Notifications are blocked' : status === 'unsupported' ? 'Not available here' : 'Reminders are off'}</h2>
+            <h2>{on ? T("Reminders are on") : status === 'blocked' ? T("Notifications are blocked") : status === 'unsupported' ? T("Not available here") : T("Reminders are off")}</h2>
             <p className="muted small">
               {on
-                ? 'This phone gets your reminders, even when the app is closed.'
+                ? T("This phone gets your reminders, even when the app is closed.")
                 : status === 'blocked'
                   ? blockedHelp()
                   : status === 'unsupported'
                     ? isIphone && !standalone
-                      ? 'On iPhone: tap Share → “Add to Home Screen”, open Tracker from there, then turn reminders on.'
-                      : 'This browser can’t show notifications. Try Chrome.'
-                    : 'Turn them on to get a sound and a notification when a plan or prayer is due.'}
+                      ? T(
+                "On iPhone: tap Share → “Add to Home Screen”, open Tracker from there, then turn reminders on."
+              )
+                      : T("This browser can’t show notifications. Try Chrome.")
+                    : T(
+                "Turn them on to get a sound and a notification when a plan or prayer is due."
+              )}
             </p>
           </div>
         </div>
         <div className="rem-actions">
           {!on && status !== 'unsupported' && (
             <button className="btn" disabled={busy} onClick={() => run(enablePush, 'Done. Now tap “Send a test”.')}>
-              {busy ? 'Turning on…' : 'Turn on reminders'}
+              {busy ? T("Turning on…") : T("Turn on reminders")}
             </button>
           )}
           {on && (
             <>
-              <button className="btn" disabled={busy} onClick={() => run(sendTest, 'Sent. It should arrive in a few seconds.')}>
-                Send a test
-              </button>
-              <button className="btn btn--ghost" disabled={busy} onClick={() => run(disablePush, 'Reminders are off on this phone.')}>
-                Turn off
-              </button>
+              <button className="btn" disabled={busy} onClick={() => run(sendTest, 'Sent. It should arrive in a few seconds.')}>{T("Send a test")}</button>
+              <button className="btn btn--ghost" disabled={busy} onClick={() => run(disablePush, 'Reminders are off on this phone.')}>{T("Turn off")}</button>
             </>
           )}
         </div>
@@ -157,8 +162,10 @@ export default function Reminders() {
       </section>
 
       <section className="card rem-card">
-        <h2>Sounds</h2>
-        <p className="muted small">Pick a sound for each kind of reminder, and whether it rings until you answer or just once.</p>
+        <h2>{T("Sounds")}</h2>
+        <p className="muted small">{T(
+          "Pick a sound for each kind of reminder, and whether it rings until you answer or just once."
+        )}</p>
         {KINDS.map((k) => {
           const v = sounds[k.id]
           return (
@@ -221,8 +228,8 @@ export default function Reminders() {
         })}
         <label className="rem-row">
           <span>
-            <strong>Ring again</strong>
-            <span className="muted small">How often “Ring until I answer” repeats</span>
+            <strong>{T("Ring again")}</strong>
+            <span className="muted small">{T("How often “Ring until I answer” repeats")}</span>
           </span>
           <select
             className="rem-select"
@@ -236,57 +243,68 @@ export default function Reminders() {
               }, 'Saved.')
             }}
           >
-            <option value={1}>Every 1 min</option>
-            <option value={2}>Every 2 min</option>
-            <option value={5}>Every 5 min</option>
-            <option value={10}>Every 10 min</option>
+            <option value={1}>{T("Every 1 min")}</option>
+            <option value={2}>{T("Every 2 min")}</option>
+            <option value={5}>{T("Every 5 min")}</option>
+            <option value={10}>{T("Every 10 min")}</option>
           </select>
         </label>
-        <p className="muted small">
-          When the app is open you hear the exact sound you picked; “Ring until I answer” keeps playing until you tap a button. When the app is
-          closed, your phone plays its notification sound, and each sound above vibrates in its own pattern, so you can tell them apart. After an
-          hour without an answer, it slows to every 15 minutes.
-        </p>
-        {note === 'Saved.' && <p className="small rem-note">Saved.</p>}
+        <p className="muted small">{T(
+          "When the app is open you hear the exact sound you picked; “Ring until I answer” keeps playing until you tap a button. When the app is closed, your phone plays its notification sound, and each sound above vibrates in its own pattern, so you can tell them apart. After an hour without an answer, it slows to every 15 minutes."
+        )}</p>
+        {note === 'Saved.' && <p className="small rem-note">{T("Saved.")}</p>}
       </section>
 
       {owner && <OwnerAdhan current={appAdhan} onChange={setAppAdhan} />}
 
       <section className="card rem-card">
-        <h2>Change the sound</h2>
-        <p className="muted small">Phones don’t let websites pick the sound, but you can choose a louder or longer one (an alarm or ringtone) for Tracker:</p>
+        <h2>{T("Change the sound")}</h2>
+        <p className="muted small">{T(
+          "Phones don’t let websites pick the sound, but you can choose a louder or longer one (an alarm or ringtone) for Tracker:"
+        )}</p>
         <ol className="rem-tips small">
-          <li>
-            Open your phone’s <b>Settings → Apps → Chrome → Notifications</b> (or <b>Apps → Tracker</b> if you added it to your Home Screen).
-          </li>
-          <li>
-            Find <b>Sites</b> → <b>personal-tracker-black-xi.vercel.app</b> (on some phones it’s listed straight under Notifications).
-          </li>
-          <li>
-            Tap <b>Sound</b> and choose a long one, such as an alarm tone. Also turn on <b>Override Do Not Disturb</b> if you want prayers to
-            ring at night.
-          </li>
-          <li>
-            <b>Adhan when the app is closed:</b> save your adhan mp3 on your phone, then in that same <b>Sound</b> screen choose it from your
-            files (on many phones: <b>Sound → Add</b> or <b>My sounds</b>). Note it then plays for all Tracker reminders, not only prayers.
-          </li>
+          <li>{Tr(
+              "Open your phone’s {0} (or {1} if you added it to your Home Screen).",
+              <b>{T("Settings → Apps → Chrome → Notifications")}</b>,
+              <b>{T("Apps → Tracker")}</b>
+            )}</li>
+          <li>{Tr(
+              "Find {0} → {1} (on some phones it’s listed straight under Notifications).",
+              <b>{T("Sites")}</b>,
+              <b>personal-tracker-black-xi.vercel.app</b>
+            )}</li>
+          <li>{Tr(
+              "Tap {0} and choose a long one, such as an alarm tone. Also turn on {1} if you want prayers to ring at night.",
+              <b>{T("Sound")}</b>,
+              <b>{T("Override Do Not Disturb")}</b>
+            )}</li>
+          <li>{Tr(
+              "{0} save your adhan mp3 on your phone, then in that same {1} screen choose it from your files (on many phones: {2} or {3}). Note it then plays for all Tracker reminders, not only prayers.",
+              <b>{T("Adhan when the app is closed:")}</b>,
+              <b>{T("Sound")}</b>,
+              <b>{T("Sound → Add")}</b>,
+              <b>{T("My sounds")}</b>
+            )}</li>
         </ol>
       </section>
 
       <section className="card rem-card">
-        <h2>Plans and tasks</h2>
-        <p className="muted small">
-          Any plan with a time reminds you at that time. Mark it <b>Important</b> and choose <b>Remind me</b> (15 min, 1 hour or 1 day
-          before) when you add it. For tasks, tap <b>⏰ Remind me</b> when you add one.
-        </p>
+        <h2>{T("Plans and tasks")}</h2>
+        <p className="muted small">{Tr(
+            "Any plan with a time reminds you at that time. Mark it {0} and choose {1} (15 min, 1 hour or 1 day before) when you add it. For tasks, tap {2} when you add one.",
+            <b>{T("Important")}</b>,
+            <b>{T("Remind me")}</b>,
+            <b>{T("⏰ Remind me")}</b>
+          )}</p>
       </section>
 
       <section className="card rem-card">
-        <h2>Prayers</h2>
+        <h2>{T("Prayers")}</h2>
         {!place ? (
-          <p className="muted small">
-            Choose your city in <a href="#/commit">Commitments</a> first.
-          </p>
+          <p className="muted small">{Tr(
+              "Choose your city in {0} first.",
+              <a href="#/commit">{T("Commitments")}</a>
+            )}</p>
         ) : (
           <>
             <p className="muted small">
@@ -295,27 +313,31 @@ export default function Reminders() {
             </p>
             <label className="rem-row">
               <span>
-                <strong>Remind me at each prayer time</strong>
-                <span className="muted small">Fajr, Dhuhr, Asr, Maghrib and Isha · sound under Sounds above</span>
+                <strong>{T("Remind me at each prayer time")}</strong>
+                <span className="muted small">{T("Fajr, Dhuhr, Asr, Maghrib and Isha · sound under Sounds above")}</span>
               </span>
               <input type="checkbox" className="rem-switch" checked={!!settings?.prayer_notify} disabled={busy || !on} onChange={(e) => setPrayer({ prayer_notify: e.target.checked })} />
             </label>
-            {!on && <p className="muted small">Turn reminders on above first.</p>}
+            {!on && <p className="muted small">{T("Turn reminders on above first.")}</p>}
           </>
         )}
       </section>
 
       <section className="card rem-card">
-        <h2>Tips for reliable reminders</h2>
+        <h2>{T("Tips for reliable reminders")}</h2>
         <InstallApp />
         <ul className="rem-tips small">
-          <li>Add Tracker to your Home Screen (Chrome menu ⋮ → “Add to Home screen”).</li>
-          <li>Android: Settings → Apps → Chrome → Battery → “Unrestricted”, so reminders aren’t delayed.</li>
-          <li>Keep notifications for this site allowed in Chrome, and sound on for them.</li>
+          <li>{T("Add Tracker to your Home Screen (Chrome menu ⋮ → “Add to Home screen”).")}</li>
+          <li>{T(
+            "Android: Settings → Apps → Chrome → Battery → “Unrestricted”, so reminders aren’t delayed."
+          )}</li>
+          <li>{T(
+            "Keep notifications for this site allowed in Chrome, and sound on for them."
+          )}</li>
         </ul>
       </section>
     </div>
-  )
+  );
 }
 
 /** One line of facts for troubleshooting (send a screenshot of it). */
@@ -394,23 +416,26 @@ function AdhanFiles() {
     <div className="adhan-row">
       <div className="adhan-row__text">
         <strong>{label}</strong>
-        <span className="muted small">{files[slot] ? `${files[slot].name} · ${(files[slot].size / 1048576).toFixed(1)} MB` : hint}</span>
+        <span className="muted small">{files[slot] ? T(
+          "{0} · {1} MB",
+          [files[slot].name, (files[slot].size / 1048576).toFixed(1)]
+        ) : hint}</span>
       </div>
       <div className="adhan-row__btns">
         {files[slot] && (
           <button type="button" className="btn btn--ghost btn--sm" onClick={() => toggle(slot)}>
-            {playing === slot ? '■ Stop' : '▶ Play'}
+            {playing === slot ? T("■ Stop") : T("▶ Play")}
           </button>
         )}
         <label className="btn btn--sm adhan-pick">
-          {files[slot] ? 'Change' : 'Choose file'}
+          {files[slot] ? T("Change") : T("Choose file")}
           <input type="file" accept="audio/*,.mp3,.m4a,.ogg,.wav" onChange={(e) => pick(slot, e.target.files?.[0])} />
         </label>
         {files[slot] && (
           <button
             type="button"
             className="btn btn--ghost btn--sm"
-            aria-label={`Remove ${label}`}
+            aria-label={T("Remove {0}", [label])}
             onClick={async () => {
               stop()
               await removeAdhan(slot)
@@ -429,9 +454,11 @@ function AdhanFiles() {
       {row('adhan', 'Adhan recording', 'Choose an adhan audio file (mp3) from your phone')}
       {row('adhan-fajr', 'Fajr adhan (optional)', 'A different recording just for Fajr')}
       {error && <p className="small error-text">{error}</p>}
-      <p className="muted small">Your recording is kept on this phone only. If none is chosen, Adhan 1 plays.</p>
+      <p className="muted small">{T(
+        "Your recording is kept on this phone only. If none is chosen, Adhan 1 plays."
+      )}</p>
     </div>
-  )
+  );
 }
 
 /** App owner only: upload the adhan every user gets. */
@@ -459,27 +486,24 @@ function OwnerAdhan({ current, onChange }) {
 
   return (
     <section className="card rem-card owner-adhan">
-      <h2>App adhan for everyone</h2>
-      <p className="muted small">
-        Only you see this (you own the app). Upload one adhan recording and every user gets it as their prayer sound. Only upload a recording you
-        have permission to share (for example from the mosque, the muezzin or the publisher).
-      </p>
+      <h2>{T("App adhan for everyone")}</h2>
+      <p className="muted small">{T(
+        "Only you see this (you own the app). Upload one adhan recording and every user gets it as their prayer sound. Only upload a recording you have permission to share (for example from the mosque, the muezzin or the publisher)."
+      )}</p>
       {current && (
-        <p className="small">
-          Now: <b>{current.label}</b>
-        </p>
+        <p className="small">{Tr("Now: {0}", <b>{current.label}</b>)}</p>
       )}
       <label className="field">
-        <span>Name users will see</span>
-        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Madinah adhan" />
+        <span>{T("Name users will see")}</span>
+        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={T("e.g. Madinah adhan")} />
       </label>
       <div className="adhan-row__btns">
         <label className="btn btn--ghost btn--sm adhan-pick">
-          {file ? file.name : 'Choose recording (mp3)'}
+          {file ? file.name : T("Choose recording (mp3)")}
           <input type="file" accept="audio/*,.mp3,.m4a" onChange={(e) => setFile(e.target.files?.[0] || null)} />
         </label>
         <button type="button" className="btn btn--sm" disabled={busy || !file} onClick={save}>
-          {busy ? 'Uploading…' : current ? 'Replace for everyone' : 'Use for everyone'}
+          {busy ? T("Uploading…") : current ? T("Replace for everyone") : T("Use for everyone")}
         </button>
         {current && (
           <button
@@ -496,13 +520,11 @@ function OwnerAdhan({ current, onChange }) {
               }
               setBusy(false)
             }}
-          >
-            Remove
-          </button>
+          >{T("Remove")}</button>
         )}
       </div>
       {msg && <p className="small rem-note">{msg}</p>}
       {err && <p className="small error-text">{err}</p>}
     </section>
-  )
+  );
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Segmented } from '../components/ui'
+import { T } from '../lib/i18n'
 
 export default function Login() {
   const [mode, setMode] = useState('signin')
@@ -29,8 +30,8 @@ export default function Login() {
   return (
     <div className="auth">
       <form className="auth-card" onSubmit={submit}>
-        <h1 className="brand">Tracker</h1>
-        <p className="muted">Words, tasks, habits, spending and plans — in one place.</p>
+        <h1 className="brand">{T("Tracker")}</h1>
+        <p className="muted">{T("Words, tasks, habits, spending and plans — in one place.")}</p>
 
         <Segmented
           value={mode}
@@ -46,11 +47,11 @@ export default function Login() {
         />
 
         <label className="field">
-          <span>Email</span>
+          <span>{T("Email")}</span>
           <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
         <label className="field">
-          <span>Password</span>
+          <span>{T("Password")}</span>
           <input
             type="password"
             autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
@@ -65,9 +66,9 @@ export default function Login() {
         {message && <p className="note">{message}</p>}
 
         <button className="btn btn--block" disabled={busy}>
-          {busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}
+          {busy ? T("Please wait…") : mode === 'signin' ? T("Sign in") : T("Create account")}
         </button>
       </form>
     </div>
-  )
+  );
 }

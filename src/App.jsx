@@ -18,6 +18,7 @@ import Notes from './pages/Notes'
 import Jobs from './pages/Jobs'
 import Commit from './pages/Commit'
 import Reminders from './pages/Reminders'
+import { T, Tr } from './lib/i18n'
 
 export const SECTIONS = [
   { to: '/words', label: 'Words', hint: 'New English words & translations' },
@@ -52,71 +53,65 @@ export default function App() {
   }, [pathname])
 
   if (!configured) return <SetupNotice />
-  if (session === undefined) return <div className="splash">Loading…</div>
+  if (session === undefined) return <div className="splash">{T("Loading…")}</div>;
   if (!session) return <Login />
 
   const inMore = pathname === '/more' || (!MOBILE.includes(pathname) && pathname !== '/')
 
   return (
     <MotionConfig reducedMotion="user">
-    <div className="shell">
-      <MobileBar pathname={pathname} email={session.user.email} />
-      <AlarmOverlay />
-      <nav className="topbar" aria-label="Sections">
-        <NavLink to="/" end className={({ isActive }) => (isActive ? 'is-active' : '')}>
-          Home
-        </NavLink>
-        {SECTIONS.map((n) => (
-          <NavLink key={n.to} to={n.to} className={({ isActive }) => (isActive ? 'is-active' : '')}>
-            {n.label}
-          </NavLink>
-        ))}
-      </nav>
+      <div className="shell">
+        <MobileBar pathname={pathname} email={session.user.email} />
+        <AlarmOverlay />
+        <nav className="topbar" aria-label={T("Sections")}>
+          <NavLink to="/" end className={({ isActive }) => (isActive ? 'is-active' : '')}>{T("Home")}</NavLink>
+          {SECTIONS.map((n) => (
+            <NavLink key={n.to} to={n.to} className={({ isActive }) => (isActive ? 'is-active' : '')}>
+              {n.label}
+            </NavLink>
+          ))}
+        </nav>
 
-      <main className="content">
-        <PageGuard resetKey={pathname}>
-        <motion.div
-          key={pathname}
-          className="page-anim"
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        >
-        <Routes>
-          <Route path="/" element={<Home session={session} />} />
-          <Route path="/words" element={<Words />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/habits" element={<Habits />} />
-          <Route path="/spend" element={<Spend />} />
-          <Route path="/plan" element={<Plan />} />
-          <Route path="/links" element={<Links />} />
-          <Route path="/notes" element={<Notes />} />
-          <Route path="/jobs" element={<Jobs />} />
-          <Route path="/commit" element={<Commit />} />
-          <Route path="/reminders" element={<Reminders />} />
-          <Route path="/more" element={<More />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        </motion.div>
-        </PageGuard>
-      </main>
+        <main className="content">
+          <PageGuard resetKey={pathname}>
+          <motion.div
+            key={pathname}
+            className="page-anim"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          >
+          <Routes>
+            <Route path="/" element={<Home session={session} />} />
+            <Route path="/words" element={<Words />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/habits" element={<Habits />} />
+            <Route path="/spend" element={<Spend />} />
+            <Route path="/plan" element={<Plan />} />
+            <Route path="/links" element={<Links />} />
+            <Route path="/notes" element={<Notes />} />
+            <Route path="/jobs" element={<Jobs />} />
+            <Route path="/commit" element={<Commit />} />
+            <Route path="/reminders" element={<Reminders />} />
+            <Route path="/more" element={<More />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+          </motion.div>
+          </PageGuard>
+        </main>
 
-      <nav className="tabbar" aria-label="Main">
-        <NavLink to="/" end className={({ isActive }) => (isActive ? 'is-active' : '')}>
-          Home
-        </NavLink>
-        {MOBILE.map((to) => (
-          <NavLink key={to} to={to} className={({ isActive }) => (isActive ? 'is-active' : '')}>
-            {SECTIONS.find((s) => s.to === to).label}
-          </NavLink>
-        ))}
-        <NavLink to="/more" className={inMore ? 'is-active' : ''}>
-          More
-        </NavLink>
-      </nav>
-    </div>
+        <nav className="tabbar" aria-label={T("Main")}>
+          <NavLink to="/" end className={({ isActive }) => (isActive ? 'is-active' : '')}>{T("Home")}</NavLink>
+          {MOBILE.map((to) => (
+            <NavLink key={to} to={to} className={({ isActive }) => (isActive ? 'is-active' : '')}>
+              {SECTIONS.find((s) => s.to === to).label}
+            </NavLink>
+          ))}
+          <NavLink to="/more" className={inMore ? 'is-active' : ''}>{T("More")}</NavLink>
+        </nav>
+      </div>
     </MotionConfig>
-  )
+  );
 }
 
 /** Phones: a slim bar at the top with ☰ — opens a list of every page. The phone's back button closes it. */
@@ -139,7 +134,7 @@ function MobileBar({ pathname, email }) {
   return (
     <>
       <header className="mobilebar">
-        <button type="button" className="mobilebar__burger" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)}>
+        <button type="button" className="mobilebar__burger" aria-label={T("Open menu")} aria-expanded={open} onClick={() => setOpen(true)}>
           <span />
           <span />
           <span />
@@ -149,10 +144,10 @@ function MobileBar({ pathname, email }) {
 
       {open && (
         <div className="drawer-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}>
-          <nav className="drawer" aria-label="All pages">
+          <nav className="drawer" aria-label={T("All pages")}>
             <div className="drawer__head">
-              <span className="drawer__brand">Tracker</span>
-              <button type="button" className="icon-btn" aria-label="Close menu" onClick={() => setOpen(false)}>
+              <span className="drawer__brand">{T("Tracker")}</span>
+              <button type="button" className="icon-btn" aria-label={T("Close menu")} onClick={() => setOpen(false)}>
                 ×
               </button>
             </div>
@@ -172,22 +167,20 @@ function MobileBar({ pathname, email }) {
             <InstallApp compact />
             <div className="drawer__foot">
               <span className="muted small">{email}</span>
-              <button className="btn btn--ghost btn--sm" onClick={() => supabase.auth.signOut()}>
-                Sign out
-              </button>
+              <button className="btn btn--ghost btn--sm" onClick={() => supabase.auth.signOut()}>{T("Sign out")}</button>
             </div>
           </nav>
         </div>
       )}
     </>
-  )
+  );
 }
 
 function More() {
   return (
     <div className="page">
       <header className="page-header">
-        <h1>All sections</h1>
+        <h1>{T("All sections")}</h1>
       </header>
       <ul className="list list--tight">
         {SECTIONS.map((s) => (
@@ -203,20 +196,22 @@ function More() {
         ))}
       </ul>
     </div>
-  )
+  );
 }
 
 function SetupNotice() {
   return (
     <div className="auth">
       <div className="auth-card">
-        <h1 className="brand">Tracker</h1>
-        <p>The database isn't connected yet.</p>
-        <p className="muted">
-          Create a <code>.env</code> file with <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>{' '}
-          (see README.md), then restart the app.
-        </p>
+        <h1 className="brand">{T("Tracker")}</h1>
+        <p>{T("The database isn't connected yet.")}</p>
+        <p className="muted">{Tr(
+            "Create a {0} file with {1} and {2} (see README.md), then restart the app.",
+            <code>.env</code>,
+            <code>VITE_SUPABASE_URL</code>,
+            <code>VITE_SUPABASE_ANON_KEY</code>
+          )}</p>
       </div>
     </div>
-  )
+  );
 }

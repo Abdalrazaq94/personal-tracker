@@ -3,6 +3,7 @@ import { useRows } from '../lib/useRows'
 import { addDays, dayLabel, today, tomorrow, ymd } from '../lib/dates'
 import { DeleteButton, Empty, ErrorBar, Loading, PageHeader, Segmented } from '../components/ui'
 import { REMIND } from '../components/TodayAI'
+import { T, Tr } from '../lib/i18n'
 
 /** The moment a plan is due (local time), or null if it has no time. */
 const dueAt = (p) => (p.plan_time ? new Date(`${p.plan_date}T${String(p.plan_time).slice(0, 5)}:00`).getTime() : null)
@@ -73,16 +74,16 @@ export default function Plan() {
 
   return (
     <div className="page">
-      <PageHeader title="Plan" subtitle="Plan tomorrow and the week ahead" />
+      <PageHeader title={T("Plan")} subtitle={T("Plan tomorrow and the week ahead")} />
       <ErrorBar error={error} onClose={() => setError(null)} />
 
       <form className="card form" onSubmit={add}>
         <label className="field">
-          <span>Task</span>
-          <input dir="auto" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What will you do?" required />
+          <span>{T("Task")}</span>
+          <input dir="auto" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={T("What will you do?")} required />
         </label>
         <div className="field">
-          <span>When</span>
+          <span>{T("When")}</span>
           <div className="when">
             {quick.map((q) => (
               <button
@@ -95,15 +96,16 @@ export default function Plan() {
               </button>
             ))}
             <input type="date" className="date-inline" value={date} min={today()} onChange={(e) => setDate(e.target.value || tomorrow())} />
-            <input type="time" className="date-inline" value={time} onChange={(e) => setTime(e.target.value)} aria-label="Time (optional)" title="Time (optional)" />
+            <input type="time" className="date-inline" value={time} onChange={(e) => setTime(e.target.value)} aria-label={T("Time (optional)")} title={T("Time (optional)")} />
           </div>
         </div>
         <div className="plan-opts">
-          <label className="qa-check">
-            <input type="checkbox" checked={important} onChange={(e) => setImportant(e.target.checked)} /> Important
-          </label>
+          <label className="qa-check">{Tr(
+              "{0} Important",
+              <input type="checkbox" checked={important} onChange={(e) => setImportant(e.target.checked)} />
+            )}</label>
           {time && (
-            <select value={remind} onChange={(e) => setRemind(Number(e.target.value))} aria-label="Remind me">
+            <select value={remind} onChange={(e) => setRemind(Number(e.target.value))} aria-label={T("Remind me")}>
               {REMIND.map(([v, l]) => (
                 <option key={v} value={v}>
                   {l}
@@ -113,7 +115,7 @@ export default function Plan() {
           )}
         </div>
         <div className="form-foot form-foot--end">
-          <button className="btn">Add to plan</button>
+          <button className="btn">{T("Add to plan")}</button>
         </div>
       </form>
 
@@ -131,12 +133,12 @@ export default function Plan() {
       {loading ? (
         <Loading />
       ) : shown.length === 0 ? (
-        <Empty>Nothing planned here yet.</Empty>
+        <Empty>{T("Nothing planned here yet.")}</Empty>
       ) : (
         shown.map(([key, items]) => (
           <section key={key} className="group">
             <h2 className="group__title">
-              <span>{key === 'overdue' ? 'Overdue' : dayLabel(key)}</span>
+              <span>{key === 'overdue' ? T("Overdue") : dayLabel(key)}</span>
               <span>
                 {items.filter((x) => x.done).length}/{items.length}
               </span>
@@ -147,28 +149,24 @@ export default function Plan() {
                   <button
                     type="button"
                     className={`check ${p.done ? 'is-on' : ''}`}
-                    aria-label={p.done ? 'Mark not done' : 'Mark done'}
+                    aria-label={p.done ? T("Mark not done") : T("Mark done")}
                     onClick={() => update(p.id, { done: !p.done })}
                   >
                     {p.done ? '✓' : ''}
                   </button>
                   <span className="plan__title" dir="auto">
                     {p.plan_time && <strong className="plan__time">{String(p.plan_time).slice(0, 5)}</strong>}
-                    {p.important && <span className="plan__imp" title="Important">!</span>}
+                    {p.important && <span className="plan__imp" title={T("Important")}>!</span>}
                     {p.title}
                     {key === 'overdue' && <small className="muted"> · {dayLabel(p.plan_date)}</small>}
                     {!p.done && dueAt(p) && dueAt(p) <= Date.now() && (
                       <span className="plan__postpone">
-                        <button type="button" className="chip" onClick={() => postpone(p, 'hour')}>
-                          Postpone 1 h
-                        </button>
-                        <button type="button" className="chip" onClick={() => postpone(p, 'tomorrow')}>
-                          Tomorrow
-                        </button>
+                        <button type="button" className="chip" onClick={() => postpone(p, 'hour')}>{T("Postpone 1 h")}</button>
+                        <button type="button" className="chip" onClick={() => postpone(p, 'tomorrow')}>{T("Tomorrow")}</button>
                       </span>
                     )}
                   </span>
-                  <DeleteButton label="Delete this plan" onClick={() => remove(p.id)} />
+                  <DeleteButton label={T("Delete this plan")} onClick={() => remove(p.id)} />
                 </li>
               ))}
             </ul>
@@ -176,5 +174,5 @@ export default function Plan() {
         ))
       )}
     </div>
-  )
+  );
 }

@@ -7,6 +7,7 @@ import AiPanel from '../components/AiPanel'
 import HabitCharts from '../components/HabitCharts'
 import { Sheet } from '../components/Collections'
 import { DeleteButton, Empty, ErrorBar, Loading, PageHeader, Segmented } from '../components/ui'
+import { T, Tr } from '../lib/i18n'
 
 const NEEDS_UPDATE =
   'The database needs a small update for this: run supabase/migrations/003_habits_v2.sql (and 002 if you haven’t) in the Supabase SQL Editor.'
@@ -77,13 +78,16 @@ export default function Habits() {
   return (
     <div className="page">
       <PageHeader
-        title={view === 'bad' ? 'Bad habits' : 'Good habits'}
+        title={view === 'bad' ? T("Bad habits") : T("Good habits")}
         subtitle={
           shown.length
-            ? `${onTrack} of ${shown.length} ${view === 'bad' ? 'clean' : 'done'} today`
+            ? T(
+            "{0} of {1} {2} today",
+            [onTrack, shown.length, view === 'bad' ? 'clean' : 'done']
+          )
             : view === 'bad'
-              ? 'Habits you want to break'
-              : 'Habits you want to build'
+              ? T("Habits you want to break")
+              : T("Habits you want to build")
         }
       />
       <div className="habit-tabs" role="tablist">
@@ -109,25 +113,24 @@ export default function Habits() {
           key={`ai-${view}`}
           kind="habits"
           extra={{ habitKind: view }}
-          label={view === 'bad' ? 'graphs + how your bad habits are going' : 'graphs + how your good habits are going'}
+          label={view === 'bad' ? T("graphs + how your bad habits are going") : T("graphs + how your good habits are going")}
           examples={
             view === 'bad'
-              ? ['What triggers my bad habits?', 'How can I avoid my weak days?']
-              : ['Which habit needs the most attention?', 'How can I keep my streaks going?']
+              ? [T("What triggers my bad habits?"), T("How can I avoid my weak days?")]
+              : [T("Which habit needs the most attention?"), T("How can I keep my streaks going?")]
           }
         >
           <HabitCharts habits={shown} logs={logs} />
         </AiPanel>
       )}
 
-
       {habits.loading ? (
         <Loading />
       ) : shown.length === 0 ? (
         <Empty>
           {view === 'bad'
-            ? 'No bad habits yet. Add one you want to break, e.g. Smoking or Sugar.'
-            : 'No good habits yet. Add one you want to build, e.g. Read 10 pages.'}
+            ? T("No bad habits yet. Add one you want to break, e.g. Smoking or Sugar.")
+            : T("No good habits yet. Add one you want to build, e.g. Read 10 pages.")}
         </Empty>
       ) : (
         <ul className="list">
@@ -151,7 +154,7 @@ export default function Habits() {
       )}
 
       {editing && (
-        <Sheet title="Edit habit" onClose={() => setEditing(null)}>
+        <Sheet title={T("Edit habit")} onClose={() => setEditing(null)}>
           <HabitForm
             initial={editing}
             bare
@@ -176,7 +179,7 @@ export default function Habits() {
         />
       )}
     </div>
-  )
+  );
 }
 
 /* ------------------------------- quick add ------------------------------- */
@@ -196,16 +199,14 @@ function QuickAdd({ kind, onAdd }) {
     >
       <input
         dir="auto"
-        aria-label="Habit name"
+        aria-label={T("Habit name")}
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder={bad ? 'Add a habit to break, e.g. Smoking' : 'Add a habit to build, e.g. Read 10 pages'}
+        placeholder={bad ? T("Add a habit to break, e.g. Smoking") : T("Add a habit to build, e.g. Read 10 pages")}
       />
-      <button className="btn" disabled={!name.trim()}>
-        Add
-      </button>
+      <button className="btn" disabled={!name.trim()}>{T("Add")}</button>
     </form>
-  )
+  );
 }
 
 /* ------------------------------- add / edit ------------------------------- */
@@ -260,32 +261,30 @@ function HabitForm({ initial, onSubmit, bare }) {
       />
       <div className="row-2 row-2--wide-first">
         <label className="field">
-          <span>{bad ? 'Habit to break' : 'Habit to build'}</span>
+          <span>{bad ? T("Habit to break") : T("Habit to build")}</span>
           <input
             dir="auto"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder={bad ? 'e.g. Smoking, sugar, social media' : 'e.g. Read 10 pages'}
+            placeholder={bad ? T("e.g. Smoking, sugar, social media") : T("e.g. Read 10 pages")}
             required
           />
         </label>
         <label className="field">
-          <span>{bad ? 'Max / day' : 'Times / day'}</span>
+          <span>{bad ? T("Max / day") : T("Times / day")}</span>
           <input type="number" min={bad ? 0 : 1} inputMode="numeric" value={target} onChange={(e) => setTarget(e.target.value)} />
         </label>
       </div>
 
       {!more ? (
         bad && (
-          <button type="button" className="link small more-link" onClick={() => setMore(true)}>
-            + Track money saved (optional)
-          </button>
+          <button type="button" className="link small more-link" onClick={() => setMore(true)}>{T("+ Track money saved (optional)")}</button>
         )
       ) : (
         <>
           {initial && (
           <div className="field">
-            <span>Days · {daysLabel({ days })}</span>
+            <span>{Tr("Days · {0}", daysLabel({ days }))}</span>
             <div className="weekday-pick">
               {WEEKDAYS.map((w) => (
                 <button
@@ -305,11 +304,11 @@ function HabitForm({ initial, onSubmit, bare }) {
           {bad && (
             <div className="row-2">
               <label className="field">
-                <span>Money each time (optional)</span>
+                <span>{T("Money each time (optional)")}</span>
                 <input inputMode="decimal" placeholder="e.g. 0.75" value={cost} onChange={(e) => setCost(e.target.value)} />
               </label>
               <label className="field">
-                <span>How many a day before</span>
+                <span>{T("How many a day before")}</span>
                 <input type="number" min="0" inputMode="numeric" placeholder="e.g. 10" value={baseline} onChange={(e) => setBaseline(e.target.value)} />
               </label>
             </div>
@@ -319,24 +318,24 @@ function HabitForm({ initial, onSubmit, bare }) {
 
       <p className="muted small">
         {bad
-          ? 'Tap + each time it happens and pick what triggered it. The day stays clean while you stay at or under your max (0 = avoid).'
-          : 'Tap + each time you do it. The day counts when you reach your target.'}
+          ? T(
+          "Tap + each time it happens and pick what triggered it. The day stays clean while you stay at or under your max (0 = avoid)."
+        )
+          : T("Tap + each time you do it. The day counts when you reach your target.")}
       </p>
       <div className="form-foot form-foot--end">
-        <button className="btn">{initial ? 'Save' : 'Add habit'}</button>
+        <button className="btn">{initial ? T("Save") : T("Add habit")}</button>
       </div>
     </form>
-  )
+  );
 }
 
 /* ---------------------------- "what triggered it?" ---------------------------- */
 
 function TriggerSheet({ habit, onPick, onClose }) {
   return (
-    <Sheet title="What triggered it?" onClose={onClose}>
-      <p className="muted small" dir="auto">
-        {habit.name} · picking a reason helps the AI find your patterns.
-      </p>
+    <Sheet title={T("What triggered it?")} onClose={onClose}>
+      <p className="muted small" dir="auto">{Tr("{0} · picking a reason helps the AI find your patterns.", habit.name)}</p>
       <div className="trigger-grid">
         {TRIGGERS.map((t) => (
           <button key={t} type="button" className="trigger" onClick={() => onPick(t)}>
@@ -344,11 +343,9 @@ function TriggerSheet({ habit, onPick, onClose }) {
           </button>
         ))}
       </div>
-      <button type="button" className="btn btn--ghost btn--block" onClick={() => onPick(null)}>
-        Just count it
-      </button>
+      <button type="button" className="btn btn--ghost btn--block" onClick={() => onPick(null)}>{T("Just count it")}</button>
     </Sheet>
-  )
+  );
 }
 
 /* --------------------------------- card --------------------------------- */
@@ -392,7 +389,7 @@ function HabitCard({ habit, logs, onPlus, onMinus, onResisted, onSkip, onEdit, o
         <div className="habit__headtext">
           <div className="habit__title">
             <h3 dir="auto">{habit.name}</h3>
-            <span className={`tag ${bad ? '' : 'tag--solid'}`}>{bad ? 'Bad' : 'Good'}</span>
+            <span className={`tag ${bad ? '' : 'tag--solid'}`}>{bad ? T("Bad") : T("Good")}</span>
           </div>
           <p className="muted small">
             {status}
@@ -400,41 +397,41 @@ function HabitCard({ habit, logs, onPlus, onMinus, onResisted, onSkip, onEdit, o
           </p>
         </div>
         <div className="row-actions">
-          <button type="button" className="icon-btn" aria-label="Edit habit" title="Edit" onClick={onEdit}>
+          <button type="button" className="icon-btn" aria-label={T("Edit habit")} title={T("Edit")} onClick={onEdit}>
             ✎
           </button>
-          <DeleteButton label={`Delete habit "${habit.name}"`} onClick={onDelete} />
+          <DeleteButton label={T("Delete habit \"{0}\"", [habit.name])} onClick={onDelete} />
         </div>
       </div>
 
       {s.milestone && (
-        <p className="milestone">
-          ★ {s.milestone}-day milestone{s.next ? ` · ${s.next - s.streak} more to ${s.next}` : ''}
-        </p>
+        <p className="milestone">{Tr(
+            "★ {0}-day milestone{1}",
+            s.milestone,
+            s.next ? T(" · {0} more to {1}", [s.next - s.streak, s.next]) : ''
+          )}</p>
       )}
 
       <div className={`habit__counter ${log.skipped ? 'is-dim' : ''}`}>
-        <button type="button" className="round-btn" onClick={onMinus} disabled={log.count === 0} aria-label="Minus one">
+        <button type="button" className="round-btn" onClick={onMinus} disabled={log.count === 0} aria-label={T("Minus one")}>
           −
         </button>
         <div className="habit__today">
           <strong>{log.count}</strong>
-          <span className="muted">{bad ? `today · max ${habit.target}` : `/ ${habit.target} today`}</span>
+          <span className="muted">{bad ? T("today · max {0}", [habit.target]) : T("/ {0} today", [habit.target])}</span>
         </div>
-        <button type="button" className="round-btn round-btn--solid" onClick={onPlus} aria-label="Plus one">
+        <button type="button" className="round-btn round-btn--solid" onClick={onPlus} aria-label={T("Plus one")}>
           +
         </button>
       </div>
 
       <div className="habit__actions">
         {bad && (
-          <button type="button" className="btn btn--ghost btn--sm" onClick={onResisted}>
-            I resisted{log.resisted ? ` · ${log.resisted}` : ''}
-          </button>
+          <button type="button" className="btn btn--ghost btn--sm" onClick={onResisted}>{Tr("I resisted{0}", log.resisted ? ` · ${log.resisted}` : '')}</button>
         )}
         {planned(habit, new Date()) && (
           <button type="button" className="btn btn--ghost btn--sm" onClick={() => onSkip(!log.skipped)}>
-            {log.skipped ? 'Undo skip' : 'Skip today'}
+            {log.skipped ? T("Undo skip") : T("Skip today")}
           </button>
         )}
       </div>
@@ -453,23 +450,23 @@ function HabitCard({ habit, logs, onPlus, onMinus, onResisted, onSkip, onEdit, o
       <div className="stats-row">
         <div>
           <strong>{s.streak}</strong>
-          <span>{bad ? 'clean streak' : 'day streak'}</span>
+          <span>{bad ? T("clean streak") : T("day streak")}</span>
         </div>
         <div>
           <strong>{s.best}</strong>
-          <span>best streak</span>
+          <span>{T("best streak")}</span>
         </div>
         {bad && Number(habit.cost) > 0 ? (
           <div>
             <strong>{money(s.saved30)}</strong>
-            <span>saved · 30 days</span>
+            <span>{T("saved · 30 days")}</span>
           </div>
         ) : (
           <div>
             <strong>
               {s.okDays}/{s.trackedDays}
             </strong>
-            <span>{bad ? 'clean days' : 'days done'}</span>
+            <span>{bad ? T("clean days") : T("days done")}</span>
           </div>
         )}
       </div>
@@ -478,21 +475,27 @@ function HabitCard({ habit, logs, onPlus, onMinus, onResisted, onSkip, onEdit, o
         <div className="habit__insights">
           {s.triggers.length > 0 && (
             <p>
-              <b>Top triggers:</b> {s.triggers.slice(0, 3).map((t) => `${t.name} (${t.n})`).join(' · ')}
+              <b>{T("Top triggers:")}</b> {s.triggers.slice(0, 3).map((t) => `${t.name} (${t.n})`).join(' · ')}
             </p>
           )}
           {s.resistedTotal > 0 && (
-            <p>
-              <b>Urges resisted:</b> {s.resistedTotal} · slipped {s.total} times
-            </p>
+            <p>{Tr(
+                "{0} {1} · slipped {2} times",
+                <b>{T("Urges resisted:")}</b>,
+                s.resistedTotal,
+                s.total
+              )}</p>
           )}
           {Number(habit.cost) > 0 && (
-            <p>
-              <b>Money:</b> {money(s.savedAll)} saved in total · {money(s.spent30)} spent on it in 30 days
-            </p>
+            <p>{Tr(
+                "{0} {1} saved in total · {2} spent on it in 30 days",
+                <b>{T("Money:")}</b>,
+                money(s.savedAll),
+                money(s.spent30)
+              )}</p>
           )}
         </div>
       )}
     </li>
-  )
+  );
 }

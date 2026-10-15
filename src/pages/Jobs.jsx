@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { addCard, authorizeUrl, getBoard, getBoards, getLists, moveCard } from '../lib/trello'
 import { Sheet } from '../components/Collections'
 import { Empty, ErrorBar, Loading, PageHeader } from '../components/ui'
+import { T, Tr } from '../lib/i18n'
 
 export default function Jobs() {
   const [settings, setSettings] = useState(undefined) // undefined = loading, null = not connected
@@ -45,13 +46,13 @@ export default function Jobs() {
         <Board settings={settings} onChangeBoard={() => setEditing(true)} onDisconnect={disconnect} />
       ) : (
         <>
-          <PageHeader title="Jobs applied" subtitle="Connected to your Trello board" />
+          <PageHeader title={T("Jobs applied")} subtitle={T("Connected to your Trello board")} />
           <ErrorBar error={error} onClose={() => setError(null)} />
           <Connect initial={settings} onSave={save} onCancel={settings ? () => setEditing(false) : null} />
         </>
       )}
     </div>
-  )
+  );
 }
 
 /* ------------------------------ connect flow ------------------------------ */
@@ -85,26 +86,34 @@ function Connect({ initial, onSave, onCancel }) {
 
   return (
     <div className="card form connect">
-      <h2 className="connect__title">Connect Trello</h2>
+      <h2 className="connect__title">{T("Connect Trello")}</h2>
       <ol className="steps">
-        <li>
-          Open{' '}
-          <a href="https://trello.com/power-ups/admin" target="_blank" rel="noreferrer">
-            trello.com/power-ups/admin
-          </a>
-          , click <b>New</b>, fill in any name, then open <b>API key</b> and copy the key.
-        </li>
-        <li>Paste the key below, then tap <b>Get token</b>, click <b>Allow</b> and copy the token Trello shows you.</li>
-        <li>Paste the token, tap <b>Load boards</b> and pick your jobs board.</li>
+        <li>{Tr(
+            "Open {0}, click {1}, fill in any name, then open {2} and copy the key.",
+            <a href="https://trello.com/power-ups/admin" target="_blank" rel="noreferrer">
+              trello.com/power-ups/admin
+            </a>,
+            <b>{T("New")}</b>,
+            <b>{T("API key")}</b>
+          )}</li>
+        <li>{Tr(
+            "Paste the key below, then tap {0}, click {1} and copy the token Trello shows you.",
+            <b>{T("Get token")}</b>,
+            <b>{T("Allow")}</b>
+          )}</li>
+        <li>{Tr(
+            "Paste the token, tap {0} and pick your jobs board.",
+            <b>{T("Load boards")}</b>
+          )}</li>
       </ol>
 
       <form className="form" onSubmit={loadBoards}>
         <label className="field">
-          <span>API key</span>
+          <span>{T("API key")}</span>
           <input value={key} onChange={(e) => setKey(e.target.value)} autoComplete="off" spellCheck="false" required />
         </label>
         <div className="field">
-          <span>Token</span>
+          <span>{T("Token")}</span>
           <div className="input-row">
             <input value={token} onChange={(e) => setToken(e.target.value)} autoComplete="off" spellCheck="false" required />
             <a
@@ -113,14 +122,12 @@ function Connect({ initial, onSave, onCancel }) {
               target="_blank"
               rel="noreferrer"
               aria-disabled={!key.trim()}
-            >
-              Get token
-            </a>
+            >{T("Get token")}</a>
           </div>
         </div>
         <div className="form-foot form-foot--end">
           <button className="btn btn--ghost" disabled={busy}>
-            {busy ? 'Loading…' : 'Load boards'}
+            {busy ? T("Loading…") : T("Load boards")}
           </button>
         </div>
       </form>
@@ -130,7 +137,7 @@ function Connect({ initial, onSave, onCancel }) {
       {boards && (
         <>
           <label className="field">
-            <span>Board</span>
+            <span>{T("Board")}</span>
             <select value={boardId} onChange={(e) => setBoardId(e.target.value)}>
               {boards.map((b) => (
                 <option key={b.id} value={b.id}>
@@ -143,18 +150,14 @@ function Connect({ initial, onSave, onCancel }) {
             className="btn btn--block"
             disabled={!boardId}
             onClick={() => onSave({ trello_key: key.trim(), trello_token: token.trim(), trello_board_id: boardId })}
-          >
-            Save &amp; show board
-          </button>
+          >{T("Save & show board")}</button>
         </>
       )}
       {onCancel && (
-        <button className="btn btn--ghost btn--block" onClick={onCancel}>
-          Cancel
-        </button>
+        <button className="btn btn--ghost btn--block" onClick={onCancel}>{T("Cancel")}</button>
       )}
     </div>
-  )
+  );
 }
 
 /* --------------------------------- board ---------------------------------- */
@@ -213,8 +216,8 @@ function Board({ settings, onChangeBoard, onDisconnect }) {
   return (
     <>
       <PageHeader
-        title="Jobs applied"
-        subtitle={board ? `${total} jobs · ${board.name}` : 'Trello'}
+        title={T("Jobs applied")}
+        subtitle={board ? T("{0} jobs · {1}", [total, board.name]) : T("Trello")}
         right={
           lists?.length > 0 && (
             <button className="btn btn--sm" onClick={() => setAdding(true)}>
@@ -244,20 +247,19 @@ function Board({ settings, onChangeBoard, onDisconnect }) {
                   </button>
                 ))}
               </div>
-              <input type="search" className="search" placeholder="Search jobs…" value={q} onChange={(e) => setQ(e.target.value)} />
+              <input type="search" className="search" placeholder={T("Search jobs…")} value={q} onChange={(e) => setQ(e.target.value)} />
               {filter !== 'all' && (
-                <p className="small muted">
-                  Showing <b>{listName[filter]}</b> ·{' '}
-                  <button className="link" onClick={() => setFilter('all')}>
-                    show all
-                  </button>
-                </p>
+                <p className="small muted">{Tr(
+                    "Showing {0} · {1}",
+                    <b>{listName[filter]}</b>,
+                    <button className="link" onClick={() => setFilter('all')}>{T("show all")}</button>
+                  )}</p>
               )}
             </>
           )}
 
           {cards.length === 0 ? (
-            <Empty>{total ? 'No jobs match.' : 'This board has no cards yet.'}</Empty>
+            <Empty>{total ? T("No jobs match.") : T("This board has no cards yet.")}</Empty>
           ) : (
             <ul className="list">
               {cards.map((c) => (
@@ -283,14 +285,15 @@ function Board({ settings, onChangeBoard, onDisconnect }) {
                         </span>
                       ))}
                       {c.due && (
-                        <span className={`tag ${c.dueComplete ? '' : 'tag--solid'}`}>
-                          Due {new Date(c.due).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
-                        </span>
+                        <span className={`tag ${c.dueComplete ? '' : 'tag--solid'}`}>{Tr(
+                            "Due {0}",
+                            new Date(c.due).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+                          )}</span>
                       )}
                     </div>
                   )}
                   <label className="job__move">
-                    <span className="muted small">List</span>
+                    <span className="muted small">{T("List")}</span>
                     <select value={c.idList} onChange={(e) => move(c, e.target.value)}>
                       {lists.map((l) => (
                         <option key={l.id} value={l.id}>
@@ -308,19 +311,13 @@ function Board({ settings, onChangeBoard, onDisconnect }) {
 
       <div className="home-footer">
         {board?.url ? (
-          <a href={board.url} target="_blank" rel="noreferrer" className="muted">
-            Open in Trello ↗
-          </a>
+          <a href={board.url} target="_blank" rel="noreferrer" className="muted">{T("Open in Trello ↗")}</a>
         ) : (
           <span />
         )}
         <div className="row-actions">
-          <button className="btn btn--ghost btn--sm" onClick={onChangeBoard}>
-            Change board
-          </button>
-          <button className="btn btn--ghost btn--sm" onClick={onDisconnect}>
-            Disconnect
-          </button>
+          <button className="btn btn--ghost btn--sm" onClick={onChangeBoard}>{T("Change board")}</button>
+          <button className="btn btn--ghost btn--sm" onClick={onDisconnect}>{T("Disconnect")}</button>
         </div>
       </div>
 
@@ -340,7 +337,7 @@ function Board({ settings, onChangeBoard, onDisconnect }) {
         />
       )}
     </>
-  )
+  );
 }
 
 function AddJob({ lists, onAdd, onClose }) {
@@ -349,7 +346,7 @@ function AddJob({ lists, onAdd, onClose }) {
   const [idList, setIdList] = useState(lists[0]?.id)
   const [busy, setBusy] = useState(false)
   return (
-    <Sheet title="Add job" onClose={onClose}>
+    <Sheet title={T("Add job")} onClose={onClose}>
       <form
         className="form"
         onSubmit={async (e) => {
@@ -361,15 +358,15 @@ function AddJob({ lists, onAdd, onClose }) {
         }}
       >
         <label className="field">
-          <span>Company & role</span>
-          <input dir="auto" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Acme — Data Analyst" required />
+          <span>{T("Company & role")}</span>
+          <input dir="auto" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={T("e.g. Acme — Data Analyst")} required />
         </label>
         <label className="field">
-          <span>Notes / job link</span>
-          <textarea dir="auto" rows={3} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Optional" />
+          <span>{T("Notes / job link")}</span>
+          <textarea dir="auto" rows={3} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={T("Optional")} />
         </label>
         <label className="field">
-          <span>List</span>
+          <span>{T("List")}</span>
           <select value={idList} onChange={(e) => setIdList(e.target.value)}>
             {lists.map((l) => (
               <option key={l.id} value={l.id}>
@@ -379,9 +376,9 @@ function AddJob({ lists, onAdd, onClose }) {
           </select>
         </label>
         <button className="btn btn--block" disabled={busy}>
-          {busy ? 'Adding…' : 'Add to Trello'}
+          {busy ? T("Adding…") : T("Add to Trello")}
         </button>
       </form>
     </Sheet>
-  )
+  );
 }

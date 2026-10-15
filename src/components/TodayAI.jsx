@@ -6,6 +6,7 @@ import { MicButton, useListen } from '../lib/speech'
 import { actionFromDraft, draftFromAction, guessLocal, runActions } from '../lib/quickAdd'
 import { supabase } from '../lib/supabase'
 import { Markdown } from './AiPanel'
+import { T, Tr } from '../lib/i18n'
 
 const CURRENCY = import.meta.env.VITE_CURRENCY || 'GBP'
 
@@ -112,23 +113,23 @@ export function QuickAddAll({ onChanged }) {
         </span>
         <input
           dir="auto"
-          aria-label="Add anything"
+          aria-label={T("Add anything")}
           value={listen.listening ? listen.interim || text : text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={listen.listening ? 'Listening…' : busy ? 'Reading…' : 'Add anything…'}
+          placeholder={listen.listening ? T("Listening…") : busy ? T("Reading…") : T("Add anything…")}
           disabled={busy}
           enterKeyHint="go"
         />
-        <MicButton listen={listen} label="Say it" />
+        <MicButton listen={listen} label={T("Say it")} />
         <button className="btn" disabled={busy || !text.trim()}>
-          {busy ? '…' : 'Next'}
+          {busy ? '…' : T("Next")}
         </button>
       </form>
 
       {!drafts && !results.length && !error && !busy && (
-        <p className="quick-all__hint">e.g. “buy milk tomorrow at 3 40”, “coffee 3.40”, “new word resilient”</p>
+        <p className="quick-all__hint">{T("e.g. “buy milk tomorrow at 3 40”, “coffee 3.40”, “new word resilient”")}</p>
       )}
-      {listen.listening && <p className="quick-all__hint">Listening… speak now, then wait a second.</p>}
+      {listen.listening && <p className="quick-all__hint">{T("Listening… speak now, then wait a second.")}</p>}
       {(error || listen.error) && <p className="error-text">{error || listen.error}</p>}
 
       {drafts && (
@@ -136,7 +137,7 @@ export function QuickAddAll({ onChanged }) {
           {info && <p className="muted small">{info}</p>}
           {drafts.map((d, i) => (
             <div key={i} className="qa-card">
-              <div className="qa-types" role="group" aria-label="What is it?">
+              <div className="qa-types" role="group" aria-label={T("What is it?")}>
                 {TYPES.map(([k, label]) => (
                   <button
                     key={k}
@@ -155,7 +156,7 @@ export function QuickAddAll({ onChanged }) {
                   </button>
                 ))}
                 {drafts.length > 1 && (
-                  <button type="button" className="icon-btn qa-remove" aria-label="Remove" onClick={() => setDrafts((ds) => ds.filter((_, j) => j !== i))}>
+                  <button type="button" className="icon-btn qa-remove" aria-label={T("Remove")} onClick={() => setDrafts((ds) => ds.filter((_, j) => j !== i))}>
                     ×
                   </button>
                 )}
@@ -163,14 +164,14 @@ export function QuickAddAll({ onChanged }) {
 
               {d.type === 'habit' ? (
                 <div className="qa-row">
-                  <select value={d.habit_id || ''} onChange={(e) => setDraft(i, { habit_id: e.target.value })} aria-label="Habit">
+                  <select value={d.habit_id || ''} onChange={(e) => setDraft(i, { habit_id: e.target.value })} aria-label={T("Habit")}>
                     {habits.map((h) => (
                       <option key={h.id} value={h.id}>
                         {h.name}
                       </option>
                     ))}
                   </select>
-                  <input className="qa-small" inputMode="numeric" value={d.count ?? 1} onChange={(e) => setDraft(i, { count: e.target.value.replace(/\D/g, '') })} aria-label="How many" />
+                  <input className="qa-small" inputMode="numeric" value={d.count ?? 1} onChange={(e) => setDraft(i, { count: e.target.value.replace(/\D/g, '') })} aria-label={T("How many")} />
                 </div>
               ) : (
                 <input
@@ -185,23 +186,24 @@ export function QuickAddAll({ onChanged }) {
 
               {d.type === 'plan' && (
                 <div className="qa-row">
-                  <input type="date" value={d.date || today()} onChange={(e) => setDraft(i, { date: e.target.value })} aria-label="Day" />
-                  <input type="time" value={d.time || ''} onChange={(e) => setDraft(i, { time: e.target.value || null })} aria-label="Time (optional)" />
+                  <input type="date" value={d.date || today()} onChange={(e) => setDraft(i, { date: e.target.value })} aria-label={T("Day")} />
+                  <input type="time" value={d.time || ''} onChange={(e) => setDraft(i, { time: e.target.value || null })} aria-label={T("Time (optional)")} />
                 </div>
               )}
               {d.type === 'expense' && (
                 <div className="qa-row">
-                  <input inputMode="decimal" placeholder="0.00" value={d.amount ?? ''} onChange={(e) => setDraft(i, { amount: e.target.value })} aria-label="Amount" />
-                  <input type="date" value={d.date || today()} onChange={(e) => setDraft(i, { date: e.target.value })} aria-label="Day" />
+                  <input inputMode="decimal" placeholder="0.00" value={d.amount ?? ''} onChange={(e) => setDraft(i, { amount: e.target.value })} aria-label={T("Amount")} />
+                  <input type="date" value={d.date || today()} onChange={(e) => setDraft(i, { date: e.target.value })} aria-label={T("Day")} />
                 </div>
               )}
               {d.type === 'plan' && (
                 <div className="qa-row">
-                  <label className="qa-check">
-                    <input type="checkbox" checked={!!d.important} onChange={(e) => setDraft(i, { important: e.target.checked })} /> Important
-                  </label>
+                  <label className="qa-check">{Tr(
+                      "{0} Important",
+                      <input type="checkbox" checked={!!d.important} onChange={(e) => setDraft(i, { important: e.target.checked })} />
+                    )}</label>
                   {d.time && (
-                    <select value={d.remind_before || 0} onChange={(e) => setDraft(i, { remind_before: Number(e.target.value) })} aria-label="Remind me">
+                    <select value={d.remind_before || 0} onChange={(e) => setDraft(i, { remind_before: Number(e.target.value) })} aria-label={T("Remind me")}>
                       {REMIND.map(([v, l]) => (
                         <option key={v} value={v}>
                           {l}
@@ -212,19 +214,18 @@ export function QuickAddAll({ onChanged }) {
                 </div>
               )}
               {d.type === 'task' && (
-                <label className="qa-check">
-                  <input type="checkbox" checked={!!d.important} onChange={(e) => setDraft(i, { important: e.target.checked })} /> Important
-                </label>
+                <label className="qa-check">{Tr(
+                    "{0} Important",
+                    <input type="checkbox" checked={!!d.important} onChange={(e) => setDraft(i, { important: e.target.checked })} />
+                  )}</label>
               )}
             </div>
           ))}
           <div className="qa-actions">
             <button type="button" className="btn" onClick={add} disabled={busy}>
-              {busy ? 'Adding…' : drafts.length > 1 ? `Add all ${drafts.length}` : 'Add'}
+              {busy ? T("Adding…") : drafts.length > 1 ? T("Add all {0}", [drafts.length]) : T("Add")}
             </button>
-            <button type="button" className="link" onClick={() => setDrafts(null)}>
-              Cancel
-            </button>
+            <button type="button" className="link" onClick={() => setDrafts(null)}>{T("Cancel")}</button>
           </div>
         </div>
       )}
@@ -236,18 +237,16 @@ export function QuickAddAll({ onChanged }) {
               <span className="mark mark--ok" aria-hidden>
                 {r.ok && !r.undone ? '✓' : '–'}
               </span>
-              <span dir="auto">{r.undone ? `Undone · ${r.label}` : r.label}</span>
+              <span dir="auto">{r.undone ? T("Undone · {0}", [r.label]) : r.label}</span>
               {r.ok && !r.undone && r.undo && (
-                <button type="button" className="link small" onClick={() => undo(i)}>
-                  Undo
-                </button>
+                <button type="button" className="link small" onClick={() => undo(i)}>{T("Undo")}</button>
               )}
             </li>
           ))}
         </ul>
       )}
     </section>
-  )
+  );
 }
 
 /* ------------------------------ AI day summary ----------------------------- */
@@ -296,26 +295,21 @@ export function DayBrief({ fallback }) {
   return (
     <section className="day-brief">
       <div className="day-brief__head">
-        <h2>
-          <span className="ai-spark" aria-hidden>
+        <h2>{Tr("{0} Your day", <span className="ai-spark" aria-hidden>
             ✦
-          </span>{' '}
-          Your day
-        </h2>
+          </span>)}</h2>
         <button type="button" className="link small" onClick={load} disabled={busy}>
-          {busy ? 'Thinking…' : at ? `Refresh · ${at}` : 'Refresh'}
+          {busy ? T("Thinking…") : at ? T("Refresh · {0}", [at]) : T("Refresh")}
         </button>
       </div>
-      {busy && !brief && <div className="ai-loading">Looking at your day…</div>}
+      {busy && !brief && <div className="ai-loading">{T("Looking at your day…")}</div>}
       {brief ? <Markdown text={brief.text} /> : !busy && fallback ? <Markdown text={fallback} /> : null}
       {error && (
         <p className="day-brief__note small">
           {error}{' '}
-          <button className="link small" onClick={load}>
-            Try again
-          </button>
+          <button className="link small" onClick={load}>{T("Try again")}</button>
         </p>
       )}
     </section>
-  )
+  );
 }

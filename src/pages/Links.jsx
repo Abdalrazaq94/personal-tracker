@@ -3,6 +3,7 @@ import { useRows } from '../lib/useRows'
 import { fetchPreview, hostOf, normalizeUrl } from '../lib/linkPreview'
 import { Collections, Sheet, useRemembered } from '../components/Collections'
 import { DeleteButton, Empty, ErrorBar, Loading, PageHeader } from '../components/ui'
+import { T } from '../lib/i18n'
 
 export default function Links() {
   const sections = useRows('link_sections', { ascending: true })
@@ -44,17 +45,17 @@ export default function Links() {
 
   return (
     <div className="page">
-      <PageHeader title="Saved links" subtitle={`${links.rows.length} links in ${sections.rows.length} sections`} />
+      <PageHeader title={T("Saved links")} subtitle={T("{0} links in {1} sections", [links.rows.length, sections.rows.length])} />
       <ErrorBar error={error} onClose={clearError} />
 
       {sections.rows.length > 0 && (
-        <input type="search" className="search" placeholder="Search all links…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input type="search" className="search" placeholder={T("Search all links…")} value={q} onChange={(e) => setQ(e.target.value)} />
       )}
 
       {!q && (
         <Collections
           noun="section"
-          placeholder="e.g. YouTube videos"
+          placeholder={T("e.g. YouTube videos")}
           items={sections.rows}
           counts={counts}
           selectedId={selectedId}
@@ -74,32 +75,32 @@ export default function Links() {
       {sections.loading || links.loading ? (
         <Loading />
       ) : sections.rows.length === 0 ? (
-        <Empty>Create your first section, for example “YouTube videos” or “TikTok”.</Empty>
+        <Empty>{T("Create your first section, for example “YouTube videos” or “TikTok”.")}</Empty>
       ) : (
         <>
           {!q && (
             <form className="card form" onSubmit={add}>
               <label className="field">
-                <span>Add a link</span>
+                <span>{T("Add a link")}</span>
                 <input
                   type="url"
                   inputMode="url"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                  placeholder="Paste a video or page link"
+                  placeholder={T("Paste a video or page link")}
                   required
                 />
               </label>
               <div className="form-foot form-foot--end">
                 <button className="btn" disabled={busy}>
-                  {busy ? 'Getting preview…' : 'Save link'}
+                  {busy ? T("Getting preview…") : T("Save link")}
                 </button>
               </div>
             </form>
           )}
 
           {shown.length === 0 ? (
-            <Empty>{q ? 'No links match.' : 'No links in this section yet.'}</Empty>
+            <Empty>{q ? T("No links match.") : T("No links in this section yet.")}</Empty>
           ) : (
             <div className="link-grid">
               {shown.map((l) => (
@@ -122,7 +123,7 @@ export default function Links() {
         />
       )}
     </div>
-  )
+  );
 }
 
 function LinkCard({ link, onEdit, onDelete }) {
@@ -145,15 +146,15 @@ function LinkCard({ link, onEdit, onDelete }) {
         <div className="link-card__foot">
           <span className="muted small">{link.site || hostOf(link.url)}</span>
           <div className="row-actions">
-            <button type="button" className="icon-btn" aria-label="Edit link" onClick={onEdit}>
+            <button type="button" className="icon-btn" aria-label={T("Edit link")} onClick={onEdit}>
               ✎
             </button>
-            <DeleteButton label="Delete link" onClick={onDelete} />
+            <DeleteButton label={T("Delete link")} onClick={onDelete} />
           </div>
         </div>
       </div>
     </article>
-  )
+  );
 }
 
 function EditLink({ link, sections, onSave, onClose }) {
@@ -174,7 +175,7 @@ function EditLink({ link, sections, onSave, onClose }) {
   }
 
   return (
-    <Sheet title="Edit link" onClose={onClose}>
+    <Sheet title={T("Edit link")} onClose={onClose}>
       <form
         className="form"
         onSubmit={(e) => {
@@ -184,15 +185,15 @@ function EditLink({ link, sections, onSave, onClose }) {
         }}
       >
         <label className="field">
-          <span>Link</span>
+          <span>{T("Link")}</span>
           <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} required />
         </label>
         <label className="field">
-          <span>Title</span>
-          <input dir="auto" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
+          <span>{T("Title")}</span>
+          <input dir="auto" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={T("Title")} />
         </label>
         <label className="field">
-          <span>Section</span>
+          <span>{T("Section")}</span>
           <select value={sectionId} onChange={(e) => setSectionId(e.target.value)}>
             {sections.map((s) => (
               <option key={s.id} value={s.id}>
@@ -203,11 +204,11 @@ function EditLink({ link, sections, onSave, onClose }) {
         </label>
         <div className="form-foot">
           <button type="button" className="btn btn--ghost btn--sm" onClick={refresh} disabled={busy}>
-            {busy ? 'Loading…' : 'Refresh preview'}
+            {busy ? T("Loading…") : T("Refresh preview")}
           </button>
-          <button className="btn">Save</button>
+          <button className="btn">{T("Save")}</button>
         </div>
       </form>
     </Sheet>
-  )
+  );
 }

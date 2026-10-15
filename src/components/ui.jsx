@@ -1,4 +1,5 @@
 import BlurText from './bits/BlurText'
+import { T } from '../lib/i18n'
 export function PageHeader({ title, subtitle, right }) {
   return (
     <header className="page-header">
@@ -41,16 +42,14 @@ export function ErrorBar({ error, onClose }) {
     <div className="error-bar" role="alert">
       <span>{error}</span>
       {onClose && (
-        <button type="button" className="link" onClick={onClose}>
-          Dismiss
-        </button>
+        <button type="button" className="link" onClick={onClose}>{T("Dismiss")}</button>
       )}
     </div>
-  )
+  );
 }
 
 export function Loading() {
-  return <div className="empty muted loading-text">Loading…</div>
+  return <div className="empty muted loading-text">{T("Loading…")}</div>;
 }
 
 export function DeleteButton({ onClick, label = 'Delete' }) {

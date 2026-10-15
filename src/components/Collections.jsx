@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useBackToClose } from '../lib/useBack'
+import { T, Tr } from '../lib/i18n'
 
 /** Bottom sheet on phones, centred dialog on bigger screens. */
 export function Sheet({ title, onClose, children }) {
@@ -20,14 +21,14 @@ export function Sheet({ title, onClose, children }) {
       <div className="sheet" role="dialog" aria-modal="true" aria-label={title}>
         <div className="sheet__head">
           <h2>{title}</h2>
-          <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}>
+          <button type="button" className="icon-btn" aria-label={T("Close")} onClick={onClose}>
             ×
           </button>
         </div>
         {children}
       </div>
     </div>
-  )
+  );
 }
 
 /** Small form inside a sheet that asks for one name. */
@@ -76,9 +77,7 @@ export function Collections({ items, selectedId, onSelect, onCreate, onRename, o
               {counts[i.id] !== undefined && <span className="count">{counts[i.id]}</span>}
             </button>
           ))}
-          <button type="button" className="chip chip--dashed" onClick={() => setSheet('new')}>
-            + New {noun}
-          </button>
+          <button type="button" className="chip chip--dashed" onClick={() => setSheet('new')}>{Tr("+ New {0}", noun)}</button>
         </div>
       </div>
 
@@ -86,25 +85,21 @@ export function Collections({ items, selectedId, onSelect, onCreate, onRename, o
         <div className="collection-head">
           <h2 dir="auto">{selected.name}</h2>
           <div className="collection-head__actions">
-            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setSheet('rename')}>
-              Rename
-            </button>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setSheet('rename')}>{T("Rename")}</button>
             <button
               type="button"
               className="btn btn--ghost btn--sm"
               onClick={() => {
                 if (window.confirm(`Delete the ${noun} "${selected.name}" and everything in it?`)) onDelete(selected.id)
               }}
-            >
-              Delete
-            </button>
+            >{T("Delete")}</button>
           </div>
         </div>
       )}
 
       {sheet === 'new' && (
         <NameSheet
-          title={`New ${noun}`}
+          title={T("New {0}", [noun])}
           label={`${noun} name`}
           placeholder={placeholder}
           submitLabel={`Create ${noun}`}
@@ -117,7 +112,7 @@ export function Collections({ items, selectedId, onSelect, onCreate, onRename, o
       )}
       {sheet === 'rename' && selected && (
         <NameSheet
-          title={`Rename ${noun}`}
+          title={T("Rename {0}", [noun])}
           label={`${noun} name`}
           initial={selected.name}
           onClose={() => setSheet(null)}
@@ -128,7 +123,7 @@ export function Collections({ items, selectedId, onSelect, onCreate, onRename, o
         />
       )}
     </>
-  )
+  );
 }
 
 /** Remembers which section/notebook was open last (per browser). */

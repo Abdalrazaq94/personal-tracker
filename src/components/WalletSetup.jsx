@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase, supabaseUrl } from '../lib/supabase'
+import { T, Tr } from '../lib/i18n'
 
 const INGEST_URL = `${supabaseUrl}/functions/v1/ingest`
 
@@ -25,9 +26,9 @@ function Copy({ text, label = 'Copy' }) {
         setTimeout(() => setDone(false), 1500)
       }}
     >
-      {done ? 'Copied ✓' : label}
+      {done ? T("Copied ✓") : label}
     </button>
-  )
+  );
 }
 
 /** Spend → "Google Wallet": private key + MacroDroid steps + test button. */
@@ -95,93 +96,97 @@ export default function WalletSetup({ onTestAdded }) {
           ⇣
         </span>
         <span>
-          <strong>Google Wallet</strong>
-          <span className="muted small"> · add payments automatically (Android)</span>
+          <strong>{T("Google Wallet")}</strong>
+          <span className="muted small">{" "}{T("· add payments automatically (Android)")}</span>
         </span>
       </button>
-    )
+    );
 
   return (
     <section className="ai-panel wallet">
       <div className="ai-panel__head">
-        <h2>
-          <span className="ai-spark" aria-hidden>
+        <h2>{Tr("{0} Google Wallet auto-add", <span className="ai-spark" aria-hidden>
             ⇣
-          </span>{' '}
-          Google Wallet auto-add
-        </h2>
-        <button type="button" className="icon-btn" aria-label="Close" onClick={() => setOpen(false)}>
+          </span>)}</h2>
+        <button type="button" className="icon-btn" aria-label={T("Close")} onClick={() => setOpen(false)}>
           ×
         </button>
       </div>
 
-      <p className="small muted">
-        Each time you pay with Google Wallet, your phone shows a notification. The free app MacroDroid sends it here and it appears in
-        Spending by itself.
-      </p>
+      <p className="small muted">{T(
+        "Each time you pay with Google Wallet, your phone shows a notification. The free app MacroDroid sends it here and it appears in Spending by itself."
+      )}</p>
 
       {error && <p className="error-text">{error}</p>}
 
       {token === undefined ? (
-        <div className="ai-loading">Loading…</div>
+        <div className="ai-loading">{T("Loading…")}</div>
       ) : !token ? (
-        <button className="btn btn--block" onClick={() => save(newToken())} disabled={busy}>
-          Create my private key
-        </button>
+        <button className="btn btn--block" onClick={() => save(newToken())} disabled={busy}>{T("Create my private key")}</button>
       ) : (
         <>
           <ol className="steps wallet-steps">
+            <li>{Tr(
+                "{0} (once): run {1} in the SQL Editor, and deploy the {2} function with {3} (see README).",
+                <b>{T("Database & function")}</b>,
+                <code>004_wallet_ingest.sql</code>,
+                <code>ingest</code>,
+                <b>{T("Verify JWT off")}</b>
+              )}</li>
             <li>
-              <b>Database &amp; function</b> (once): run <code>004_wallet_ingest.sql</code> in the SQL Editor, and deploy the{' '}
-              <code>ingest</code> function with <b>Verify JWT off</b> (see README).
-            </li>
-            <li>
-              <b>Test it here:</b>{' '}
+              <b>{T("Test it here:")}</b>{' '}
               <button className="btn btn--sm" onClick={sendTest} disabled={busy}>
-                {busy ? 'Sending…' : 'Send test'}
+                {busy ? T("Sending…") : T("Send test")}
               </button>
               {test && <span className={`wallet-test ${test.ok ? 'is-ok' : ''}`}>{test.msg}</span>}
             </li>
-            <li>
-              On your phone, install <b>MacroDroid</b> from the Play Store and allow <b>Notification access</b> when it asks.
-            </li>
-            <li>
-              <b>Add macro → Trigger:</b> Notification → Notification received → choose app <b>Google Wallet</b> → any content.
-            </li>
-            <li>
-              <b>Action:</b> Connectivity → <b>HTTP Request</b>. Method <b>POST</b>, this URL:
-              <div className="copy-row">
-                <code>{INGEST_URL}</code>
-                <Copy text={INGEST_URL} />
-              </div>
-              Body / content type <b>application/json</b>, with this text:
-              <div className="copy-row">
-                <code className="wrap">{body}</code>
-                <Copy text={body} />
-              </div>
-              <span className="small muted">
-                If MacroDroid’s names differ, use its “…” magic-text button to insert <i>Notification title</i> and{' '}
-                <i>Notification text</i>.
-              </span>
-            </li>
-            <li>
-              Save the macro. Your next Google Wallet payment appears in Spending with a <span className="tag">Wallet</span> tag.
-            </li>
+            <li>{Tr(
+                "On your phone, install {0} from the Play Store and allow {1} when it asks.",
+                <b>{T("MacroDroid")}</b>,
+                <b>{T("Notification access")}</b>
+              )}</li>
+            <li>{Tr(
+                "{0} Notification → Notification received → choose app {1} → any content.",
+                <b>{T("Add macro → Trigger:")}</b>,
+                <b>{T("Google Wallet")}</b>
+              )}</li>
+            <li>{Tr(
+                "{0} Connectivity → {1}. Method {2}, this URL:{3}Body / content type {4}, with this text:{5}{6}",
+                <b>{T("Action:")}</b>,
+                <b>{T("HTTP Request")}</b>,
+                <b>{T("POST")}</b>,
+                <div className="copy-row">
+                  <code>{INGEST_URL}</code>
+                  <Copy text={INGEST_URL} />
+                </div>,
+                <b>application/json</b>,
+                <div className="copy-row">
+                  <code className="wrap">{body}</code>
+                  <Copy text={body} />
+                </div>,
+                <span className="small muted">{Tr(
+                    "If MacroDroid’s names differ, use its “…” magic-text button to insert {0} and {1}.",
+                    <i>{T("Notification title")}</i>,
+                    <i>{T("Notification text")}</i>
+                  )}</span>
+              )}</li>
+            <li>{Tr(
+                "Save the macro. Your next Google Wallet payment appears in Spending with a {0} tag.",
+                <span className="tag">{T("Wallet")}</span>
+              )}</li>
           </ol>
           <div className="form-foot">
             <button
               className="btn btn--ghost btn--sm"
               onClick={() => window.confirm('Make a new key? The old one stops working, so update MacroDroid too.') && save(newToken())}
-            >
-              New key
-            </button>
-            <button className="btn btn--ghost btn--sm" onClick={() => window.confirm('Turn off auto-add?') && save('')}>
-              Turn off
-            </button>
+            >{T("New key")}</button>
+            <button className="btn btn--ghost btn--sm" onClick={() => window.confirm('Turn off auto-add?') && save('')}>{T("Turn off")}</button>
           </div>
-          <p className="small muted">Keep your key private — anyone with it could add spending to your account (but can’t read anything).</p>
+          <p className="small muted">{T(
+            "Keep your key private — anyone with it could add spending to your account (but can’t read anything)."
+          )}</p>
         </>
       )}
     </section>
-  )
+  );
 }

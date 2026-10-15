@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useRows } from '../lib/useRows'
 import { Collections, Sheet, useRemembered } from '../components/Collections'
 import { Empty, ErrorBar, Loading, PageHeader } from '../components/ui'
+import { T, Tr } from '../lib/i18n'
 
 export default function Notes() {
   const books = useRows('notebooks', { ascending: true })
@@ -36,7 +37,7 @@ export default function Notes() {
   return (
     <div className="page">
       <PageHeader
-        title="Notes"
+        title={T("Notes")}
         subtitle={`${notes.rows.length} notes`}
         right={
           books.rows.length > 0 && (
@@ -55,13 +56,13 @@ export default function Notes() {
       />
 
       {books.rows.length > 0 && (
-        <input type="search" className="search" placeholder="Search all notes…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input type="search" className="search" placeholder={T("Search all notes…")} value={q} onChange={(e) => setQ(e.target.value)} />
       )}
 
       {!q && (
         <Collections
           noun="notebook"
-          placeholder="e.g. Daily notes"
+          placeholder={T("e.g. Daily notes")}
           items={books.rows}
           counts={counts}
           selectedId={selectedId}
@@ -81,18 +82,16 @@ export default function Notes() {
       {books.loading || notes.loading ? (
         <Loading />
       ) : books.rows.length === 0 ? (
-        <Empty>Create your first notebook, for example “Daily notes”.</Empty>
+        <Empty>{T("Create your first notebook, for example “Daily notes”.")}</Empty>
       ) : shown.length === 0 ? (
         <Empty>
           {q ? (
-            'No notes match.'
+            T("No notes match.")
           ) : (
-            <>
-              No notes here yet.{' '}
-              <button className="link" onClick={() => setOpen('new')}>
-                Write one
-              </button>
-            </>
+            <>{Tr(
+                "No notes here yet. {0}",
+                <button className="link" onClick={() => setOpen('new')}>{T("Write one")}</button>
+              )}</>
           )}
         </Empty>
       ) : (
@@ -133,14 +132,14 @@ export default function Notes() {
         />
       )}
     </div>
-  )
+  );
 }
 
 function NoteEditor({ note, onSave, onDelete, onClose }) {
   const [title, setTitle] = useState(note?.title || '')
   const [body, setBody] = useState(note?.body || '')
   return (
-    <Sheet title={note ? 'Edit note' : 'New note'} onClose={onClose}>
+    <Sheet title={note ? T("Edit note") : T("New note")} onClose={onClose}>
       <form
         className="form"
         onSubmit={(e) => {
@@ -148,23 +147,21 @@ function NoteEditor({ note, onSave, onDelete, onClose }) {
           if (title.trim() || body.trim()) onSave({ title: title.trim(), body: body.trim() })
         }}
       >
-        <input dir="auto" className="note-title-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" autoFocus={!note} />
-        <textarea dir="auto" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write your note…" rows={10} />
+        <input dir="auto" className="note-title-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={T("Title")} autoFocus={!note} />
+        <textarea dir="auto" value={body} onChange={(e) => setBody(e.target.value)} placeholder={T("Write your note…")} rows={10} />
         <div className="form-foot">
           {onDelete ? (
             <button
               type="button"
               className="btn btn--ghost btn--sm"
               onClick={() => window.confirm('Delete this note?') && onDelete()}
-            >
-              Delete
-            </button>
+            >{T("Delete")}</button>
           ) : (
             <span />
           )}
-          <button className="btn">Save</button>
+          <button className="btn">{T("Save")}</button>
         </div>
       </form>
     </Sheet>
-  )
+  );
 }

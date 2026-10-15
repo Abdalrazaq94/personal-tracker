@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ADHAN, playSound, SOUNDS } from '../lib/sounds'
 import { isAdhan, playAdhan } from '../lib/adhan'
+import { T } from '../lib/i18n'
 
 /**
  * When a reminder arrives while the app is open, this plays the sound you picked for that kind of reminder.
@@ -102,12 +103,12 @@ export default function AlarmOverlay() {
         </div>
         <div className="alarm-toast__actions">
           {buttons}
-          <button className="btn btn--ghost" onClick={() => { stopRef.current?.(); close() }} aria-label="Close">
+          <button className="btn btn--ghost" onClick={() => { stopRef.current?.(); close() }} aria-label={T("Close")}>
             ✕
           </button>
         </div>
       </div>
-    )
+    );
 
   return (
     <div className="alarm" role="alertdialog" aria-live="assertive" aria-label={alarm.title}>
@@ -119,9 +120,9 @@ export default function AlarmOverlay() {
         {alarm.body && <p className="alarm__body">{alarm.body}</p>}
         <div className="alarm__actions">{buttons}</div>
         <button className="alarm__mute" onClick={() => stopRef.current?.()}>
-          {isAdhan(alarm.sound) ? 'Stop the adhan' : 'Stop the sound'}
+          {isAdhan(alarm.sound) ? T("Stop the adhan") : T("Stop the sound")}
         </button>
       </div>
     </div>
-  )
+  );
 }

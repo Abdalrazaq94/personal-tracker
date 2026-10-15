@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { PRAYERS } from '../lib/prayer'
+import { T, Tr } from '../lib/i18n'
 
 const W = 340
 const H = 168
@@ -107,19 +108,25 @@ export default function PrayerChart({ logs, today, days = 30 }) {
   return (
     <figure className="prayer-chart">
       <figcaption className="prayer-chart__head">
-        <span className="prayer-chart__legend">
-          <span className="lg lg--prayed" /> Prayed <span className="lg lg--ontime" /> On time
-        </span>
+        <span className="prayer-chart__legend">{Tr(
+            "{0} Prayed {1} On time",
+            <span className="lg lg--prayed" />,
+            <span className="lg lg--ontime" />
+          )}</span>
       </figcaption>
       <p className="habit-chart__info">
         {hv
-          ? `${label(hv.day, { weekday: 'short', day: 'numeric', month: 'short' })} · prayed ${hv.prayed} of 5 · ${hv.onTime} on time`
+          ? T("{0} · prayed {1} of 5 · {2} on time", [
+          label(hv.day, { weekday: 'short', day: 'numeric', month: 'short' }),
+          hv.prayed,
+          hv.onTime
+        ])
           : trend}
       </p>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`Prayers per day over the last ${days} days. ${trend}.`}
+        aria-label={T("Prayers per day over the last {0} days. {1}.", [days, trend])}
         onPointerMove={onMove}
         onPointerDown={onMove}
         onPointerLeave={() => setHover(null)}
@@ -151,18 +158,12 @@ export default function PrayerChart({ logs, today, days = 30 }) {
           <>
             <circle cx={x(lastIdx)} cy={y(last.prayed)} r="4" fill={GREEN} stroke="#fff" strokeWidth="2" />
             <circle cx={x(lastIdx)} cy={y(last.onTime)} r="4" fill={BLUE} stroke="#fff" strokeWidth="2" />
-            <text x={x(lastIdx) + 8} y={endY.prayed + 4} className="hc-tick prayer-chart__end">
-              Prayed {last.prayed}
-            </text>
-            <text x={x(lastIdx) + 8} y={endY.onTime + 4} className="hc-tick prayer-chart__end">
-              On time {last.onTime}
-            </text>
+            <text x={x(lastIdx) + 8} y={endY.prayed + 4} className="hc-tick prayer-chart__end">{Tr("Prayed {0}", last.prayed)}</text>
+            <text x={x(lastIdx) + 8} y={endY.onTime + 4} className="hc-tick prayer-chart__end">{Tr("On time {0}", last.onTime)}</text>
           </>
         )}
         {!last && (
-          <text x={(PAD.l + W - PAD.r) / 2} y={H / 2} className="hc-tick" textAnchor="middle">
-            Mark a prayer below and your line starts here
-          </text>
+          <text x={(PAD.l + W - PAD.r) / 2} y={H / 2} className="hc-tick" textAnchor="middle">{T("Mark a prayer below and your line starts here")}</text>
         )}
 
         {hv && (
@@ -176,12 +177,10 @@ export default function PrayerChart({ logs, today, days = 30 }) {
         <text x={PAD.l} y={H - 5} className="hc-tick">
           {label(data[0].day, { day: 'numeric', month: 'short' })}
         </text>
-        <text x={W - PAD.r} y={H - 5} className="hc-tick" textAnchor="end">
-          Today
-        </text>
+        <text x={W - PAD.r} y={H - 5} className="hc-tick" textAnchor="end">{T("Today")}</text>
       </svg>
 
-      {tracked.length > 0 && <ul className="prayer-rates" aria-label="Each prayer over the same days">
+      {tracked.length > 0 && <ul className="prayer-rates" aria-label={T("Each prayer over the same days")}>
         {perPrayer.map((p) => (
           <li key={p.key}>
             <span className="prayer-rates__name">{p.name}</span>
@@ -197,5 +196,5 @@ export default function PrayerChart({ logs, today, days = 30 }) {
         ))}
       </ul>}
     </figure>
-  )
+  );
 }

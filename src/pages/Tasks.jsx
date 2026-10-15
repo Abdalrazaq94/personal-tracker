@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useRows } from '../lib/useRows'
 import AiPanel from '../components/AiPanel'
 import { DeleteButton, Empty, ErrorBar, Loading, PageHeader, Segmented } from '../components/ui'
+import { T } from '../lib/i18n'
 
 const STATUS_ORDER = { doing: 0, todo: 1, done: 2 }
 
@@ -82,13 +83,13 @@ export default function Tasks() {
 
   return (
     <div className="page">
-      <PageHeader title="Daily tasks" subtitle={`${counts.done} of ${counts.all} done`} />
+      <PageHeader title={T("Daily tasks")} subtitle={T("{0} of {1} done", [counts.done, counts.all])} />
       <ErrorBar error={error} onClose={() => setError(null)} />
 
       <form className="card form" onSubmit={add}>
         <label className="field">
-          <span>New task</span>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What needs doing?" required />
+          <span>{T("New task")}</span>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={T("What needs doing?")} required />
         </label>
         <div className="form-foot">
           <Segmented
@@ -101,19 +102,19 @@ export default function Tasks() {
             ]}
           />
           <button type="button" className={`badge ${remind ? 'badge--solid' : ''}`} onClick={() => setRemind(remind ? '' : inAnHour())}>
-            ⏰ {remind ? 'Reminder on' : 'Remind me'}
+            ⏰ {remind ? T("Reminder on") : T("Remind me")}
           </button>
-          <button className="btn">Add</button>
+          <button className="btn">{T("Add")}</button>
         </div>
         {remind && (
           <label className="field">
-            <span>Remind me at</span>
+            <span>{T("Remind me at")}</span>
             <input type="datetime-local" value={remind} onChange={(e) => setRemind(e.target.value)} required />
           </label>
         )}
       </form>
 
-      <AiPanel kind="tasks" examples={['What should I focus on tomorrow?', 'Which tasks am I avoiding?']} />
+      <AiPanel kind="tasks" examples={[T("What should I focus on tomorrow?"), T("Which tasks am I avoiding?")]} />
 
       <div className="toolbar">
         <div className="scroll-x">
@@ -132,14 +133,14 @@ export default function Tasks() {
         <label className="switch">
           <input type="checkbox" checked={importantTop} onChange={toggleTop} />
           <span className="switch__track" />
-          <span>Important on top</span>
+          <span>{T("Important on top")}</span>
         </label>
       </div>
 
       {loading ? (
         <Loading />
       ) : shown.length === 0 ? (
-        <Empty>{rows.length ? 'Nothing here.' : 'No tasks yet.'}</Empty>
+        <Empty>{rows.length ? T("Nothing here.") : T("No tasks yet.")}</Empty>
       ) : (
         <ul className="list">
           {shown.map((t) => (
@@ -148,7 +149,7 @@ export default function Tasks() {
                 <button
                   type="button"
                   className={`check ${t.status === 'done' ? 'is-on' : ''}`}
-                  aria-label={t.status === 'done' ? 'Mark not done' : 'Mark done'}
+                  aria-label={t.status === 'done' ? T("Mark not done") : T("Mark done")}
                   onClick={() => update(t.id, { status: t.status === 'done' ? 'todo' : 'done' })}
                 >
                   {t.status === 'done' ? '✓' : ''}
@@ -156,7 +157,7 @@ export default function Tasks() {
                 <span className="task__title" dir="auto">
                   {t.title}
                 </span>
-                <DeleteButton label="Delete task" onClick={() => remove(t.id)} />
+                <DeleteButton label={T("Delete task")} onClick={() => remove(t.id)} />
               </div>
               <div className="task__meta">
                 <button
@@ -164,20 +165,20 @@ export default function Tasks() {
                   className={`badge ${t.priority === 'important' ? 'badge--solid' : ''}`}
                   onClick={() => update(t.id, { priority: t.priority === 'important' ? 'normal' : 'important' })}
                 >
-                  {t.priority === 'important' ? '! Important' : 'Normal'}
+                  {t.priority === 'important' ? T("! Important") : T("Normal")}
                 </button>
                 {t.remind_at && t.status !== 'done' ? (
                   <span className="task__remind">
                     <button type="button" className="badge" onClick={() => setEditing(editing === t.id ? null : t.id)}>
                       ⏰ {whenLabel(t.remind_at)}
                     </button>
-                    <button type="button" className="badge" aria-label="Remove reminder" onClick={() => update(t.id, remindPatch(null))}>
+                    <button type="button" className="badge" aria-label={T("Remove reminder")} onClick={() => update(t.id, remindPatch(null))}>
                       ✕
                     </button>
                   </span>
                 ) : (
                   t.status !== 'done' && (
-                    <button type="button" className="badge" aria-label="Add a reminder" onClick={() => setEditing(editing === t.id ? null : t.id)}>
+                    <button type="button" className="badge" aria-label={T("Add a reminder")} onClick={() => setEditing(editing === t.id ? null : t.id)}>
                       ⏰
                     </button>
                   )
@@ -202,8 +203,8 @@ export default function Tasks() {
                     if (v && (await update(t.id, remindPatch(v)))) setEditing(null)
                   }}
                 >
-                  <input type="datetime-local" name="at" defaultValue={t.remind_at ? toLocalInput(new Date(t.remind_at)) : inAnHour()} required aria-label="Remind me at" />
-                  <button className="btn">Save</button>
+                  <input type="datetime-local" name="at" defaultValue={t.remind_at ? toLocalInput(new Date(t.remind_at)) : inAnHour()} required aria-label={T("Remind me at")} />
+                  <button className="btn">{T("Save")}</button>
                 </form>
               )}
             </li>
@@ -211,5 +212,5 @@ export default function Tasks() {
         </ul>
       )}
     </div>
-  )
+  );
 }

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { T, Tr } from '../lib/i18n'
 
 const W = 340
 const H = 150
@@ -78,17 +79,26 @@ export default function TaskChart({ tasks, today, days = 14 }) {
   return (
     <figure className="prayer-chart">
       <figcaption className="prayer-chart__head">
-        <span className="prayer-chart__legend">
-          <span className="lg lg--prayed" /> Done <span className="lg lg--ontime" /> Added
-        </span>
+        <span className="prayer-chart__legend">{Tr(
+            "{0} Done {1} Added",
+            <span className="lg lg--prayed" />,
+            <span className="lg lg--ontime" />
+          )}</span>
       </figcaption>
       <p className="habit-chart__info">
-        {hv ? `${label(hv.day, { weekday: 'short', day: 'numeric', month: 'short' })} · ${hv.done} done · ${hv.added} added` : summary}
+        {hv ? T("{0} · {1} done · {2} added", [
+          label(hv.day, { weekday: 'short', day: 'numeric', month: 'short' }),
+          hv.done,
+          hv.added
+        ]) : summary}
       </p>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`Tasks done and added per day over the last ${days} days. ${summary}.`}
+        aria-label={T(
+          "Tasks done and added per day over the last {0} days. {1}.",
+          [days, summary]
+        )}
         onPointerMove={onMove}
         onPointerDown={onMove}
         onPointerLeave={() => setHover(null)}
@@ -115,12 +125,8 @@ export default function TaskChart({ tasks, today, days = 14 }) {
           <>
             <circle cx={x(lastIdx)} cy={y(last.added)} r="4" fill={BLUE} stroke="#fff" strokeWidth="2" />
             <circle cx={x(lastIdx)} cy={y(last.done)} r="4" fill={GREEN} stroke="#fff" strokeWidth="2" />
-            <text x={x(lastIdx) + 8} y={endY.done + 4} className="hc-tick prayer-chart__end">
-              Done {last.done}
-            </text>
-            <text x={x(lastIdx) + 8} y={endY.added + 4} className="hc-tick prayer-chart__end">
-              Added {last.added}
-            </text>
+            <text x={x(lastIdx) + 8} y={endY.done + 4} className="hc-tick prayer-chart__end">{Tr("Done {0}", last.done)}</text>
+            <text x={x(lastIdx) + 8} y={endY.added + 4} className="hc-tick prayer-chart__end">{Tr("Added {0}", last.added)}</text>
           </>
         )}
         {hv && (
@@ -133,10 +139,8 @@ export default function TaskChart({ tasks, today, days = 14 }) {
         <text x={PAD.l} y={H - 5} className="hc-tick">
           {label(data[0].day, { day: 'numeric', month: 'short' })}
         </text>
-        <text x={W - PAD.r} y={H - 5} className="hc-tick" textAnchor="end">
-          Today
-        </text>
+        <text x={W - PAD.r} y={H - 5} className="hc-tick" textAnchor="end">{T("Today")}</text>
       </svg>
     </figure>
-  )
+  );
 }
