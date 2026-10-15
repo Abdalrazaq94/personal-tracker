@@ -6,8 +6,8 @@ import { ErrorBar, PageHeader } from '../components/ui'
 import { Markdown } from '../components/AiPanel'
 import { callAi } from '../lib/ai'
 import PrayerChart from '../components/PrayerChart'
-import { METHODS, PRAYERS, clock, currentPrayer, findPlaces, hijri, inWords, nextPrayer, placeToday, timesFor } from '../lib/prayer'
-import { T, Tr } from '../lib/i18n'
+import { METHODS, PRAYERS, clock, currentPrayer, findPlaces, hijri, inWords, nextPrayer, placeToday, prayerName, timesFor } from '../lib/prayer'
+import { T, Tr, isAr, LOCALE } from '../lib/i18n'
 
 const NEEDS_TABLE =
   'Prayer needs a small database update: in Supabase open SQL Editor, paste the file supabase/migrations/006_prayers.sql and press Run. Then refresh this page.'
@@ -19,10 +19,10 @@ const shiftDay = (day, n) => {
   return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
 }
 const niceDay = (day, today) => {
-  if (day === today) return 'Today'
-  if (day === shiftDay(today, -1)) return 'Yesterday'
+  if (day === today) return T("Today");
+  if (day === shiftDay(today, -1)) return T("Yesterday");
   const [y, m, d] = day.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })
+  return new Date(y, m - 1, d).toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'short' })
 }
 
 export default function Commit() {
@@ -121,10 +121,10 @@ export default function Commit() {
 /* ------------------------------------------------------------------ */
 
 const QUESTIONS = [
-  { label: 'How am I doing?', q: '' },
-  { label: 'Which prayer do I miss most?', q: 'Which prayer do I miss or delay most, and why might that be?' },
-  { label: 'How can I pray Fajr on time?', q: 'Give me a simple plan to pray Fajr on time.' },
-  { label: 'Am I improving?', q: 'Am I improving this month? Compare the weeks.' },
+  { label: T("How am I doing?"), q: '' },
+  { label: T("Which prayer do I miss most?"), q: 'Which prayer do I miss or delay most, and why might that be?' },
+  { label: T("How can I pray Fajr on time?"), q: 'Give me a simple plan to pray Fajr on time.' },
+  { label: T("Am I improving?"), q: 'Am I improving this month? Compare the weeks.' },
 ]
 
 /** Always at the top: the 30-day line chart, then four AI questions (no typing). */
@@ -141,7 +141,7 @@ function PrayerInsights({ logs, today }) {
     setAnswer('')
     try {
       const data = await callAi({ kind: 'prayers', question: item.q, today: today })
-      setAnswer(data?.text || 'No answer.')
+      setAnswer(data?.text || T('No answer.'))
     } catch (e) {
       setErr(e.message)
     }
@@ -235,16 +235,18 @@ function PrayerCard({ place, today, day, setDay, logs, mark, onChangePlace, show
                 {log ? '✓' : ''}
               </span>
               <span className="prayer-row__name">
-                <strong>{p.name}</strong>
-                <span dir="rtl" lang="ar">
-                  {p.ar}
-                </span>
+                <strong>{prayerName(p)}</strong>
+                {!isAr && (
+                  <span dir="rtl" lang="ar">
+                    {p.ar}
+                  </span>
+                )}
               </span>
               <span className="prayer-row__time">{clock(times[p.key], place.tz)}</span>
               {notYet ? (
                 <span className="prayer-row__wait muted small">Not yet</span>
               ) : (
-                <span className="prayer-row__acts" role="group" aria-label={`${p.name}: prayed?`}>
+                <span className="prayer-row__acts" role="group" aria-label={T('{0}: prayed?', [prayerName(p)])}>
                   <button className={log && !log.late ? 'is-on' : ''} aria-pressed={!!log && !log.late} onClick={() => mark(p.key, false)}>
                     On time
                   </button>
@@ -336,7 +338,7 @@ function PrayerWeek({ place, today, logs, onPick, picked }) {
           const [y, m, dd] = d.split('-').map(Number)
           return (
             <button key={d} className={`prayer-week__day${d === picked ? ' is-on' : ''}`} onClick={() => onPick(d)}>
-              {new Date(y, m - 1, dd).toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 2)}
+              {new Date(y, m - 1, dd).toLocaleDateString(LOCALE, { weekday: 'short' }).slice(0, 2)}
             </button>
           )
         })}
@@ -358,12 +360,12 @@ function Row({ p, days, logs, place, today }) {
   const t = timesFor(place, today)
   return (
     <>
-      <span className="prayer-week__name">{p.name}</span>
+      <span className="prayer-week__name">{prayerName(p)}</span>
       {days.map((d) => {
         const l = logs.get(`${d}|${p.key}`)
         const future = d === today && t[p.key].getTime() > Date.now()
         const cls = l ? (l.late ? 'is-late' : 'is-done') : future ? 'is-future' : ''
-        return <span key={d} className={`prayer-dot ${cls}`} title={`${p.name} ${d}: ${l ? (l.late ? 'late' : 'on time') : future ? 'not yet' : 'not marked'}`} />
+        return <span key={d} className={`prayer-dot ${cls}`} title={`${prayerName(p)} ${d}: ${l ? (l.late ? T('late') : T('on time')) : future ? T('not yet') : T('not marked')}`} />
       })}
     </>
   )
@@ -386,7 +388,7 @@ function PlacePicker({ current, onPick, onCancel }) {
       try {
         const r = await findPlaces(q)
         setResults(r)
-        if (!r.length) setMsg('No city found. Check the spelling.')
+        if (!r.length) setMsg(T("No city found. Check the spelling."))
       } catch (e) {
         setMsg(e.message)
       }
@@ -396,18 +398,18 @@ function PlacePicker({ current, onPick, onCancel }) {
   }, [q])
 
   const useMyLocation = () => {
-    if (!navigator.geolocation) return setMsg('This browser can’t share your location.')
-    setMsg('Finding you…')
+    if (!navigator.geolocation) return setMsg(T("This browser can’t share your location."));
+    setMsg(T("Finding you…"))
     navigator.geolocation.getCurrentPosition(
       (pos) =>
         onPick({
-          name: 'My location',
+          name: T('My location'),
           region: '',
           lat: Math.round(pos.coords.latitude * 1000) / 1000,
           lon: Math.round(pos.coords.longitude * 1000) / 1000,
           tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
-      () => setMsg('Location was not allowed. Search for your city instead.'),
+      () => setMsg(T("Location was not allowed. Search for your city instead.")),
       { timeout: 15000 }
     )
   }

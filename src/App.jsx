@@ -5,6 +5,8 @@ import PageGuard from './components/PageGuard'
 import AlarmOverlay from './components/AlarmOverlay'
 import { MotionConfig, motion } from 'motion/react'
 import InstallApp from './components/InstallApp'
+import LangSwitch from './components/LangSwitch'
+import { followAccountLang } from './lib/i18n'
 import { configured, supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Home from './pages/Home'
@@ -21,16 +23,16 @@ import Reminders from './pages/Reminders'
 import { T, Tr } from './lib/i18n'
 
 export const SECTIONS = [
-  { to: '/words', label: 'Words', hint: 'New English words & translations' },
-  { to: '/tasks', label: 'Tasks', hint: 'Daily tasks · AI analysis' },
-  { to: '/habits', label: 'Habits', hint: 'Track habits every day' },
-  { to: '/spend', label: 'Spend', hint: 'Daily spending · AI analysis' },
-  { to: '/plan', label: 'Plan', hint: 'Plan tomorrow & the week' },
-  { to: '/links', label: 'Links', hint: 'Saved video & web links' },
-  { to: '/notes', label: 'Notes', hint: 'Notebooks with note cards' },
-  { to: '/jobs', label: 'Jobs', hint: 'Jobs applied · Trello' },
-  { to: '/commit', label: 'Commit', hint: 'Commitments · prayer times' },
-  { to: '/reminders', label: 'Reminders', hint: 'Notifications for plans & prayers' },
+  { to: '/words', label: T("Words"), hint: T("New English words & translations") },
+  { to: '/tasks', label: T("Tasks"), hint: T("Daily tasks · AI analysis") },
+  { to: '/habits', label: T("Habits"), hint: T("Track habits every day") },
+  { to: '/spend', label: T("Spend"), hint: T("Daily spending · AI analysis") },
+  { to: '/plan', label: T("Plan"), hint: T("Plan tomorrow & the week") },
+  { to: '/links', label: T("Links"), hint: T("Saved video & web links") },
+  { to: '/notes', label: T("Notes"), hint: T("Notebooks with note cards") },
+  { to: '/jobs', label: T("Jobs"), hint: T("Jobs applied · Trello") },
+  { to: '/commit', label: T("Commit"), hint: T("Commitments · prayer times") },
+  { to: '/reminders', label: T("Reminders"), hint: T("Notifications for plans & prayers") },
 ]
 
 // bottom bar on phones: the most used pages + "More"
@@ -42,7 +44,10 @@ export default function App() {
 
   useEffect(() => {
     if (!configured) return
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+      followAccountLang(data.session?.user) // use the language saved in your account
+    })
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
     return () => sub.subscription.unsubscribe()
   }, [])
@@ -70,6 +75,7 @@ export default function App() {
               {n.label}
             </NavLink>
           ))}
+          <LangSwitch className="lang-switch--top" />
         </nav>
 
         <main className="content">
@@ -120,7 +126,7 @@ function MobileBar({ pathname, email }) {
   const navigate = useNavigate()
   useBackToClose(open, () => setOpen(false))
 
-  const here = pathname === '/' ? 'Home' : SECTIONS.find((s) => pathname.startsWith(s.to))?.label || 'Tracker'
+  const here = pathname === '/' ? T('Home') : SECTIONS.find((s) => pathname.startsWith(s.to))?.label || T('Tracker')
   const go = (to) => {
     // close the menu first (that takes its own history step back out), then open the page
     const after = () => {
@@ -152,7 +158,7 @@ function MobileBar({ pathname, email }) {
               </button>
             </div>
             <ul>
-              {[{ to: '/', label: 'Home', hint: 'Today at a glance' }, ...SECTIONS].map((s) => {
+              {[{ to: '/', label: T("Home"), hint: T("Today at a glance") }, ...SECTIONS].map((s) => {
                 const active = s.to === '/' ? pathname === '/' : pathname.startsWith(s.to)
                 return (
                   <li key={s.to}>
@@ -164,6 +170,9 @@ function MobileBar({ pathname, email }) {
                 )
               })}
             </ul>
+            <div className="drawer__lang">
+              <LangSwitch />
+            </div>
             <InstallApp compact />
             <div className="drawer__foot">
               <span className="muted small">{email}</span>

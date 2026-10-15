@@ -1,3 +1,4 @@
+import { LOCALE, T } from './i18n'
 const pad = (n) => String(n).padStart(2, '0')
 
 /** Local date as YYYY-MM-DD */
@@ -28,17 +29,17 @@ export const today = () => ymd()
 export const tomorrow = () => ymd(addDays(new Date(), 1))
 
 export const dayLabel = (s) => {
-  if (s === ymd()) return 'Today'
-  if (s === tomorrow()) return 'Tomorrow'
-  if (s === ymd(addDays(new Date(), -1))) return 'Yesterday'
-  return parseYmd(s).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
+  if (s === ymd()) return T('Today')
+  if (s === tomorrow()) return T('Tomorrow')
+  if (s === ymd(addDays(new Date(), -1))) return T('Yesterday')
+  return parseYmd(s).toLocaleDateString(LOCALE, { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
 const CURRENCY = import.meta.env.VITE_CURRENCY || 'GBP'
 
 export const money = (n) => {
   try {
-    return new Intl.NumberFormat(undefined, { style: 'currency', currency: CURRENCY }).format(n)
+    return new Intl.NumberFormat(LOCALE, { style: 'currency', currency: CURRENCY }).format(n)
   } catch {
     return `${Number(n).toFixed(2)} ${CURRENCY}`
   }

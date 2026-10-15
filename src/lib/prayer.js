@@ -1,5 +1,6 @@
 /** Prayer times, calculated on this device with the open-source "adhan" library (no paid service). */
 import { CalculationMethod, Coordinates, HighLatitudeRule, Madhab, PrayerTimes } from 'adhan'
+import { isAr, T, LOCALE } from './i18n'
 
 export const PRAYERS = [
   { key: 'fajr', name: 'Fajr', ar: 'الفجر' },
@@ -10,18 +11,18 @@ export const PRAYERS = [
 ]
 
 export const METHODS = [
-  { key: 'MoonsightingCommittee', label: 'Moonsighting Committee (UK & US)' },
-  { key: 'MuslimWorldLeague', label: 'Muslim World League' },
-  { key: 'NorthAmerica', label: 'ISNA (North America)' },
-  { key: 'Egyptian', label: 'Egyptian Authority' },
-  { key: 'Karachi', label: 'Karachi (University of Islamic Sciences)' },
-  { key: 'UmmAlQura', label: 'Umm al-Qura (Makkah)' },
-  { key: 'Dubai', label: 'Dubai' },
-  { key: 'Qatar', label: 'Qatar' },
-  { key: 'Kuwait', label: 'Kuwait' },
-  { key: 'Turkey', label: 'Turkey (Diyanet)' },
-  { key: 'Singapore', label: 'Singapore' },
-  { key: 'Tehran', label: 'Tehran' },
+  { key: 'MoonsightingCommittee', label: T("Moonsighting Committee (UK & US)") },
+  { key: 'MuslimWorldLeague', label: T("Muslim World League") },
+  { key: 'NorthAmerica', label: T("ISNA (North America)") },
+  { key: 'Egyptian', label: T("Egyptian Authority") },
+  { key: 'Karachi', label: T("Karachi (University of Islamic Sciences)") },
+  { key: 'UmmAlQura', label: T("Umm al-Qura (Makkah)") },
+  { key: 'Dubai', label: T("Dubai") },
+  { key: 'Qatar', label: T("Qatar") },
+  { key: 'Kuwait', label: T("Kuwait") },
+  { key: 'Turkey', label: T("Turkey (Diyanet)") },
+  { key: 'Singapore', label: T("Singapore") },
+  { key: 'Tehran', label: T("Tehran") },
 ]
 
 export const DEFAULT_PLACE = null // the user picks a city the first time
@@ -41,9 +42,9 @@ export function timesFor(place, day) {
 /** "13:08" in the place's own time zone. */
 export function clock(date, tz) {
   try {
-    return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', timeZone: tz || undefined })
+    return date.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit', timeZone: tz || undefined })
   } catch {
-    return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+    return date.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })
   }
 }
 
@@ -84,16 +85,19 @@ export function currentPrayer(place, today) {
 export const inWords = (ms) => {
   const m = Math.max(0, Math.round(ms / 60000))
   const h = Math.floor(m / 60)
-  return h ? `${h}h ${m % 60}m` : `${m}m`
+  return h ? T('{0}h {1}m', [h, m % 60]) : T('{0}m', [m])
 }
+
+/** The prayer's name in the app's language (Fajr / الفجر). */
+export const prayerName = (p) => (isAr ? p.ar : p.name)
 
 /** Islamic (Hijri) date, e.g. "22 Rabiʻ II 1448". */
 export function hijri(day) {
   const [y, m, d] = day.split('-').map(Number)
   try {
-    return new Intl.DateTimeFormat('en-GB-u-ca-islamic-umalqura', { day: 'numeric', month: 'long', year: 'numeric' })
+    return new Intl.DateTimeFormat(isAr ? 'ar-u-ca-islamic-umalqura-nu-latn' : 'en-GB-u-ca-islamic-umalqura', { day: 'numeric', month: 'long', year: 'numeric' })
       .format(new Date(y, m - 1, d, 12))
-      .replace(/\s?AH$/, '')
+      .replace(/\s?(AH|هـ)$/, '');
   } catch {
     return ''
   }
@@ -104,7 +108,7 @@ export async function findPlaces(query) {
   const q = query.trim()
   if (q.length < 2) return []
   const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?count=8&language=en&format=json&name=${encodeURIComponent(q)}`)
-  if (!res.ok) throw new Error('City search is not available right now. Try “Use my location”.')
+  if (!res.ok) throw new Error(T("City search is not available right now. Try “Use my location”."))
   const out = await res.json()
   return (out.results || []).map((r) => ({
     name: r.name,

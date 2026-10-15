@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { T } from './i18n'
 
 /** Phone notifications (Web Push). Works in Chrome on Android, desktop browsers, and iPhone when added to the Home Screen. */
 
@@ -30,7 +31,7 @@ async function call(body) {
       const j = await error.context?.json?.()
       if (j?.error) msg = j.error
     } catch {}
-    if (error.context?.status === 404 || /Failed to send/i.test(msg)) msg = 'The “notify” function isn’t deployed yet (see the steps on this page).'
+    if (error.context?.status === 404 || /Failed to send/i.test(msg)) msg = T('The “notify” function isn’t deployed yet (see the steps on this page).')
     throw new Error(msg)
   }
   if (data?.error) throw new Error(data.error)
@@ -41,11 +42,19 @@ async function call(body) {
 export function blockedHelp(perm = Notification.permission) {
   const app = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true
   const iphone = /iPhone|iPad|iPod/.test(navigator.userAgent)
-  if (perm === 'default') return 'You closed the question without choosing. Tap “Turn on reminders” again and choose Allow.'
-  if (iphone) return 'Notifications are off for Tracker. Open iPhone Settings → Notifications → Tracker → turn on Allow Notifications, then come back and tap Turn on reminders.'
+  if (perm === 'default') return T(
+    "You closed the question without choosing. Tap “Turn on reminders” again and choose Allow."
+  );
+  if (iphone) return T(
+    "Notifications are off for Tracker. Open iPhone Settings → Notifications → Tracker → turn on Allow Notifications, then come back and tap Turn on reminders."
+  );
   if (app)
-    return 'Notifications are off for the Tracker app. Open phone Settings → Apps → Tracker → Notifications → turn on, then come back and tap Turn on reminders.'
-  return 'Notifications are blocked for this site. Tap the icon left of the web address → Permissions (or Site settings) → Notifications → Allow, then reload and tap Turn on reminders.'
+    return T(
+      "Notifications are off for the Tracker app. Open phone Settings → Apps → Tracker → Notifications → turn on, then come back and tap Turn on reminders."
+    );
+  return T(
+    "Notifications are blocked for this site. Tap the icon left of the web address → Permissions (or Site settings) → Notifications → Allow, then reload and tap Turn on reminders."
+  );
 }
 
 /** Is this phone/browser already getting reminders? */
@@ -59,7 +68,9 @@ export async function currentStatus() {
 
 /** Ask permission, subscribe this phone, and save it. */
 export async function enablePush() {
-  if (!pushSupported()) throw new Error('This browser can’t show notifications. On iPhone, add Tracker to your Home Screen first.')
+  if (!pushSupported()) throw new Error(T(
+    "This browser can’t show notifications. On iPhone, add Tracker to your Home Screen first."
+  ))
   const perm = await Notification.requestPermission()
   if (perm !== 'granted') throw new Error(blockedHelp(perm))
   const reg = (await registerWorker()) || (await navigator.serviceWorker.ready)
@@ -86,7 +97,7 @@ export async function enablePush() {
     },
     { onConflict: 'endpoint' }
   )
-  if (error) throw new Error(/push_subscriptions/.test(error.message) ? 'Run supabase/migrations/008_reminders.sql in Supabase first.' : error.message)
+  if (error) throw new Error(/push_subscriptions/.test(error.message) ? T("Run supabase/migrations/008_reminders.sql in Supabase first.") : error.message)
   await saveSettings({ tz: Intl.DateTimeFormat().resolvedOptions().timeZone })
 }
 
@@ -116,16 +127,16 @@ export async function sendTest() {
   const why = r?.problems?.length
     ? r.problems.join(' · ')
     : r?.devices === 0
-      ? 'This phone is not saved on the server.'
-      : 'Unknown reason.'
-  throw new Error(`Nothing was delivered. ${why}`)
+      ? T('This phone is not saved on the server.')
+      : T('Unknown reason.')
+  throw new Error(T("Nothing was delivered. {0}", [why]))
 }
 
 /** Reminder settings live in user_settings (time zone, prayer reminders). */
 export async function saveSettings(patch) {
   const { data: u } = await supabase.auth.getUser()
   const { error } = await supabase.from('user_settings').upsert({ user_id: u.user.id, ...patch, updated_at: new Date().toISOString() })
-  if (error) throw new Error(/sounds|ring_every/.test(error.message) ? 'Run supabase/migrations/010_sounds.sql in Supabase first.' : /column|prayer_|tz/.test(error.message) ? 'Run supabase/migrations/008_reminders.sql in Supabase first.' : error.message)
+  if (error) throw new Error(/sounds|ring_every/.test(error.message) ? T("Run supabase/migrations/010_sounds.sql in Supabase first.") : /column|prayer_|tz/.test(error.message) ? T("Run supabase/migrations/008_reminders.sql in Supabase first.") : error.message)
 }
 
 export async function loadSettings() {

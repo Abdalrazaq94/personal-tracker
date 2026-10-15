@@ -1,3 +1,4 @@
+import { T } from './i18n'
 // Minimal Trello REST client (runs in the browser with the user's own key + token).
 const API = 'https://api.trello.com/1'
 
@@ -9,8 +10,8 @@ async function call(path, { key, token }, { method = 'GET', params = {} } = {}) 
   const res = await fetch(`${API}${path}?${qs}`, { method })
   const text = await res.text()
   if (!res.ok) {
-    if (res.status === 401) throw new Error('Trello rejected the key or token. Check them and try again.')
-    throw new Error(text || `Trello error ${res.status}`)
+    if (res.status === 401) throw new Error(T('Trello rejected the key or token. Check them and try again.'))
+    throw new Error(text || T('Trello error {0}', [res.status]))
   }
   return text ? JSON.parse(text) : null
 }

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Segmented } from '../components/ui'
 import { T } from '../lib/i18n'
+import LangSwitch from '../components/LangSwitch'
 
 export default function Login() {
   const [mode, setMode] = useState('signin')
@@ -22,7 +23,7 @@ export default function Login() {
     } else {
       const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) setError(error.message)
-      else if (!data.session) setMessage('Account created. Check your email to confirm it, then sign in.')
+      else if (!data.session) setMessage(T("Account created. Check your email to confirm it, then sign in."))
     }
     setBusy(false)
   }
@@ -30,6 +31,7 @@ export default function Login() {
   return (
     <div className="auth">
       <form className="auth-card" onSubmit={submit}>
+        <LangSwitch className="lang-switch--login" />
         <h1 className="brand">{T("Tracker")}</h1>
         <p className="muted">{T("Words, tasks, habits, spending and plans — in one place.")}</p>
 
@@ -41,8 +43,8 @@ export default function Login() {
             setMessage(null)
           }}
           options={[
-            { value: 'signin', label: 'Sign in' },
-            { value: 'signup', label: 'Create account' },
+            { value: 'signin', label: T("Sign in") },
+            { value: 'signup', label: T("Create account") },
           ]}
         />
 

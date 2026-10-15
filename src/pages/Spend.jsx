@@ -4,7 +4,7 @@ import { dayLabel, money, startOfMonth, startOfWeek, today, ymd } from '../lib/d
 import AiPanel from '../components/AiPanel'
 import WalletSetup from '../components/WalletSetup'
 import { DeleteButton, Empty, ErrorBar, Loading, PageHeader } from '../components/ui'
-import { T } from '../lib/i18n'
+import { T, LOCALE } from '../lib/i18n'
 
 export default function Spend() {
   const { rows, loading, error, setError, insert, remove, reload } = useRows('expenses', { order: 'spent_on' })
@@ -39,7 +39,7 @@ export default function Spend() {
   const add = async (e) => {
     e.preventDefault()
     const n = Number(String(amount).replace(',', '.'))
-    if (!n || n <= 0) return setError('Enter an amount above zero.')
+    if (!n || n <= 0) return setError(T("Enter an amount above zero."));
     const ok = await insert({ amount: n, note: note.trim(), spent_on: date || today() })
     if (ok) {
       setAmount('')
@@ -49,7 +49,7 @@ export default function Spend() {
 
   return (
     <div className="page">
-      <PageHeader title={T("Spending")} subtitle={new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' })} />
+      <PageHeader title={T("Spending")} subtitle={new Date().toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' })} />
       <ErrorBar error={error} onClose={() => setError(null)} />
 
       <div className="totals">

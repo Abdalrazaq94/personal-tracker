@@ -238,7 +238,7 @@ input[type='date'] { appearance: none; -webkit-appearance: none; }
 }
 @media (min-width: 760px) { .sticky-search { top: 60px; } }
 .search {
-  height: 46px; border-radius: 999px !important; padding-left: 42px !important;
+  height: 46px; border-radius: 999px !important; padding-inline-start: 42px !important;
   background: var(--soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='8' cy='8' r='6'/%3E%3Cpath d='m13 13 4 4'/%3E%3C/svg%3E") no-repeat 16px center !important;
   border-color: transparent !important;
 }
@@ -271,7 +271,7 @@ input[type='date'] { appearance: none; -webkit-appearance: none; }
 .task__title { flex: 1; font-weight: 600; font-size: 16px; overflow-wrap: anywhere; }
 .task--done .task__title { text-decoration: line-through; color: var(--muted); font-weight: 500; }
 .task--doing .task__title::before { content: 'In progress · '; font-weight: 500; color: var(--muted); font-size: 13px; }
-.task__meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding-left: 38px; }
+.task__meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding-inline-start: 38px; }
 .badge {
   height: 28px; padding: 0 10px; border-radius: 999px;
   border: 1px solid var(--line); background: var(--bg);
@@ -307,7 +307,7 @@ input[type='date'] { appearance: none; -webkit-appearance: none; }
 .day__label { font-size: 11px; color: var(--muted); font-weight: 600; }
 .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); padding-top: 12px; }
 .stats-row div { display: flex; flex-direction: column; align-items: center; }
-.stats-row div + div { border-left: 1px solid var(--line); }
+.stats-row div + div { border-inline-start: 1px solid var(--line); }
 .stats-row strong { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .stats-row span { font-size: 12px; color: var(--muted); }
 
@@ -406,7 +406,7 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .play {
   position: absolute; left: 12px; bottom: 12px;
   width: 38px; height: 38px; border-radius: 50%;
-  display: grid; place-items: center; padding-left: 3px;
+  display: grid; place-items: center; padding-inline-start: 3px;
   background: rgba(0, 0, 0, .75); color: #fff; font-size: 14px;
 }
 .link-card__body { padding: 12px 10px 8px 14px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
@@ -502,7 +502,7 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .explain-head { display: flex; align-items: center; gap: 6px; margin-top: -6px; }
 
 .textarea-wrap { position: relative; }
-.textarea-wrap textarea { padding-right: 62px; }
+.textarea-wrap textarea { padding-inline-end: 62px; }
 .textarea-wrap .mic-btn { position: absolute; right: 8px; bottom: 10px; }
 
 .mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -549,7 +549,7 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 
 /* v4: one-box word adding, Arabic beside the word */
 .add-word { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 999px; }
-.add-word input { flex: 1; border-color: transparent !important; box-shadow: none !important; background: transparent; padding-left: 12px; }
+.add-word input { flex: 1; border-color: transparent !important; box-shadow: none !important; background: transparent; padding-inline-start: 12px; }
 .add-word:focus-within { border-color: var(--fg); }
 .add-word .btn { flex: none; }
 .word__line { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 12px; row-gap: 2px; min-width: 0; }
@@ -646,8 +646,8 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 /* v9: quick add for everything + AI day summary */
 .quick-all { display: flex; flex-direction: column; gap: 8px; }
 .quick-all__box { border: 1.5px solid var(--fg); }
-.quick-all__box .ai-spark { width: 28px; height: 28px; font-size: 12px; margin-left: 4px; }
-.quick-all__box input { padding-left: 4px; }
+.quick-all__box .ai-spark { width: 28px; height: 28px; font-size: 12px; margin-inline-start: 4px; }
+.quick-all__box input { padding-inline-start: 4px; }
 .quick-all__box .mic-btn { width: 40px; height: 40px; }
 .quick-all__hint { font-size: 12px; color: var(--muted); padding: 0 6px; }
 .quick-all__results { list-style: none; margin: 0; padding: 4px 12px; border-radius: var(--radius-sm); background: var(--soft); display: flex; flex-direction: column; }
@@ -675,7 +675,7 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .copy-row .btn { flex: none; }
 .wallet-test { display: block; margin-top: 6px; font-size: 13px; font-weight: 600; }
 .wallet-test.is-ok::before { content: '✓ '; }
-.expense__tag { margin-left: 8px; font-size: 11px; vertical-align: middle; }
+.expense__tag { margin-inline-start: 8px; font-size: 11px; vertical-align: middle; }
 
 /* ---------- Commitments: prayer ---------- */
 .prayer { display: flex; flex-direction: column; gap: 14px; }
@@ -701,7 +701,7 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .prayer-row__name span { color: var(--muted); font-size: 14px; }
 .prayer-row.is-done .prayer-row__name span { color: var(--w-memorized-ink); }
 .prayer-row__time { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.prayer-row__wait { min-width: 120px; text-align: right; }
+.prayer-row__wait { min-width: 120px; text-align: end; }
 .prayer-row__acts { display: inline-flex; padding: 3px; gap: 2px; background: var(--soft); border-radius: 999px; }
 .prayer-row.is-done .prayer-row__acts { background: rgba(255, 255, 255, .7); }
 .prayer-row__acts button { height: 30px; padding: 0 11px; border: 0; border-radius: 999px; background: transparent; font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; }
@@ -721,20 +721,20 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .prayer-dot.is-late { background: repeating-linear-gradient(135deg, var(--w-memorized-ink) 0 3px, #cfe6d3 3px 6px); border-color: var(--w-memorized-ink); }
 .prayer-dot.is-future { background: transparent; border-style: dashed; }
 .prayer-legend { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
-.prayer-legend .prayer-dot { width: 12px; height: 12px; margin-left: 8px; }
-.prayer-legend .prayer-dot:first-child { margin-left: 0; }
+.prayer-legend .prayer-dot { width: 12px; height: 12px; margin-inline-start: 8px; }
+.prayer-legend .prayer-dot:first-child { margin-inline-start: 0; }
 
 .prayer-pick { display: flex; flex-direction: column; gap: 10px; }
 .prayer-pick__list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
 .prayer-pick__list li + li { border-top: 1px solid var(--line); }
-.prayer-pick__list button { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; padding: 10px 14px; border: 0; background: var(--bg); text-align: left; }
+.prayer-pick__list button { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; padding: 10px 14px; border: 0; background: var(--bg); text-align: start; }
 .prayer-pick__list button:hover { background: var(--soft); }
 .prayer-pick__acts { display: flex; align-items: center; gap: 12px; }
 
 @media (max-width: 420px) {
   .prayer-row { grid-template-columns: 24px 1fr auto; row-gap: 8px; }
   .prayer-row__acts, .prayer-row__wait { grid-column: 2 / -1; justify-self: start; }
-  .prayer-row__wait { text-align: left; min-width: 0; }
+  .prayer-row__wait { text-align: start; min-width: 0; }
   .prayer-row__name { flex-wrap: wrap; }
 }
 
@@ -743,8 +743,8 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .prayer-chart { margin: 0; display: flex; flex-direction: column; gap: 2px; }
 .prayer-chart svg { width: 100%; height: auto; display: block; touch-action: none; }
 .prayer-chart__legend { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
-.prayer-chart__legend .lg { display: inline-block; width: 18px; height: 0; border-top: 2px solid #2f7a3f; margin-left: 6px; }
-.prayer-chart__legend .lg:first-child { margin-left: 0; }
+.prayer-chart__legend .lg { display: inline-block; width: 18px; height: 0; border-top: 2px solid #2f7a3f; margin-inline-start: 6px; }
+.prayer-chart__legend .lg:first-child { margin-inline-start: 0; }
 .prayer-chart__legend .lg--ontime { border-top: 2px dashed #2f5d93; }
 .prayer-chart__end { fill: var(--fg); font-weight: 600; }
 .prayer-rates { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
@@ -793,7 +793,7 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .drawer ul { list-style: none; margin: 0; padding: 0 10px; flex: 1; }
 .drawer li button {
   width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
-  padding: 10px 12px; border: 0; border-radius: 12px; background: none; text-align: left;
+  padding: 10px 12px; border: 0; border-radius: 12px; background: none; text-align: start;
 }
 .drawer li button strong { font-size: 16px; }
 .drawer li button span { font-size: 13px; color: var(--muted); }
@@ -816,7 +816,7 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .qa-types { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .qa-types .chip { cursor: pointer; }
 .qa-types .chip:disabled { opacity: .4; cursor: default; }
-.qa-remove { margin-left: auto; }
+.qa-remove { margin-inline-start: auto; }
 .qa-card input:not([type='checkbox']), .qa-card select { height: 42px; }
 .qa-card select { padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg); font: inherit; font-size: 16px; }
 .qa-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -824,12 +824,12 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .qa-small { max-width: 90px; }
 .qa-check { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
 .qa-actions { display: flex; align-items: center; gap: 12px; }
-.plan__time { display: inline-block; margin-right: 8px; padding: 1px 7px; border-radius: 6px; background: var(--fg); color: var(--bg); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; vertical-align: 1px; }
+.plan__time { display: inline-block; margin-inline-end: 8px; padding: 1px 7px; border-radius: 6px; background: var(--fg); color: var(--bg); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; vertical-align: 1px; }
 
 /* reminders */
 .plan-opts { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .plan-opts select { height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg); font: inherit; font-size: 14px; }
-.plan__imp { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: var(--fg); color: var(--bg); font-size: 12px; font-weight: 800; vertical-align: 1px; }
+.plan__imp { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-inline-end: 6px; border-radius: 50%; background: var(--fg); color: var(--bg); font-size: 12px; font-weight: 800; vertical-align: 1px; }
 .plan__postpone { display: flex; gap: 6px; margin-top: 6px; }
 .plan__postpone .chip { height: 28px; cursor: pointer; }
 .qa-card select { width: 100%; }
@@ -847,7 +847,7 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .rem-switch:checked { background: var(--fg); }
 .rem-switch:checked::after { transform: translateX(18px); }
 .rem-switch:disabled { opacity: .45; cursor: default; }
-.rem-tips { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: #3a3a3a; }
+.rem-tips { margin: 0; padding-inline-start: 18px; display: flex; flex-direction: column; gap: 6px; color: #3a3a3a; }
 
 /* alarm while the app is open */
 .alarm { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px; background: rgba(10, 10, 10, .55); }
@@ -868,7 +868,7 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .snd-row__head { display: flex; flex-direction: column; gap: 2px; }
 .snd-row__controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .snd-row__controls .rem-select { flex: 1 1 130px; max-width: none; }
-.snd-play { flex: none; width: 44px; padding-left: 0; padding-right: 0; }
+.snd-play { flex: none; width: 44px; padding-inline-start: 0; padding-inline-end: 0; }
 .alarm-toast { position: fixed; z-index: 1000; left: 12px; right: 12px; top: 12px; margin: 0 auto; max-width: 480px; background: var(--fg); color: var(--bg); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 12px 30px rgba(0,0,0,.25); }
 .alarm-toast__text { display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
 .alarm-toast__text span { opacity: .8; font-size: 14px; }
@@ -1036,3 +1036,53 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .adhan-pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .adhan-box .btn--ghost { background: #fff; }
 .adhan-credit { margin: 0; font-size: 12px; } .adhan-credit a { color: inherit; }
+
+
+/* ================= Arabic: right-to-left ================= */
+[dir='rtl'] body, [dir='rtl'] button, [dir='rtl'] input, [dir='rtl'] select, [dir='rtl'] textarea {
+  font-family: 'IBM Plex Sans Arabic', var(--font);
+}
+/* Arabic letters join up: never space them apart */
+[dir='rtl'] *, [dir='rtl'] *::before, [dir='rtl'] *::after { letter-spacing: 0 !important; }
+[dir='rtl'] .display { line-height: 1.25; }
+[dir='rtl'] .page-header h1 { line-height: 1.3; }
+
+/* the menu slides in from the right */
+[dir='rtl'] .drawer { left: auto; right: 0; animation-name: drawer-slide-rtl; }
+@keyframes drawer-slide-rtl { from { transform: translateX(100%); } to { transform: none; } }
+[dir='rtl'] .drawer li button { align-items: flex-start; }
+
+/* on/off switches: the knob starts on the right */
+[dir='rtl'] .switch__track::after { left: auto; right: 3px; }
+[dir='rtl'] .switch input:checked + .switch__track::after { transform: translateX(-14px); }
+[dir='rtl'] .rem-switch::after { left: auto; right: 3px; }
+[dir='rtl'] .rem-switch:checked::after { transform: translateX(-18px); }
+
+/* dropdown arrow on the left */
+[dir='rtl'] select { background-position: left 14px center; }
+
+/* the mic in text boxes, the small corner arrows */
+[dir='rtl'] .textarea-wrap .mic-btn { right: auto; left: 8px; }
+[dir='rtl'] .home-card__arrow { right: auto; left: 16px; }
+[dir='rtl'] .today-link, [dir='rtl'] .more-item > a > span[aria-hidden] { display: inline-block; transform: scaleX(-1); }
+
+/* charts keep time running left → right, like most Arabic apps */
+[dir='rtl'] .prayer-chart svg, [dir='rtl'] .habit-chart svg, [dir='rtl'] .habit-charts svg { direction: ltr; }
+
+/* tilt the other way */
+[dir='rtl'] .home-tile:hover .home-tile__icon, [dir='rtl'] .home-glare:hover .home-tile__icon { transform: scale(1.1) rotate(4deg); }
+
+/* times, amounts and links read left-to-right inside Arabic text */
+[dir='rtl'] .plan__time, [dir='rtl'] .count-up, [dir='rtl'] input[type='time'], [dir='rtl'] input[type='datetime-local'],
+[dir='rtl'] input[type='url'], [dir='rtl'] input[inputmode='decimal'] { direction: ltr; unicode-bidi: isolate; }
+[dir='rtl'] input[type='time'], [dir='rtl'] input[type='datetime-local'] { text-align: end; }
+
+/* language switch */
+.lang-switch { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--soft); gap: 2px; }
+.lang-switch button { border: 0; background: transparent; padding: 6px 12px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.lang-switch button[lang='ar'] { font-family: 'IBM Plex Sans Arabic', var(--font); }
+.lang-switch button.is-active { background: var(--fg); color: var(--bg); }
+.drawer__lang { padding: 10px 16px; border-top: 1px solid var(--line); }
+.lang-switch--top { margin-inline-start: auto; align-self: center; }
+.lang-switch--login { align-self: center; margin-bottom: 8px; }
+[dir='rtl'] .search { background-position: right 16px center !important; }

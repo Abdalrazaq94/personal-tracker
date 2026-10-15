@@ -67,9 +67,9 @@ export default function Plan() {
   }
 
   const quick = [
-    { label: 'Today', value: today() },
-    { label: 'Tomorrow', value: tomorrow() },
-    { label: 'In 2 days', value: ymd(addDays(new Date(), 2)) },
+    { label: T("Today"), value: today() },
+    { label: T("Tomorrow"), value: tomorrow() },
+    { label: T("In 2 days"), value: ymd(addDays(new Date(), 2)) },
   ]
 
   return (
@@ -124,9 +124,9 @@ export default function Plan() {
         value={view}
         onChange={setView}
         options={[
-          { value: 'tomorrow', label: 'Tomorrow' },
-          { value: 'week', label: 'Next 7 days' },
-          { value: 'all', label: 'All' },
+          { value: 'tomorrow', label: T("Tomorrow") },
+          { value: 'week', label: T("Next 7 days") },
+          { value: 'all', label: T("All") },
         ]}
       />
 

@@ -3,6 +3,7 @@
  * Each sound has its own vibration pattern too — the vibration works even when the app is closed.
  * Keep the ids and vibration patterns in sync with public/sw.js.
  */
+import { T } from './i18n'
 
 const note = (ctx, at, freq, { type = 'sine', vol = 0.25, len = 0.3, attack = 0.01, decay = true } = {}) => {
   const o = ctx.createOscillator()
@@ -24,7 +25,7 @@ const note = (ctx, at, freq, { type = 'sine', vol = 0.25, len = 0.3, attack = 0.
 // each: label, how long one play lasts (s), the vibration, and how to play it
 export const SOUNDS = {
   chime: {
-    label: 'Chime',
+    label: T("Chime"),
     len: 1.4,
     vibrate: [200, 100, 200],
     play: (ctx, t) => {
@@ -33,7 +34,7 @@ export const SOUNDS = {
     },
   },
   bell: {
-    label: 'Bell',
+    label: T("Bell"),
     len: 2.4,
     vibrate: [600, 400, 600],
     play: (ctx, t) => {
@@ -45,7 +46,7 @@ export const SOUNDS = {
     },
   },
   alarm: {
-    label: 'Alarm',
+    label: T("Alarm"),
     len: 1.2,
     vibrate: [800, 300, 800, 300, 800, 300, 800, 300, 800, 300, 800],
     play: (ctx, t) => {
@@ -53,7 +54,7 @@ export const SOUNDS = {
     },
   },
   digital: {
-    label: 'Digital beeps',
+    label: T("Digital beeps"),
     len: 1.0,
     vibrate: [100, 80, 100, 80, 100, 400, 100, 80, 100, 80, 100],
     play: (ctx, t) => {
@@ -62,7 +63,7 @@ export const SOUNDS = {
     },
   },
   marimba: {
-    label: 'Marimba',
+    label: T("Marimba"),
     len: 1.3,
     vibrate: [150, 80, 150, 80, 150, 80, 400],
     play: (ctx, t) => {
@@ -70,7 +71,7 @@ export const SOUNDS = {
     },
   },
   gentle: {
-    label: 'Gentle',
+    label: T("Gentle"),
     len: 2.2,
     vibrate: [1000],
     play: (ctx, t) => {
@@ -78,7 +79,7 @@ export const SOUNDS = {
     },
   },
   ping: {
-    label: 'Ping',
+    label: T("Ping"),
     len: 0.8,
     vibrate: [120],
     play: (ctx, t) => note(ctx, t, 1760, { len: 0.6, vol: 0.2 }),
@@ -88,19 +89,19 @@ export const SOUNDS = {
 // Adhan choices (see lib/adhan.js); only offered for prayers
 export const ADHAN = { vibrate: [400, 200, 400, 200, 1200] }
 export const ADHAN_CHOICES = [
-  ['adhan', '🕌 Adhan 1'],
-  ['adhan2', '🕌 Adhan 2'],
-  ['adhan-mine', '🕌 My own adhan recording'],
+  ['adhan', T('🕌 Adhan 1')],
+  ['adhan2', T('🕌 Adhan 2')],
+  ['adhan-mine', T('🕌 My own adhan recording')],
 ]
 
 export const SOUND_IDS = Object.keys(SOUNDS)
 
 // what each kind of reminder uses until you change it
 export const KINDS = [
-  { id: 'plan', label: 'Plans', hint: 'Plans with a time' },
-  { id: 'important', label: 'Important plans', hint: 'Plans marked Important' },
-  { id: 'task', label: 'Tasks', hint: 'Tasks with “Remind me”' },
-  { id: 'prayer', label: 'Prayers', hint: 'Fajr, Dhuhr, Asr, Maghrib, Isha' },
+  { id: 'plan', label: T("Plans"), hint: T("Plans with a time") },
+  { id: 'important', label: T("Important plans"), hint: T("Plans marked Important") },
+  { id: 'task', label: T("Tasks"), hint: T("Tasks with “Remind me”") },
+  { id: 'prayer', label: T("Prayers"), hint: T("Fajr, Dhuhr, Asr, Maghrib, Isha") },
 ]
 export const DEFAULT_SOUNDS = {
   plan: { sound: 'chime', ring: false },

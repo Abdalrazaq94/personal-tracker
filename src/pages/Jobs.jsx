@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { addCard, authorizeUrl, getBoard, getBoards, getLists, moveCard } from '../lib/trello'
 import { Sheet } from '../components/Collections'
 import { Empty, ErrorBar, Loading, PageHeader } from '../components/ui'
-import { T, Tr } from '../lib/i18n'
+import { T, Tr, LOCALE } from '../lib/i18n'
 
 export default function Jobs() {
   const [settings, setSettings] = useState(undefined) // undefined = loading, null = not connected
@@ -33,7 +33,7 @@ export default function Jobs() {
   }
 
   const disconnect = async () => {
-    if (!window.confirm('Disconnect Trello from this app? Your Trello board is not changed.')) return
+    if (!window.confirm(T("Disconnect Trello from this app? Your Trello board is not changed."))) return
     await save({ trello_key: '', trello_token: '', trello_board_id: '' })
     setSettings(null)
   }
@@ -74,7 +74,7 @@ function Connect({ initial, onSave, onCancel }) {
       setBoards(b)
       if (!b.some((x) => x.id === boardId)) setBoardId((b.find((x) => /job|apply|appl/i.test(x.name)) || b[0])?.id || '')
     } catch (err) {
-      setError(err.message === 'Failed to fetch' ? 'Could not reach Trello. Check your internet connection.' : err.message)
+      setError(err.message === 'Failed to fetch' ? T("Could not reach Trello. Check your internet connection.") : err.message)
     }
     setBusy(false)
   }
@@ -178,7 +178,7 @@ function Board({ settings, onChangeBoard, onDisconnect }) {
       setLists(l)
       setError(null)
     } catch (e) {
-      setError(e.message === 'Failed to fetch' ? 'Could not reach Trello.' : e.message)
+      setError(e.message === 'Failed to fetch' ? T("Could not reach Trello.") : e.message)
       setLists((x) => x || [])
     }
   }, [auth, settings.trello_board_id])
@@ -269,7 +269,7 @@ function Board({ settings, onChangeBoard, onDisconnect }) {
                       {c.name}
                     </a>
                     <span className="muted small nowrap">
-                      {new Date(c.dateLastActivity).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                      {new Date(c.dateLastActivity).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })}
                     </span>
                   </div>
                   {c.desc && (
@@ -287,7 +287,7 @@ function Board({ settings, onChangeBoard, onDisconnect }) {
                       {c.due && (
                         <span className={`tag ${c.dueComplete ? '' : 'tag--solid'}`}>{Tr(
                             "Due {0}",
-                            new Date(c.due).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+                            new Date(c.due).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })
                           )}</span>
                       )}
                     </div>

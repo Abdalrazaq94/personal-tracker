@@ -7,7 +7,7 @@ import AiPanel from '../components/AiPanel'
 import HabitCharts from '../components/HabitCharts'
 import { Sheet } from '../components/Collections'
 import { DeleteButton, Empty, ErrorBar, Loading, PageHeader, Segmented } from '../components/ui'
-import { T, Tr } from '../lib/i18n'
+import { T, Tr, LOCALE } from '../lib/i18n'
 
 const NEEDS_UPDATE =
   'The database needs a small update for this: run supabase/migrations/003_habits_v2.sql (and 002 if you haven’t) in the Supabase SQL Editor.'
@@ -92,8 +92,8 @@ export default function Habits() {
       />
       <div className="habit-tabs" role="tablist">
         {[
-          { v: 'good', label: 'Good habits', n: counts.good },
-          { v: 'bad', label: 'Bad habits', n: counts.bad },
+          { v: 'good', label: T("Good habits"), n: counts.good },
+          { v: 'bad', label: T("Bad habits"), n: counts.bad },
         ].map((t) => (
           <button key={t.v} type="button" role="tab" aria-selected={view === t.v} className={view === t.v ? 'is-active' : ''} onClick={() => setView(t.v)}>
             {t.label}
@@ -255,8 +255,8 @@ function HabitForm({ initial, onSubmit, bare }) {
         value={kind}
         onChange={switchKind}
         options={[
-          { value: 'good', label: '＋ Good habit' },
-          { value: 'bad', label: '− Bad habit' },
+          { value: 'good', label: T("＋ Good habit") },
+          { value: 'bad', label: T("− Bad habit") },
         ]}
       />
       <div className="row-2 row-2--wide-first">
@@ -339,7 +339,7 @@ function TriggerSheet({ habit, onPick, onClose }) {
       <div className="trigger-grid">
         {TRIGGERS.map((t) => (
           <button key={t} type="button" className="trigger" onClick={() => onPick(t)}>
-            {t}
+            {T(t)}
           </button>
         ))}
       </div>
@@ -363,25 +363,25 @@ function HabitCard({ habit, logs, onPlus, onMinus, onResisted, onSkip, onEdit, o
       Array.from({ length: 7 }, (_, i) => {
         const day = addDays(new Date(), i - 6)
         const key = ymd(day)
-        return { key, label: day.toLocaleDateString(undefined, { weekday: 'narrow' }), c: logOn(logs, habit.id, key).count, state: dayState(habit, logs, day) }
+        return { key, label: day.toLocaleDateString(LOCALE, { weekday: 'narrow' }), c: logOn(logs, habit.id, key).count, state: dayState(habit, logs, day) }
       }),
     [logs, habit]
   )
 
   const status =
     state === 'skipped'
-      ? 'Skipped today'
+      ? T('Skipped today')
       : state === 'off'
-        ? 'Rest day — not planned today'
+        ? T('Rest day — not planned today')
         : bad
           ? log.count === 0
-            ? 'Clean today ✓'
+            ? T('Clean today ✓')
             : success(habit, log.count)
-              ? `Within your limit today (${log.count}/${habit.target})`
-              : 'Over your limit today'
+              ? T('Within your limit today ({0}/{1})', [log.count, habit.target])
+              : T('Over your limit today')
           : state === 'ok'
-            ? 'Done today ✓'
-            : 'Not done yet today'
+            ? T('Done today ✓')
+            : T('Not done yet today')
 
   return (
     <li className={`item habit ${state === 'ok' ? 'habit--done' : ''} ${bad ? 'habit--bad' : ''}`}>
@@ -475,7 +475,7 @@ function HabitCard({ habit, logs, onPlus, onMinus, onResisted, onSkip, onEdit, o
         <div className="habit__insights">
           {s.triggers.length > 0 && (
             <p>
-              <b>{T("Top triggers:")}</b> {s.triggers.slice(0, 3).map((t) => `${t.name} (${t.n})`).join(' · ')}
+              <b>{T("Top triggers:")}</b> {s.triggers.slice(0, 3).map((t) => `${T(t.name)} (${t.n})`).join(' · ')}
             </p>
           )}
           {s.resistedTotal > 0 && (

@@ -74,7 +74,7 @@ export default function Reminders() {
     const st = await playAdhan('dhuhr', choice)
     if (!st) {
       setAdhanPlaying(false)
-      setError('Couldn’t play the adhan. Check your internet connection and try again.')
+      setError(T("Couldn’t play the adhan. Check your internet connection and try again."))
       return
     }
     adhanStop.current = st
@@ -96,7 +96,7 @@ export default function Reminders() {
     setSettings((s) => ({ ...s, sounds: next }))
     run(async () => {
       await saveSettings({ sounds: next, ...(kind === 'prayer' ? { prayer_repeat: next.prayer.ring } : {}) })
-    }, 'Saved.')
+    }, T("Saved."))
   }
 
   const on = status === 'on'
@@ -146,14 +146,14 @@ export default function Reminders() {
         </div>
         <div className="rem-actions">
           {!on && status !== 'unsupported' && (
-            <button className="btn" disabled={busy} onClick={() => run(enablePush, 'Done. Now tap “Send a test”.')}>
+            <button className="btn" disabled={busy} onClick={() => run(enablePush, T("Done. Now tap “Send a test”."))}>
               {busy ? T("Turning on…") : T("Turn on reminders")}
             </button>
           )}
           {on && (
             <>
-              <button className="btn" disabled={busy} onClick={() => run(sendTest, 'Sent. It should arrive in a few seconds.')}>{T("Send a test")}</button>
-              <button className="btn btn--ghost" disabled={busy} onClick={() => run(disablePush, 'Reminders are off on this phone.')}>{T("Turn off")}</button>
+              <button className="btn" disabled={busy} onClick={() => run(sendTest, T("Sent. It should arrive in a few seconds."))}>{T("Send a test")}</button>
+              <button className="btn btn--ghost" disabled={busy} onClick={() => run(disablePush, T("Reminders are off on this phone."))}>{T("Turn off")}</button>
             </>
           )}
         </div>
@@ -175,10 +175,10 @@ export default function Reminders() {
                 <span className="muted small">{k.hint}</span>
               </div>
               <div className="snd-row__controls">
-                <select className="rem-select" aria-label={`${k.label} sound`} value={v.sound} disabled={locked} onChange={(e) => setSound(k.id, { sound: e.target.value })}>
+                <select className="rem-select" aria-label={T('{0} sound', [k.label])} value={v.sound} disabled={locked} onChange={(e) => setSound(k.id, { sound: e.target.value })}>
                   {k.id === 'prayer' &&
                     (appAdhan
-                      ? [['adhan', `🕌 ${appAdhan.label}`], ['adhan1', '🕌 Adhan 1'], ...ADHAN_CHOICES.slice(1)]
+                      ? [['adhan', `🕌 ${appAdhan.label}`], ['adhan1', T('🕌 Adhan 1')], ...ADHAN_CHOICES.slice(1)]
                       : ADHAN_CHOICES
                     ).map(([id, label]) => (
                       <option key={id} value={id}>
@@ -194,7 +194,7 @@ export default function Reminders() {
                 <button
                   type="button"
                   className="btn btn--ghost snd-play"
-                  aria-label={isAdhan(v.sound) ? (adhanPlaying ? 'Stop the adhan' : 'Play the adhan') : `Play ${SOUNDS[v.sound]?.label}`}
+                  aria-label={isAdhan(v.sound) ? (adhanPlaying ? T('Stop the adhan') : T('Play the adhan')) : T('Play {0}', [SOUNDS[v.sound]?.label])}
                   onClick={() => (isAdhan(v.sound) ? toggleAdhan(v.sound) : preview(v.sound))}
                 >
                   {isAdhan(v.sound) && adhanPlaying ? '■' : '▶'}
@@ -204,8 +204,8 @@ export default function Reminders() {
                   value={v.ring ? 'ring' : 'once'}
                   onChange={(m) => !locked && setSound(k.id, { ring: m === 'ring' })}
                   options={[
-                    { value: 'ring', label: 'Ring until I answer' },
-                    { value: 'once', label: 'Once' },
+                    { value: 'ring', label: T("Ring until I answer") },
+                    { value: 'once', label: T("Once") },
                   ]}
                 />
               </div>
@@ -224,7 +224,7 @@ export default function Reminders() {
                 </p>
               )}
             </div>
-          )
+          );
         })}
         <label className="rem-row">
           <span>
@@ -240,7 +240,7 @@ export default function Reminders() {
               run(async () => {
                 await saveSettings({ ring_every })
                 setSettings((s) => ({ ...s, ring_every }))
-              }, 'Saved.')
+              }, T("Saved."))
             }}
           >
             <option value={1}>{T("Every 1 min")}</option>
@@ -356,13 +356,19 @@ function Diagnostics({ status }) {
       }
       const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null
       const sub = await reg?.pushManager?.getSubscription?.().catch(() => null)
-      const app = window.matchMedia?.('(display-mode: standalone)').matches ? 'app' : 'browser tab'
+      const app = window.matchMedia?.('(display-mode: standalone)').matches ? 'app' : T('browser tab')
       const ua = navigator.userAgent.match(/(SamsungBrowser|EdgA|Edg|Firefox|OPR|CriOS|Chrome|Version)\/[\d.]+/)?.[0] || ''
       if (alive)
         setInfo(
-          `Details: ${status} · permission ${perm}${android && android !== perm ? ` / ${android}` : ''} · helper ${reg ? (reg.active ? 'ready' : 'starting') : 'missing'} · ${
-            sub ? 'subscribed' : 'not subscribed'
-          } · ${app} · ${ua}`
+          T("Details: {0} · permission {1}{2} · helper {3} · {4} · {5} · {6}", [
+            status,
+            perm,
+            android && android !== perm ? ` / ${android}` : '',
+            reg ? (reg.active ? 'ready' : 'starting') : 'missing',
+            sub ? 'subscribed' : T("not subscribed"),
+            app,
+            ua
+          ])
         )
     })()
     return () => {
@@ -396,7 +402,7 @@ function AdhanFiles() {
   const toggle = async (slot) => {
     if (playing) return stop()
     const st = await playAdhan(slot === 'adhan-fajr' ? 'fajr' : 'dhuhr', 'adhan-mine')
-    if (!st) return setError('Choose your adhan recording first.')
+    if (!st) return setError(T("Choose your adhan recording first."));
     stopRef.current = st
     setPlaying(slot)
   }
@@ -451,8 +457,8 @@ function AdhanFiles() {
 
   return (
     <div className="adhan-box">
-      {row('adhan', 'Adhan recording', 'Choose an adhan audio file (mp3) from your phone')}
-      {row('adhan-fajr', 'Fajr adhan (optional)', 'A different recording just for Fajr')}
+      {row('adhan', T('Adhan recording'), T('Choose an adhan audio file (mp3) from your phone'))}
+      {row('adhan-fajr', T('Fajr adhan (optional)'), T('A different recording just for Fajr'))}
       {error && <p className="small error-text">{error}</p>}
       <p className="muted small">{T(
         "Your recording is kept on this phone only. If none is chosen, Adhan 1 plays."
@@ -463,21 +469,21 @@ function AdhanFiles() {
 
 /** App owner only: upload the adhan every user gets. */
 function OwnerAdhan({ current, onChange }) {
-  const [label, setLabel] = useState(current?.label || 'Madinah adhan')
+  const [label, setLabel] = useState(current?.label || T('Madinah adhan'))
   const [file, setFile] = useState(null)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
 
   const save = async () => {
-    if (!file) return setErr('Choose the recording first.')
+    if (!file) return setErr(T("Choose the recording first."));
     setBusy(true)
     setErr('')
     setMsg('')
     try {
       onChange(await uploadAppAdhan(file, label))
       setFile(null)
-      setMsg('Saved. Everyone now gets this adhan for prayers.')
+      setMsg(T("Saved. Everyone now gets this adhan for prayers."))
     } catch (e) {
       setErr(e.message)
     }
@@ -514,7 +520,7 @@ function OwnerAdhan({ current, onChange }) {
               setBusy(true)
               try {
                 onChange(await removeAppAdhan())
-                setMsg('Removed. Everyone is back to Adhan 1.')
+                setMsg(T("Removed. Everyone is back to Adhan 1."))
               } catch (e) {
                 setErr(e.message)
               }

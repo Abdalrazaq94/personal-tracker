@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useRows } from '../lib/useRows'
 import AiPanel from '../components/AiPanel'
 import { DeleteButton, Empty, ErrorBar, Loading, PageHeader, Segmented } from '../components/ui'
-import { T } from '../lib/i18n'
+import { T, LOCALE } from '../lib/i18n'
 
 const STATUS_ORDER = { doing: 0, todo: 1, done: 2 }
 
@@ -26,10 +26,10 @@ function whenLabel(iso) {
   const d = new Date(iso)
   const day = new Date(d).setHours(0, 0, 0, 0)
   const today = new Date().setHours(0, 0, 0, 0)
-  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
-  if (day === today) return `Today ${time}`
-  if (day === today + 864e5) return `Tomorrow ${time}`
-  return `${d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })} ${time}`
+  const time = d.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  if (day === today) return T("Today {0}", [time]);
+  if (day === today + 864e5) return T("Tomorrow {0}", [time]);
+  return `${d.toLocaleDateString(LOCALE, { weekday: 'short', day: 'numeric', month: 'short' })} ${time}`
 }
 
 export default function Tasks() {
@@ -97,8 +97,8 @@ export default function Tasks() {
             value={priority}
             onChange={setPriority}
             options={[
-              { value: 'normal', label: 'Normal' },
-              { value: 'important', label: 'Important' },
+              { value: 'normal', label: T("Normal") },
+              { value: 'important', label: T("Important") },
             ]}
           />
           <button type="button" className={`badge ${remind ? 'badge--solid' : ''}`} onClick={() => setRemind(remind ? '' : inAnHour())}>
@@ -123,10 +123,10 @@ export default function Tasks() {
             value={filter}
             onChange={setFilter}
             options={[
-              { value: 'all', label: 'All', count: counts.all },
-              { value: 'todo', label: 'To do', count: counts.todo },
-              { value: 'doing', label: 'Doing', count: counts.doing },
-              { value: 'done', label: 'Done', count: counts.done },
+              { value: 'all', label: T("All"), count: counts.all },
+              { value: 'todo', label: T("To do"), count: counts.todo },
+              { value: 'doing', label: T("Doing"), count: counts.doing },
+              { value: 'done', label: T("Done"), count: counts.done },
             ]}
           />
         </div>
@@ -188,9 +188,9 @@ export default function Tasks() {
                   value={t.status}
                   onChange={(s) => update(t.id, { status: s })}
                   options={[
-                    { value: 'todo', label: 'To do' },
-                    { value: 'doing', label: 'Doing' },
-                    { value: 'done', label: 'Done' },
+                    { value: 'todo', label: T("To do") },
+                    { value: 'doing', label: T("Doing") },
+                    { value: 'done', label: T("Done") },
                   ]}
                 />
               </div>

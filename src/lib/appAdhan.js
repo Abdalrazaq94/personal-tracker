@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { T } from './i18n'
 
 /**
  * The app adhan: one recording the app owner uploads (Reminders page) that every user gets as their adhan.
@@ -23,8 +24,8 @@ async function loadAppAdhan() {
       .then(({ data, error }) => {
         if (error || !data?.adhan_version) return null
         const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(FILE)
-        return { label: data.adhan_label || 'App adhan', url: `${pub.publicUrl}?v=${data.adhan_version}` }
-      })
+        return { label: data.adhan_label || T("App adhan"), url: `${pub.publicUrl}?v=${data.adhan_version}` };
+      });
   } catch {
     return null // never let this break a page
   }
@@ -45,11 +46,11 @@ export async function isAppOwner() {
 
 /** Owner only: upload (or replace) the app adhan. */
 export async function uploadAppAdhan(file, label) {
-  if (!file.type.startsWith('audio/') && !/\.(mp3|m4a|aac|ogg|wav)$/i.test(file.name)) throw new Error('Please choose an audio file (mp3 is best).')
-  if (file.size > 15 * 1024 * 1024) throw new Error('That file is too big (over 15 MB).')
+  if (!file.type.startsWith('audio/') && !/\.(mp3|m4a|aac|ogg|wav)$/i.test(file.name)) throw new Error(T("Please choose an audio file (mp3 is best)."))
+  if (file.size > 15 * 1024 * 1024) throw new Error(T("That file is too big (over 15 MB)."))
   const up = await supabase.storage.from(BUCKET).upload(FILE, file, { upsert: true, contentType: file.type || 'audio/mpeg', cacheControl: '3600' })
-  if (up.error) throw new Error(/bucket|not found|policy|security/i.test(up.error.message) ? 'Run supabase/migrations/012_app_adhan.sql first (with your email in it).' : up.error.message)
-  const { error } = await supabase.from('app_config').update({ adhan_label: label.trim() || 'App adhan', adhan_version: Date.now() }).eq('id', 1)
+  if (up.error) throw new Error(/bucket|not found|policy|security/i.test(up.error.message) ? T("Run supabase/migrations/012_app_adhan.sql first (with your email in it).") : up.error.message)
+  const { error } = await supabase.from('app_config').update({ adhan_label: label.trim() || T('App adhan'), adhan_version: Date.now() }).eq('id', 1)
   if (error) throw new Error(error.message)
   return refreshAppAdhan()
 }

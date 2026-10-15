@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { callAi } from './ai'
 import { dayLabel, money, today } from './dates'
+import { T } from './i18n'
 
 /**
  * Carries out the actions the AI found in a quick-add note.
@@ -12,7 +13,7 @@ export async function runActions(actions, { lang = 'Arabic' } = {}) {
     try {
       results.push(await run(a, lang))
     } catch (e) {
-      results.push({ label: `Couldn’t add: ${e.message}`, ok: false })
+      results.push({ label: T("Couldn’t add: {0}", [e.message]), ok: false })
     }
   }
   return results
@@ -27,7 +28,7 @@ async function run(a, lang) {
   switch (a.type) {
     case 'task': {
       const row = must(await supabase.from('tasks').insert({ title: a.title, priority: a.important ? 'important' : 'normal' }).select().single())
-      return { label: `Task${a.important ? ' (important)' : ''}: ${a.title}`, ok: true, undo: () => supabase.from('tasks').delete().eq('id', row.id) }
+      return { label: T("Task{0}: {1}", [a.important ? T(" (important)") : '', a.title]), ok: true, undo: () => supabase.from('tasks').delete().eq('id', row.id) };
     }
     case 'plan': {
       const date = a.date || today()
@@ -38,18 +39,25 @@ async function run(a, lang) {
         res = await supabase.from('plans').insert({ title: a.time ? `${a.title} · ${a.time}` : a.title, plan_date: date }).select().single()
       const row = must(res)
       return {
-        label: `Plan · ${dayLabel(date)}${a.time ? ` ${a.time}` : ''}: ${a.title}`,
+        label: T(
+          "Plan · {0}{1}: {2}",
+          [dayLabel(date), a.time ? ` ${a.time}` : '', a.title]
+        ),
         ok: true,
         undo: () => supabase.from('plans').delete().eq('id', row.id),
-      }
+      };
     }
     case 'expense': {
       const row = must(await supabase.from('expenses').insert({ amount: a.amount, note: a.note || '', spent_on: a.date || today() }).select().single())
       return {
-        label: `Spent ${money(a.amount)}${a.note ? ` · ${a.note}` : ''}${a.date && a.date !== today() ? ` · ${dayLabel(a.date)}` : ''}`,
+        label: T("Spent {0}{1}{2}", [
+          money(a.amount),
+          a.note ? ` · ${a.note}` : '',
+          a.date && a.date !== today() ? ` · ${dayLabel(a.date)}` : ''
+        ]),
         ok: true,
         undo: () => supabase.from('expenses').delete().eq('id', row.id),
-      }
+      };
     }
     case 'word': {
       const row = must(await supabase.from('words').insert({ word: a.word, translation: '', status: 'new' }).select().single())
@@ -57,7 +65,7 @@ async function run(a, lang) {
       callAi({ kind: 'translate', word: a.word, lang })
         .then((r) => r?.translation && supabase.from('words').update({ translation: r.translation }).eq('id', row.id))
         .catch(() => {})
-      return { label: `New word: ${a.word}`, ok: true, undo: () => supabase.from('words').delete().eq('id', row.id) }
+      return { label: T("New word: {0}", [a.word]), ok: true, undo: () => supabase.from('words').delete().eq('id', row.id) };
     }
     case 'habit': {
       const day = today()
@@ -65,19 +73,19 @@ async function run(a, lang) {
       const before = cur?.count || 0
       must(await supabase.from('habit_logs').upsert({ habit_id: a.habit_id, day, count: before + a.count }, { onConflict: 'habit_id,day' }))
       return {
-        label: `Habit: ${a.name} +${a.count}`,
+        label: T("Habit: {0} +{1}", [a.name, a.count]),
         ok: true,
         undo: () => supabase.from('habit_logs').upsert({ habit_id: a.habit_id, day, count: before }, { onConflict: 'habit_id,day' }),
-      }
+      };
     }
     case 'note': {
       let book = must(await supabase.from('notebooks').select('id').eq('name', 'Quick notes').limit(1).maybeSingle())
       if (!book) book = must(await supabase.from('notebooks').insert({ name: 'Quick notes' }).select().single())
       const row = must(await supabase.from('notes').insert({ notebook_id: book.id, title: '', body: a.text }).select().single())
-      return { label: `Note: ${a.text.length > 60 ? a.text.slice(0, 60) + '…' : a.text}`, ok: true, undo: () => supabase.from('notes').delete().eq('id', row.id) }
+      return { label: T("Note: {0}", [a.text.length > 60 ? a.text.slice(0, 60) + '…' : a.text]), ok: true, undo: () => supabase.from('notes').delete().eq('id', row.id) };
     }
     default:
-      return { label: 'Not sure what to do with that', ok: false }
+      return { label: T("Not sure what to do with that"), ok: false };
   }
 }
 
@@ -104,11 +112,9 @@ function takeTime(s) {
     else if (!ap && h >= 1 && h <= 6) h += 12 // "at 3 40" usually means the afternoon
     return { time: `${pad(h)}:${pad(min)}`, rest: (s.slice(0, m.index) + ' ' + s.slice(m.index + m[0].length)).trim() }
   }
-  return (
-    pick(/\b(?:at\s+)?(\d{1,2})(?:[:.\s](\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)/i, 3) ||
-    pick(/\bat\s+(\d{1,2})(?:[:.\s]([0-5]\d))?\b/i, 0) ||
-    pick(/\b([01]?\d|2[0-3]):([0-5]\d)\b/, 0) || { time: null, rest: s }
-  )
+  return (pick(/\b(?:at\s+)?(\d{1,2})(?:[:.\s](\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)/i, 3) ||
+  pick(/\bat\s+(\d{1,2})(?:[:.\s]([0-5]\d))?\b/i, 0) ||
+  pick(/\b([01]?\d|2[0-3]):([0-5]\d)\b/, 0) || { time: null, rest: s });
 }
 
 function takeDate(s) {
@@ -173,7 +179,7 @@ export function guessLocal(text, habits = []) {
   return text
     .split(/\s*(?:[,;\n]|\band then\b|\balso\b)\s*/i)
     .map((p) => guessOne(p, habits))
-    .filter((d) => d && (d.title || d.amount))
+    .filter((d) => d && (d.title || d.amount));
 }
 
 /** AI action → editable draft (same shape as guessOne). */

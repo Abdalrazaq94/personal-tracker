@@ -29,7 +29,7 @@ export default function Links() {
   const add = async (e) => {
     e.preventDefault()
     const clean = normalizeUrl(url)
-    if (!clean) return links.setError('That doesn’t look like a link.')
+    if (!clean) return links.setError(T("That doesn’t look like a link."));
     setBusy(true)
     const p = await fetchPreview(clean)
     const ok = await links.insert({ section_id: selectedId, url: p.url, title: p.title, image: p.image, site: p.site })

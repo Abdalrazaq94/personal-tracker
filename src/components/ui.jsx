@@ -52,7 +52,7 @@ export function Loading() {
   return <div className="empty muted loading-text">{T("Loading…")}</div>;
 }
 
-export function DeleteButton({ onClick, label = 'Delete' }) {
+export function DeleteButton({ onClick, label = T('Delete') }) {
   return (
     <button
       type="button"

@@ -1,4 +1,5 @@
 import { addDays, ymd } from './dates'
+import { T } from './i18n'
 
 // Good habit: success when count >= target (times per day you want).
 // Bad habit:  success ("clean") when count <= target (most times per day you allow; 0 = avoid).
@@ -7,13 +8,13 @@ import { addDays, ymd } from './dates'
 export const TRIGGERS = ['Stress', 'Boredom', 'Tired', 'After eating', 'After coffee', 'With friends', 'Phone / social media', 'Alone', 'Other']
 
 export const WEEKDAYS = [
-  { n: 1, short: 'M', long: 'Mon' },
-  { n: 2, short: 'T', long: 'Tue' },
-  { n: 3, short: 'W', long: 'Wed' },
-  { n: 4, short: 'T', long: 'Thu' },
-  { n: 5, short: 'F', long: 'Fri' },
-  { n: 6, short: 'S', long: 'Sat' },
-  { n: 0, short: 'S', long: 'Sun' },
+  { n: 1, short: 'M', long: T("Mon") },
+  { n: 2, short: 'T', long: T("Tue") },
+  { n: 3, short: 'W', long: T("Wed") },
+  { n: 4, short: 'T', long: T("Thu") },
+  { n: 5, short: 'F', long: T("Fri") },
+  { n: 6, short: 'S', long: T("Sat") },
+  { n: 0, short: 'S', long: T("Sun") },
 ]
 export const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6]
 
@@ -40,9 +41,9 @@ export const planned = (h, date) => {
 
 export const daysLabel = (h) => {
   const days = Array.isArray(h.days) && h.days.length ? h.days : ALL_DAYS
-  if (days.length === 7) return 'Every day'
-  if (days.length === 5 && [1, 2, 3, 4, 5].every((d) => days.includes(d))) return 'Weekdays'
-  if (days.length === 2 && days.includes(0) && days.includes(6)) return 'Weekends'
+  if (days.length === 7) return T("Every day");
+  if (days.length === 5 && [1, 2, 3, 4, 5].every((d) => days.includes(d))) return T("Weekdays");
+  if (days.length === 2 && days.includes(0) && days.includes(6)) return T("Weekends");
   return WEEKDAYS.filter((w) => days.includes(w.n))
     .map((w) => w.long)
     .join(', ')

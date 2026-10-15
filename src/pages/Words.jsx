@@ -41,7 +41,7 @@ export default function Words() {
       const r = await callAi({ kind: 'translate', word: row.word, lang })
       if (r?.translation) await update(row.id, { translation: r.translation })
     } catch (e) {
-      setError(`Couldn’t translate “${row.word}”: ${e.message}`)
+      setError(T("Couldn’t translate “{0}”: {1}", [row.word, e.message]))
     } finally {
       mark(row.id, false)
     }
@@ -133,7 +133,7 @@ export default function Words() {
           small
           value={filter}
           onChange={setFilter}
-          options={[{ value: 'all', label: 'All', count: counts.all }].concat(
+          options={[{ value: 'all', label: T("All"), count: counts.all }].concat(
             STATUSES.map((s) => ({ ...s, count: counts[s.value] }))
           )}
         />

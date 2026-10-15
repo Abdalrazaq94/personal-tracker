@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { T, Tr } from '../lib/i18n'
+import { T, Tr, LOCALE } from '../lib/i18n'
 
 const W = 340
 const H = 150
@@ -14,7 +14,7 @@ const shift = (day, n) => {
 }
 const label = (day, opts) => {
   const [y, m, d] = day.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, opts)
+  return new Date(y, m - 1, d).toLocaleDateString(LOCALE, opts)
 }
 
 /**
@@ -63,8 +63,10 @@ export default function TaskChart({ tasks, today, days = 14 }) {
   const lastWeek = sum(data.slice(-14, -7))
   const summary =
     lastWeek && data[days - 14]?.done !== null
-      ? `${thisWeek} done this week · ${thisWeek > lastWeek ? 'up' : thisWeek < lastWeek ? 'down' : 'same as'} ${thisWeek === lastWeek ? 'last week' : `from ${lastWeek} last week`}`
-      : `${thisWeek} done this week · ${last.done} today`
+      ? thisWeek === lastWeek
+        ? T('{0} done this week · same as last week', [thisWeek])
+        : T(thisWeek > lastWeek ? '{0} done this week · up from {1} last week' : '{0} done this week · down from {1} last week', [thisWeek, lastWeek])
+      : T('{0} done this week · {1} today', [thisWeek, last.done])
 
   const onMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect()

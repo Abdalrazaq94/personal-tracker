@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useRows } from '../lib/useRows'
 import { Collections, Sheet, useRemembered } from '../components/Collections'
 import { Empty, ErrorBar, Loading, PageHeader } from '../components/ui'
-import { T, Tr } from '../lib/i18n'
+import { T, Tr, LOCALE } from '../lib/i18n'
 
 export default function Notes() {
   const books = useRows('notebooks', { ascending: true })
@@ -38,7 +38,7 @@ export default function Notes() {
     <div className="page">
       <PageHeader
         title={T("Notes")}
-        subtitle={`${notes.rows.length} notes`}
+        subtitle={T('{0} notes', [notes.rows.length])}
         right={
           books.rows.length > 0 && (
             <button className="btn btn--sm" onClick={() => setOpen('new')}>
@@ -109,7 +109,7 @@ export default function Notes() {
                 </p>
               )}
               <span className="note-card__date">
-                {new Date(n.updated_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                {new Date(n.updated_at).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })}
               </span>
             </button>
           ))}
@@ -154,7 +154,7 @@ function NoteEditor({ note, onSave, onDelete, onClose }) {
             <button
               type="button"
               className="btn btn--ghost btn--sm"
-              onClick={() => window.confirm('Delete this note?') && onDelete()}
+              onClick={() => window.confirm(T("Delete this note?")) && onDelete()}
             >{T("Delete")}</button>
           ) : (
             <span />

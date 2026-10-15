@@ -20,7 +20,7 @@ function Copy({ text, label = 'Copy' }) {
         try {
           await navigator.clipboard.writeText(text)
         } catch {
-          window.prompt('Copy this:', text)
+          window.prompt(T('Copy this:'), text)
         }
         setDone(true)
         setTimeout(() => setDone(false), 1500)
@@ -46,7 +46,7 @@ export default function WalletSetup({ onTestAdded }) {
       .select('ingest_token')
       .maybeSingle()
       .then(({ data, error }) => {
-        if (error) setError(/ingest_token|column/i.test(error.message) ? 'Run the database update supabase/migrations/004_wallet_ingest.sql first.' : error.message)
+        if (error) setError(/ingest_token|column/i.test(error.message) ? T("Run the database update supabase/migrations/004_wallet_ingest.sql first.") : error.message)
         setToken(data?.ingest_token || '')
       })
   }, [open, token])
@@ -59,7 +59,7 @@ export default function WalletSetup({ onTestAdded }) {
       .from('user_settings')
       .upsert({ user_id: u.user.id, ingest_token: value, updated_at: new Date().toISOString() })
     setBusy(false)
-    if (error) setError(/ingest_token|column/i.test(error.message) ? 'Run the database update supabase/migrations/004_wallet_ingest.sql first.' : error.message)
+    if (error) setError(/ingest_token|column/i.test(error.message) ? T("Run the database update supabase/migrations/004_wallet_ingest.sql first.") : error.message)
     else {
       setToken(value || '')
       setTest(null)
@@ -73,16 +73,16 @@ export default function WalletSetup({ onTestAdded }) {
       const res = await fetch(INGEST_URL, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ token, title: 'Test payment', text: '£0.01 with Visa •••• 0000' }),
+        body: JSON.stringify({ token, title: "Test payment", text: "£0.01 with Visa •••• 0000" }), // English on purpose: the server reads it
       })
       const out = await res.json().catch(() => ({}))
-      if (res.status === 404) setTest({ ok: false, msg: 'The “ingest” function isn’t deployed yet (step 2).' })
+      if (res.status === 404) setTest({ ok: false, msg: T("The “ingest” function isn’t deployed yet (step 2).") })
       else if (out.added) {
-        setTest({ ok: true, msg: 'It works! A £0.01 “Test payment” was added — you can delete it.' })
+        setTest({ ok: true, msg: T("It works! A £0.01 “Test payment” was added — you can delete it.") })
         onTestAdded?.()
-      } else setTest({ ok: false, msg: out.error || out.skipped || `Error ${res.status}` })
+      } else setTest({ ok: false, msg: out.error || out.skipped || T("Error {0}", [res.status]) })
     } catch {
-      setTest({ ok: false, msg: 'Could not reach the function. Is it deployed with “Verify JWT” off?' })
+      setTest({ ok: false, msg: T("Could not reach the function. Is it deployed with “Verify JWT” off?") })
     }
     setBusy(false)
   }
@@ -178,9 +178,9 @@ export default function WalletSetup({ onTestAdded }) {
           <div className="form-foot">
             <button
               className="btn btn--ghost btn--sm"
-              onClick={() => window.confirm('Make a new key? The old one stops working, so update MacroDroid too.') && save(newToken())}
+              onClick={() => window.confirm(T("Make a new key? The old one stops working, so update MacroDroid too.")) && save(newToken())}
             >{T("New key")}</button>
-            <button className="btn btn--ghost btn--sm" onClick={() => window.confirm('Turn off auto-add?') && save('')}>{T("Turn off")}</button>
+            <button className="btn btn--ghost btn--sm" onClick={() => window.confirm(T("Turn off auto-add?")) && save('')}>{T("Turn off")}</button>
           </div>
           <p className="small muted">{T(
             "Keep your key private — anyone with it could add spending to your account (but can’t read anything)."

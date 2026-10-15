@@ -1,8 +1,9 @@
 // brown = not yet, blue = learning, green = memorized
+import { T } from '../lib/i18n'
 export const STATUSES = [
-  { value: 'new', label: 'Not yet' },
-  { value: 'learning', label: 'Learning' },
-  { value: 'memorized', label: 'Memorized' },
+  { value: 'new', label: T("Not yet") },
+  { value: 'learning', label: T("Learning") },
+  { value: 'memorized', label: T("Memorized") },
 ]
 
 export function StatusPicker({ value, onChange }) {

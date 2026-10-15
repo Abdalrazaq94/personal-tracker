@@ -6,7 +6,7 @@ import { MicButton, useListen } from '../lib/speech'
 import { actionFromDraft, draftFromAction, guessLocal, runActions } from '../lib/quickAdd'
 import { supabase } from '../lib/supabase'
 import { Markdown } from './AiPanel'
-import { T, Tr } from '../lib/i18n'
+import { T, Tr, LOCALE } from '../lib/i18n'
 
 const CURRENCY = import.meta.env.VITE_CURRENCY || 'GBP'
 
@@ -21,12 +21,12 @@ const TYPES = [
   ['note', 'Note'],
 ]
 export const REMIND = [
-  [0, 'Remind at the time'],
-  [15, '15 min before'],
-  [60, '1 hour before'],
-  [1440, '1 day before'],
+  [0, T('Remind at the time')],
+  [15, T('15 min before')],
+  [60, T('1 hour before')],
+  [1440, T('1 day before')],
 ]
-const TITLE_LABEL = { task: 'Task', plan: 'What', expense: 'What for', word: 'Word', habit: 'Habit', note: 'Note' }
+const TITLE_LABEL = { task: T('Task'), plan: T('What'), expense: T('What for'), word: T('Word'), habit: T('Habit'), note: T('Note') }
 
 /**
  * Type or say anything → choose what it is (Task, Plan, Spend…) → Add.
@@ -62,7 +62,7 @@ export function QuickAddAll({ onChanged }) {
       list = (actions || []).map(draftFromAction)
     } catch {
       list = guessLocal(v, habits)
-      setInfo('Filled in without the AI: check it, then Add.')
+      setInfo(T("Filled in without the AI: check it, then Add."))
     }
     if (!list.length) list = [{ type: 'task', title: v }]
     setDrafts(list.map((d) => (d.type === 'habit' && !d.habit_id ? { ...d, type: 'task' } : d)))
@@ -71,7 +71,7 @@ export function QuickAddAll({ onChanged }) {
 
   const add = async () => {
     const actions = drafts.map((d) => actionFromDraft({ ...d, habitName: habits.find((h) => h.id === d.habit_id)?.name })).filter(Boolean)
-    if (!actions.length) return setError('Nothing to add yet. Fill in the details first.')
+    if (!actions.length) return setError(T("Nothing to add yet. Fill in the details first."));
     setBusy(true)
     const res = await runActions(actions, { lang })
     setResults(res)
@@ -279,7 +279,7 @@ export function DayBrief({ fallback }) {
         localStorage.setItem(KEY(), JSON.stringify(b))
       } catch {}
     } catch (e) {
-      setError(/unknown request/i.test(e.message) ? 'The AI part needs updating on the server, so here’s a simple summary.' : e.message)
+      setError(/unknown request/i.test(e.message) ? T("The AI part needs updating on the server, so here’s a simple summary.") : e.message)
     }
     setBusy(false)
   }
@@ -290,7 +290,7 @@ export function DayBrief({ fallback }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const at = brief?.at ? new Date(brief.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : null
+  const at = brief?.at ? new Date(brief.at).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' }) : null
 
   return (
     <section className="day-brief">

@@ -5,29 +5,29 @@ import { money, parseYmd, startOfMonth, today, ymd } from '../lib/dates'
 import { dayState, isBad, logOn, planned } from '../lib/habits'
 import { SpeakButton } from '../lib/speech'
 import { DayBrief, QuickAddAll } from '../components/TodayAI'
-import { inWords, nextPrayer, placeToday, PRAYERS, timesFor } from '../lib/prayer'
+import { inWords, nextPrayer, placeToday, prayerName, PRAYERS, timesFor } from '../lib/prayer'
 import TaskChart from '../components/TaskChart'
 import BlurText from '../components/bits/BlurText'
 import CountUp from '../components/bits/CountUp'
 import Reveal from '../components/bits/Reveal'
 import GlareHover from '../components/reactbits/GlareHover'
 import { currentStatus } from '../lib/push'
-import { T, Tr } from '../lib/i18n'
+import { T, Tr, LOCALE } from '../lib/i18n'
 
 const PRIORITY = { doing: 0, todo: 1 }
 
 // the buttons at the top of Home (two per row)
 const TILES = [
-  { to: '/tasks', icon: '✅', label: 'Tasks' },
-  { to: '/plan', icon: '🗓️', label: 'Plan' },
-  { to: '/habits', icon: '🔁', label: 'Habits' },
-  { to: '/spend', icon: '💷', label: 'Spend' },
-  { to: '/words', icon: '📖', label: 'Words' },
-  { to: '/commit', icon: '🕌', label: 'Prayers' },
-  { to: '/notes', icon: '📝', label: 'Notes' },
-  { to: '/links', icon: '🔗', label: 'Links' },
-  { to: '/jobs', icon: '💼', label: 'Jobs' },
-  { to: '/reminders', icon: '🔔', label: 'Reminders' },
+  { to: '/tasks', icon: '✅', label: T("Tasks") },
+  { to: '/plan', icon: '🗓️', label: T("Plan") },
+  { to: '/habits', icon: '🔁', label: T("Habits") },
+  { to: '/spend', icon: '💷', label: T("Spend") },
+  { to: '/words', icon: '📖', label: T("Words") },
+  { to: '/commit', icon: '🕌', label: T("Prayers") },
+  { to: '/notes', icon: '📝', label: T("Notes") },
+  { to: '/links', icon: '🔗', label: T("Links") },
+  { to: '/jobs', icon: '💼', label: T("Jobs") },
+  { to: '/reminders', icon: '🔔', label: T("Reminders") },
 ]
 
 const addDays = (ymdStr, n) => {
@@ -37,10 +37,10 @@ const addDays = (ymdStr, n) => {
 }
 const hhmm = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 function dayWord(day, t) {
-  if (day < t) return 'Overdue'
-  if (day === t) return 'Today'
-  if (day === addDays(t, 1)) return 'Tomorrow'
-  return parseYmd(day).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })
+  if (day < t) return T("Overdue");
+  if (day === t) return T("Today");
+  if (day === addDays(t, 1)) return T("Tomorrow");
+  return parseYmd(day).toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'short' })
 }
 
 /** Picks the same few words all day, different ones tomorrow. */
@@ -175,8 +175,8 @@ export default function Home({ session }) {
   // ---- derived ----
   const now = new Date()
   const hour = now.getHours()
-  const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
-  const date = now.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+  const greet = hour < 12 ? T('Good morning') : hour < 18 ? T('Good afternoon') : T('Good evening')
+  const date = now.toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' })
 
   const todayHabits = useMemo(
     () => (d ? d.habits.filter((h) => planned(h, new Date()) && !logOn(d.logs, h.id, today()).skipped) : []),
@@ -251,14 +251,26 @@ export default function Home({ session }) {
     const parts = []
     parts.push(
       todays.length || untimed.length
-        ? `You have **${todays.length + allUntimed.length} things** to do today.`
-        : 'Nothing planned for today.'
+        ? T(
+        "You have **{0} things** to do today.",
+        [todays.length + allUntimed.length]
+      )
+        : T("Nothing planned for today.")
     )
-    if (next) parts.push(`Next: **${next.title}**${next.time ? ` at ${next.time}` : ''}.`)
-    if (late.length) parts.push(`**${late.length} overdue**: ${late.slice(0, 2).map((x) => x.title).join(', ')}.`)
-    if (important.length) parts.push(`Important: ${important.slice(0, 2).map((x) => `**${x.title}**`).join(', ')}.`)
-    if (goodHabits.length) parts.push(`Habits: ${goodHabits.filter((h) => dayState(h, d.logs, now) === 'ok').length} of ${goodHabits.length} done.`)
-    parts.push(`Spent ${money(spentToday)} today.`)
+    if (next) parts.push(T("Next: **{0}**{1}.", [next.title, next.time ? ` at ${next.time}` : '']))
+    if (late.length) parts.push(T(
+      "**{0} overdue**: {1}.",
+      [late.length, late.slice(0, 2).map((x) => x.title).join(', ')]
+    ))
+    if (important.length) parts.push(T(
+      "Important: {0}.",
+      [important.slice(0, 2).map((x) => `**${x.title}**`).join(', ')]
+    ))
+    if (goodHabits.length) parts.push(T("Habits: {0} of {1} done.", [
+      goodHabits.filter((h) => dayState(h, d.logs, now) === 'ok').length,
+      goodHabits.length
+    ]))
+    parts.push(T("Spent {0} today.", [money(spentToday)]))
     return parts.join(' ')
   }
 
@@ -271,16 +283,19 @@ export default function Home({ session }) {
         return open ? (
           <>{Tr("{0} to do", <CountUp to={open} />)}</>
         ) : (
-          'All done'
+          T("All done")
         );
       }
       case '/plan': {
         const late = d.plans.filter((p) => !p.done && p.plan_date < t).length
         const todayN = d.plans.filter((p) => !p.done && p.plan_date === t).length
-        return late ? `${late} overdue` : todayN ? `${todayN} today` : 'Nothing today'
+        return late ? T('{0} overdue', [late]) : todayN ? T('{0} today', [todayN]) : T("Nothing today");
       }
       case '/habits':
-        return goodHabits.length ? `${goodHabits.filter((h) => dayState(h, d.logs, now) === 'ok').length} of ${goodHabits.length} today` : 'Track habits'
+        return goodHabits.length ? T("{0} of {1} today", [
+          goodHabits.filter((h) => dayState(h, d.logs, now) === 'ok').length,
+          goodHabits.length
+        ]) : T("Track habits");
       case '/spend':
         return (
           <>
@@ -291,18 +306,18 @@ export default function Home({ session }) {
         return d.wordsLeft ? (
           <>{Tr("{0} to learn", <CountUp to={d.wordsLeft} />)}</>
         ) : (
-          'Add words'
+          T("Add words")
         );
       case '/commit':
-        return prayer ? `${prayer.name} in ${inWords(prayer.inMs)}` : 'Prayer times'
+        return prayer ? T('{0} in {1}', [prayerName(prayer), inWords(prayer.inMs)]) : T("Prayer times");
       case '/notes':
-        return `${d.notes} notes`
+        return T('{0} notes', [d.notes])
       case '/links':
-        return `${d.links} saved`
+        return T('{0} saved', [d.links])
       case '/jobs':
-        return 'Applications'
+        return T("Applications");
       case '/reminders':
-        return remind === 'on' ? 'On' : remind === 'blocked' ? 'Blocked' : 'Off'
+        return remind === 'on' ? T("On") : remind === 'blocked' ? T("Blocked") : T("Off");
       default:
         return ''
     }
@@ -405,7 +420,7 @@ export default function Home({ session }) {
             ) : (
               planGroups.map(([label, list]) => (
                 <div key={label} className="up-group">
-                  <h3 className={`up-day ${label === 'Overdue' ? 'is-late' : ''}`}>{label}</h3>
+                  <h3 className={`up-day ${label === T('Overdue') ? 'is-late' : ''}`}>{label}</h3>
                   <ul className="today-list">
                     {list.map((it) => (
                       <li key={it.key} className={it.done ? 'is-done' : ''}>
@@ -447,7 +462,7 @@ export default function Home({ session }) {
                       <span className="today-count">
                         {c}/{h.target}
                       </span>
-                      <button className="round-btn round-btn--solid round-btn--sm" aria-label={`Add one to ${h.name}`} onClick={() => plusHabit(h)}>
+                      <button className="round-btn round-btn--solid round-btn--sm" aria-label={T('Add one to {0}', [h.name])} onClick={() => plusHabit(h)}>
                         +
                       </button>
                     </li>
@@ -464,8 +479,8 @@ export default function Home({ session }) {
                       <span dir="auto" className="today-list__text">
                         {h.name}
                       </span>
-                      <span className="today-count">{c === 0 ? 'None today' : `${c} today`}</span>
-                      <button className="round-btn round-btn--sm" aria-label={`I did ${h.name} once more`} onClick={() => plusHabit(h)}>
+                      <span className="today-count">{c === 0 ? T('None today') : T('{0} today', [c])}</span>
+                      <button className="round-btn round-btn--sm" aria-label={T('I did {0} once more', [h.name])} onClick={() => plusHabit(h)}>
                         +
                       </button>
                     </li>
@@ -537,7 +552,7 @@ export default function Home({ session }) {
 function whenShort(iso) {
   const at = new Date(iso)
   const time = hhmm(at)
-  return ymd(at) === today() ? time : `${at.toLocaleDateString(undefined, { weekday: 'short' })} ${time}`
+  return ymd(at) === today() ? time : `${at.toLocaleDateString(LOCALE, { weekday: 'short' })} ${time}`
 }
 
 /** Today's 5 prayers at a glance: done, late, now, missed or coming, with quick buttons for the ones not marked yet. */
@@ -577,12 +592,12 @@ function PrayerToday({ place, logs, onMark }) {
   const next = nextPrayer(place, day)
   const current = rows.find((r) => r.state === 'now')
   const missed = rows.filter((r) => r.state === 'missed')
-  const word = { done: '✓', late: 'Late', now: 'Now', missed: 'Missed', coming: '' }
+  const word = { done: '✓', late: T('Late'), now: T('Now'), missed: T('Missed'), coming: '' }
   const clock = (date, tz) => {
     try {
-      return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: tz || undefined })
+      return date.toLocaleTimeString(LOCALE || 'en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: tz || undefined })
     } catch {
-      return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+      return date.toLocaleTimeString(LOCALE || 'en-GB', { hour: '2-digit', minute: '2-digit' })
     }
   }
 
@@ -590,25 +605,25 @@ function PrayerToday({ place, logs, onMark }) {
     <Reveal as="section" className="today-card today-card--prayers">
       <SectionHead title={T("Prayers")} to="/commit" note={T(
         "Next: {0} {1} · in {2}",
-        [next.name, clock(next.at, place.tz), inWords(next.inMs)]
+        [prayerName(next), clock(next.at, place.tz), inWords(next.inMs)]
       )} />
       <ul className="pt-row" aria-label={T("Today's prayers")}>
         {rows.map((r) => (
           <li key={r.key} className={`pt pt--${r.state}`}>
-            <strong>{r.name}</strong>
+            <strong>{prayerName(r)}</strong>
             <span>{word[r.state] || clock(r.at, place.tz)}</span>
           </li>
         ))}
       </ul>
       {current && (
         <div className="pt-act">
-          <span>{Tr("It’s {0} time now", <b>{current.name}</b>)}</span>
+          <span>{Tr("It’s {0} time now", <b>{prayerName(current)}</b>)}</span>
           <button className="btn btn--sm" onClick={() => onMark(current.key, false)}>{T("✓ Prayed")}</button>
         </div>
       )}
       {missed.map((r) => (
         <div key={r.key} className="pt-act pt-act--missed">
-          <span>{Tr("Missed {0} ({1})", <b>{r.name}</b>, clock(r.at, place.tz))}</span>
+          <span>{Tr("Missed {0} ({1})", <b>{prayerName(r)}</b>, clock(r.at, place.tz))}</span>
           <button className="btn btn--ghost btn--sm" onClick={() => onMark(r.key, true)}>{T("Prayed late")}</button>
         </div>
       ))}

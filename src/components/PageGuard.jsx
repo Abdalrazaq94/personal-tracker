@@ -53,7 +53,7 @@ export default class PageGuard extends Component {
               className="btn btn--ghost"
               onClick={() => {
                 const full = `${text}\n${window.location.href}\n${navigator.userAgent}\n${(error?.stack || '').slice(0, 800)}`
-                navigator.clipboard?.writeText(full).catch(() => window.prompt('Copy this:', full))
+                navigator.clipboard?.writeText(full).catch(() => window.prompt(T('Copy this:'), full))
               }}
             >{T("Copy message")}</button>
           </div>

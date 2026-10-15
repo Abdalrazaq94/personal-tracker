@@ -107,8 +107,8 @@ export default function Practice({ words, onStatus, onClose, lang = 'Arabic' }) 
               value={pool}
               onChange={setPool}
               options={[
-                { value: 'learning', label: 'Not memorized', count: words.filter((w) => w.status !== 'memorized').length },
-                { value: 'all', label: 'All', count: words.length },
+                { value: 'learning', label: T("Not memorized"), count: words.filter((w) => w.status !== 'memorized').length },
+                { value: 'all', label: T("All"), count: words.length },
               ]}
             />
           </div>
@@ -150,7 +150,7 @@ export default function Practice({ words, onStatus, onClose, lang = 'Arabic' }) 
           {mode === 'gap' ? (
             <GapRound key={index} lang={lang} round={rounds[index]} onResult={finish} onNext={next} last={index + 1 === rounds.length} />
           ) : (
-            <SentenceRound key={index} round={rounds[index]} onResult={finish} onNext={next} last={index + 1 === rounds.length} />
+            <SentenceRound key={index} lang={lang} round={rounds[index]} onResult={finish} onNext={next} last={index + 1 === rounds.length} />
           )}
         </>
       )}
@@ -283,7 +283,7 @@ function GapRound({ round, onResult, onNext, last, lang }) {
 
 /* ----------------------------- make a sentence ---------------------------- */
 
-function SentenceRound({ round, onResult, onNext, last }) {
+function SentenceRound({ round, onResult, onNext, last, lang }) {
   const { w } = round
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)

@@ -18,7 +18,7 @@ export default function AiPanel({ kind, examples = [], children, extra = {}, lab
     setError(null)
     try {
       const data = await callAi({ kind, question: q, today: today(), currency: CURRENCY, ...extra })
-      setText(data?.text || 'No answer.')
+      setText(data?.text || T('No answer.'))
     } catch (e) {
       setError(e.message)
     }

@@ -3,6 +3,7 @@
  * Two slots: 'adhan' (all prayers) and 'adhan-fajr' (optional, used for Fajr only).
  */
 import { getAppAdhan } from './appAdhan'
+import { T } from './i18n'
 
 const DB = 'tracker-sounds'
 const STORE = 'files'
@@ -27,8 +28,8 @@ async function tx(mode, fn) {
 
 /** Saves a chosen audio file. Returns { name, size }. */
 export async function saveAdhan(slot, file) {
-  if (!file.type.startsWith('audio/') && !/\.(mp3|m4a|aac|ogg|wav|opus)$/i.test(file.name)) throw new Error('Please choose an audio file (mp3, m4a, ogg or wav).')
-  if (file.size > 25 * 1024 * 1024) throw new Error('That file is too big (over 25 MB).')
+  if (!file.type.startsWith('audio/') && !/\.(mp3|m4a|aac|ogg|wav|opus)$/i.test(file.name)) throw new Error(T("Please choose an audio file (mp3, m4a, ogg or wav)."))
+  if (file.size > 25 * 1024 * 1024) throw new Error(T("That file is too big (over 25 MB)."))
   const rec = { name: file.name, size: file.size, type: file.type || 'audio/mpeg', blob: file }
   await tx('readwrite', (s) => s.put(rec, slot))
   return { name: rec.name, size: rec.size }
@@ -44,7 +45,7 @@ export const removeAdhan = (slot) => tx('readwrite', (s) => s.delete(slot))
 const WM = 'https://upload.wikimedia.org/wikipedia/commons'
 export const BUILTIN_ADHANS = {
   adhan: {
-    label: 'Adhan 1',
+    label: T("Adhan 1"),
     page: 'https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg',
     sources: [
       `${WM}/transcoded/b/b0/Beautiful_adhan.ogg/Beautiful_adhan.ogg.mp3`,
@@ -53,7 +54,7 @@ export const BUILTIN_ADHANS = {
     ],
   },
   adhan2: {
-    label: 'Adhan 2',
+    label: T("Adhan 2"),
     page: 'https://commons.wikimedia.org/wiki/File:Adhan_wiki.oga',
     sources: [
       `${WM}/transcoded/1/16/Adhan_wiki.oga/Adhan_wiki.oga.mp3`,

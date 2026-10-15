@@ -90,7 +90,7 @@ export function Collections({ items, selectedId, onSelect, onCreate, onRename, o
               type="button"
               className="btn btn--ghost btn--sm"
               onClick={() => {
-                if (window.confirm(`Delete the ${noun} "${selected.name}" and everything in it?`)) onDelete(selected.id)
+                if (window.confirm(T("Delete the {0} \"{1}\" and everything in it?", [noun, selected.name]))) onDelete(selected.id)
               }}
             >{T("Delete")}</button>
           </div>
@@ -100,9 +100,9 @@ export function Collections({ items, selectedId, onSelect, onCreate, onRename, o
       {sheet === 'new' && (
         <NameSheet
           title={T("New {0}", [noun])}
-          label={`${noun} name`}
+          label={T('{0} name', [noun])}
           placeholder={placeholder}
-          submitLabel={`Create ${noun}`}
+          submitLabel={T('Create {0}', [noun])}
           onClose={() => setSheet(null)}
           onSubmit={async (name) => {
             await onCreate(name)
@@ -113,7 +113,7 @@ export function Collections({ items, selectedId, onSelect, onCreate, onRename, o
       {sheet === 'rename' && selected && (
         <NameSheet
           title={T("Rename {0}", [noun])}
-          label={`${noun} name`}
+          label={T('{0} name', [noun])}
           initial={selected.name}
           onClose={() => setSheet(null)}
           onSubmit={async (name) => {

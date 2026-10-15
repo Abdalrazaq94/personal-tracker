@@ -32,7 +32,7 @@ export function useListen({ lang = 'en-GB', onResult }) {
 
   const start = () => {
     if (!Recognition) {
-      setError('Voice input isn’t supported in this browser. Try Chrome or Safari.')
+      setError(T('Voice input isn’t supported in this browser. Try Chrome or Safari.'))
       return
     }
     setError(null)
@@ -55,13 +55,13 @@ export function useListen({ lang = 'en-GB', onResult }) {
     }
     r.onerror = (e) => {
       const map = {
-        'not-allowed': 'Microphone permission was blocked. Allow it in your browser settings.',
-        'service-not-allowed': 'Microphone permission was blocked. Allow it in your browser settings.',
-        'no-speech': 'I didn’t hear anything. Tap the mic and try again.',
-        'audio-capture': 'No microphone found.',
-        network: 'Voice input needs an internet connection.',
+        'not-allowed': T('Microphone permission was blocked. Allow it in your browser settings.'),
+        'service-not-allowed': T('Microphone permission was blocked. Allow it in your browser settings.'),
+        'no-speech': T('I didn’t hear anything. Tap the mic and try again.'),
+        'audio-capture': T('No microphone found.'),
+        network: T('Voice input needs an internet connection.'),
       }
-      if (e.error !== 'aborted') setError(map[e.error] || 'Voice input stopped. Try again.')
+      if (e.error !== 'aborted') setError(map[e.error] || T('Voice input stopped. Try again.'))
     }
     r.onend = () => {
       setListening(false)
@@ -82,7 +82,7 @@ export function useListen({ lang = 'en-GB', onResult }) {
 }
 
 /** Round mic button. */
-export function MicButton({ listen, label = 'Speak' }) {
+export function MicButton({ listen, label = T('Speak') }) {
   return (
     <button
       type="button"
@@ -100,7 +100,7 @@ export function MicButton({ listen, label = 'Speak' }) {
 }
 
 /** Small speaker button that reads text aloud. */
-export function SpeakButton({ text, label = 'Listen' }) {
+export function SpeakButton({ text, label = T('Listen') }) {
   if (!canSpeak) return null
   return (
     <button type="button" className="icon-btn" aria-label={label} title={label} onClick={() => speak(text)}>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { isBad, series, success } from '../lib/habits'
-import { T } from '../lib/i18n'
+import { T, LOCALE } from '../lib/i18n'
 
 const W = 320
 const H = 132
@@ -43,15 +43,15 @@ function HabitChart({ habit, logs, days }) {
   const avg = (arr) => (arr.length ? arr.reduce((a, d) => a + d.count, 0) / arr.length : null)
   const recent = avg(tracked.slice(-7))
   const before = avg(tracked.slice(-14, -7))
-  let trend = 'Not enough data yet'
+  let trend = T('Not enough data yet')
   if (recent !== null && before !== null && tracked.length >= 10) {
     const diff = recent - before
     const better = bad ? diff < 0 : diff > 0
     trend =
       Math.abs(diff) < 0.15
-        ? `Steady · ${recent.toFixed(1)} a day`
-        : `${better ? 'Improving' : 'Slipping'} · ${recent.toFixed(1)} a day (was ${before.toFixed(1)})`
-  } else if (recent !== null) trend = `${recent.toFixed(1)} a day this week`
+        ? T('Steady · {0} a day', [recent.toFixed(1)])
+        : T('{0} · {1} a day (was {2})', [better ? T('Improving') : T('Slipping'), recent.toFixed(1), before.toFixed(1)])
+  } else if (recent !== null) trend = T('{0} a day this week', [recent.toFixed(1)])
 
   const onMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -62,7 +62,7 @@ function HabitChart({ habit, logs, days }) {
   }
 
   const hv = hover !== null ? data[hover] : null
-  const label = (d) => d.date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+  const label = (d) => d.date.toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })
 
   return (
     <figure className="habit-chart">
@@ -74,9 +74,9 @@ function HabitChart({ habit, logs, days }) {
       </figcaption>
       <p className="habit-chart__info">
         {hv
-          ? `${hv.date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} · ${hv.count} ${
+          ? `${hv.date.toLocaleDateString(LOCALE, { weekday: 'short', day: 'numeric', month: 'short' })} · ${hv.count} ${
               hv.count === 1 ? 'time' : 'times'
-            } · ${success(habit, hv.count) ? (bad ? 'clean ✓' : 'done ✓') : bad ? 'over limit' : 'missed'}`
+            } · ${success(habit, hv.count) ? (bad ? T('clean ✓') : T('done ✓')) : bad ? T('over limit') : 'missed'}`
           : trend}
       </p>
       <svg
@@ -99,7 +99,7 @@ function HabitChart({ habit, logs, days }) {
         {/* target / limit */}
         <line x1={PAD.l} x2={W - PAD.r} y1={y(habit.target)} y2={y(habit.target)} className="hc-target" />
         <text x={W - PAD.r} y={y(habit.target) - 4} className="hc-tick" textAnchor="end">
-          {bad ? `limit ${habit.target}` : `target ${habit.target}`}
+          {bad ? T('limit {0}', [habit.target]) : T('target {0}', [habit.target])}
         </text>
 
         {/* the line */}

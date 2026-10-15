@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { PRAYERS } from '../lib/prayer'
-import { T, Tr } from '../lib/i18n'
+import { PRAYERS, prayerName } from '../lib/prayer'
+import { T, Tr, LOCALE } from '../lib/i18n'
 
 const W = 340
 const H = 168
@@ -15,7 +15,7 @@ const shift = (day, n) => {
 }
 const label = (day, opts) => {
   const [y, m, d] = day.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, opts)
+  return new Date(y, m - 1, d).toLocaleDateString(LOCALE, opts)
 }
 
 /**
@@ -87,10 +87,10 @@ export default function PrayerChart({ logs, today, days = 30 }) {
   const before = finished.slice(-14, -7)
   const r = avg(recent, 'prayed')
   const b = avg(before, 'prayed')
-  let trend = r === null ? `Your graph starts today · ${todayDone} of 5 prayed so far` : `${r.toFixed(1)} of 5 a day this week`
+  let trend = r === null ? T('Your graph starts today · {0} of 5 prayed so far', [todayDone]) : T('{0} of 5 a day this week', [r.toFixed(1)])
   if (r !== null && b !== null && before.length >= 5) {
     const diff = r - b
-    trend = Math.abs(diff) < 0.2 ? `Steady · ${r.toFixed(1)} of 5 a day` : `${diff > 0 ? 'Improving' : 'Slipping'} · ${r.toFixed(1)} of 5 a day (was ${b.toFixed(1)})`
+    trend = Math.abs(diff) < 0.2 ? T('Steady · {0} of 5 a day', [r.toFixed(1)]) : T('{0} · {1} of 5 a day (was {2})', [diff > 0 ? T('Improving') : T('Slipping'), r.toFixed(1), b.toFixed(1)])
   }
 
   const onMove = (e) => {
@@ -183,7 +183,7 @@ export default function PrayerChart({ logs, today, days = 30 }) {
       {tracked.length > 0 && <ul className="prayer-rates" aria-label={T("Each prayer over the same days")}>
         {perPrayer.map((p) => (
           <li key={p.key}>
-            <span className="prayer-rates__name">{p.name}</span>
+            <span className="prayer-rates__name">{prayerName(p)}</span>
             <span className="prayer-rates__bar" aria-hidden>
               <span className="is-ontime" style={{ width: `${p.of ? ((p.done - p.late) / p.of) * 100 : 0}%` }} />
               <span className="is-late" style={{ width: `${p.of ? (p.late / p.of) * 100 : 0}%` }} />
