@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useBackToClose } from './lib/useBack'
 import PageGuard from './components/PageGuard'
 import AlarmOverlay from './components/AlarmOverlay'
-import { MotionConfig, motion } from 'motion/react'
 import InstallApp from './components/InstallApp'
 import LangSwitch from './components/LangSwitch'
 import TopControls from './components/TopControls'
@@ -11,18 +10,38 @@ import { followAccountLang } from './lib/i18n'
 import { configured, supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Home from './pages/Home'
-import Words from './pages/Words'
-import Tasks from './pages/Tasks'
-import Habits from './pages/Habits'
-import Spend from './pages/Spend'
-import Plan from './pages/Plan'
-import Links from './pages/Links'
-import Notes from './pages/Notes'
-import Jobs from './pages/Jobs'
-import Commit from './pages/Commit'
-import Reminders from './pages/Reminders'
-import Review from './pages/Review'
 import { T, Tr } from './lib/i18n'
+
+// Pages load when you open them (Home is part of the first download). After the first screen, the rest load quietly in the background.
+const PAGES = {
+  words: () => import('./pages/Words'),
+  tasks: () => import('./pages/Tasks'),
+  habits: () => import('./pages/Habits'),
+  spend: () => import('./pages/Spend'),
+  plan: () => import('./pages/Plan'),
+  links: () => import('./pages/Links'),
+  notes: () => import('./pages/Notes'),
+  jobs: () => import('./pages/Jobs'),
+  commit: () => import('./pages/Commit'),
+  reminders: () => import('./pages/Reminders'),
+  review: () => import('./pages/Review'),
+}
+const Words = lazy(PAGES.words)
+const Tasks = lazy(PAGES.tasks)
+const Habits = lazy(PAGES.habits)
+const Spend = lazy(PAGES.spend)
+const Plan = lazy(PAGES.plan)
+const Links = lazy(PAGES.links)
+const Notes = lazy(PAGES.notes)
+const Jobs = lazy(PAGES.jobs)
+const Commit = lazy(PAGES.commit)
+const Reminders = lazy(PAGES.reminders)
+const Review = lazy(PAGES.review)
+function prefetchPages() {
+  const go = () => Object.values(PAGES).forEach((load) => load().catch(() => {}))
+  if ('requestIdleCallback' in window) window.requestIdleCallback(go, { timeout: 4000 })
+  else setTimeout(go, 2500)
+}
 
 export const SECTIONS = [
   { to: '/words', label: T("Words"), hint: T("New English words & translations") },
@@ -49,6 +68,7 @@ export default function App() {
     if (!configured) return
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
+      if (data.session) prefetchPages() // the other pages, quietly, so opening them is instant
       followAccountLang(data.session?.user) // use the language saved in your account
     })
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
@@ -67,7 +87,6 @@ export default function App() {
   const inMore = pathname === '/more' || (!MOBILE.includes(pathname) && pathname !== '/')
 
   return (
-    <MotionConfig reducedMotion="user">
       <div className="shell">
         <MobileBar pathname={pathname} email={session.user.email} />
         <AlarmOverlay />
@@ -83,13 +102,8 @@ export default function App() {
 
         <main className="content">
           <PageGuard resetKey={pathname}>
-          <motion.div
-            key={pathname}
-            className="page-anim"
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          >
+          <div key={pathname} className="page-anim">
+          <Suspense fallback={<div className="empty muted loading-text">{T('Loading…')}</div>}>
           <Routes>
             <Route path="/" element={<Home session={session} />} />
             <Route path="/words" element={<Words />} />
@@ -106,7 +120,8 @@ export default function App() {
             <Route path="/more" element={<More />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-          </motion.div>
+          </Suspense>
+          </div>
           </PageGuard>
         </main>
 
@@ -120,7 +135,6 @@ export default function App() {
           <NavLink to="/more" className={inMore ? 'is-active' : ''}>{T("More")}</NavLink>
         </nav>
       </div>
-    </MotionConfig>
   );
 }
 

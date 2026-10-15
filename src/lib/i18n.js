@@ -1,5 +1,4 @@
 import { createElement, Fragment } from 'react'
-import AR from '../i18n/ar'
 
 /**
  * English / Arabic interface.
@@ -20,6 +19,12 @@ function readLang() {
 
 export const LANG = readLang()
 export const isAr = LANG === 'ar'
+
+// The Arabic text is only downloaded when the app is in Arabic (main.jsx waits for it before drawing).
+let AR = {}
+export async function loadLang() {
+  if (isAr) AR = (await import('../i18n/ar')).default
+}
 /** Use for all dates and numbers: Arabic month/day names, but the usual 0-9 digits. */
 export const LOCALE = isAr ? 'ar-u-nu-latn' : undefined
 

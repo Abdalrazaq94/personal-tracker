@@ -1271,3 +1271,12 @@ html.theme-anim, html.theme-anim * { transition: background-color .3s ease, bord
 .review-ai .ai-result { font-size: 15px; }
 .review-ai__btn { align-self: flex-start; background: var(--bg); color: var(--fg); border-color: var(--bg); }
 [data-theme='dark'] .review-ai__btn { background: var(--fg); color: var(--bg); }
+
+/* ===== animations without a library (same look as before) ===== */
+.page-anim { animation: page-in .35s cubic-bezier(.22,1,.36,1) both; }
+@keyframes page-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.blur-text__word { animation: blur-in .5s cubic-bezier(.22,1,.36,1) both; }
+@keyframes blur-in { from { opacity: 0; filter: blur(10px); transform: translateY(-8px); } to { opacity: 1; filter: none; transform: none; } }
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity .55s cubic-bezier(.22,1,.36,1), transform .55s cubic-bezier(.22,1,.36,1); }
+.reveal.is-shown { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; } }
