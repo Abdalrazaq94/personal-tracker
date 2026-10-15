@@ -90,9 +90,7 @@ export default function Words() {
         subtitle={T("{0} of {1} memorized", [counts.memorized, counts.all])}
         right={
           rows.length > 0 && (
-            <button className="btn btn--sm" onClick={() => setPractising(true)}>
-              ✦ Practise
-            </button>
+            <button className="btn btn--sm" onClick={() => setPractising(true)}>{T("✦ Practise")}</button>
           )
         }
       />

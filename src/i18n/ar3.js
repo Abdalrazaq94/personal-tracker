@@ -238,4 +238,25 @@ export default {
   'Phone / social media': 'الهاتف / التواصل الاجتماعي',
   Alone: 'وحيدًا',
   Other: 'أخرى',
+  // added in the second check
+  '+ Add job': '+ إضافة وظيفة',
+  '+ New note': '+ ملاحظة جديدة',
+  'Adhan 1 and 2 are free recordings from Wikimedia Commons ({0}, {1}: author and licence). They need the internet to play.':
+    'الأذان 1 و2 تسجيلات مجانية من ويكيميديا كومنز ({0}، {1}: المؤلف والترخيص). يحتاجان الإنترنت للتشغيل.',
+  English: 'English',
+  'Language / اللغة': 'اللغة / Language',
+  'On time': 'في وقتها',
+  clean: 'نظيفة',
+  done: 'منجزة',
+  notebook: 'دفتر',
+  section: 'قسم',
+  '✦ Practise': '✦ تدرّب',
+  // habit day boxes
+  Partly: 'جزئيًا',
+  'Over limit': 'فوق الحد',
+  'Rest day': 'يوم راحة',
+  Skipped: 'تم التخطي',
+  'Before you started': 'قبل أن تبدأ',
+  ' tomorrow': ' غدًا',
+  '{0} of {1} prayed': 'صلّيت {0} من {1}',
 }

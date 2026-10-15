@@ -9,6 +9,9 @@ import { Sheet } from '../components/Collections'
 import { DeleteButton, Empty, ErrorBar, Loading, PageHeader, Segmented } from '../components/ui'
 import { T, Tr, LOCALE } from '../lib/i18n'
 
+// names for the little day boxes (shown when you hover/long-press them)
+const STATE_NAME = { ok: 'Done', part: 'Partly', miss: 'Missed', over: 'Over limit', off: 'Rest day', skipped: 'Skipped', pending: 'Not yet', before: 'Before you started' }
+
 const NEEDS_UPDATE =
   'The database needs a small update for this: run supabase/migrations/003_habits_v2.sql (and 002 if you haven’t) in the Supabase SQL Editor.'
 const needsUpdate = (msg) => /column|schema cache|habits_kind_check|habits_target_check/i.test(msg || '')
@@ -83,7 +86,7 @@ export default function Habits() {
           shown.length
             ? T(
             "{0} of {1} {2} today",
-            [onTrack, shown.length, view === 'bad' ? 'clean' : 'done']
+            [onTrack, shown.length, view === 'bad' ? T('clean') : T('done')]
           )
             : view === 'bad'
               ? T("Habits you want to break")
@@ -439,7 +442,7 @@ function HabitCard({ habit, logs, onPlus, onMinus, onResisted, onSkip, onEdit, o
       <div className="habit__week">
         {week.map((d) => (
           <div key={d.key} className="day">
-            <span className={`day__box ${BOX[d.state] || ''}`} title={d.state}>
+            <span className={`day__box ${BOX[d.state] || ''}`} title={T(STATE_NAME[d.state] || d.state)}>
               {d.state === 'skipped' ? '–' : d.state === 'ok' && bad ? '✓' : d.c > 0 ? d.c : ''}
             </span>
             <span className="day__label">{d.label}</span>

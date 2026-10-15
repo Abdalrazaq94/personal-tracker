@@ -211,17 +211,15 @@ export default function Reminders() {
               </div>
               {k.id === 'prayer' && v.sound === 'adhan-mine' && <AdhanFiles />}
               {k.id === 'prayer' && (
-                <p className="muted small adhan-credit">
-                  Adhan 1 and 2 are free recordings from Wikimedia Commons (
-                  <a href={BUILTIN_ADHANS.adhan.page} target="_blank" rel="noreferrer">
-                    1
-                  </a>
-                  ,{' '}
-                  <a href={BUILTIN_ADHANS.adhan2.page} target="_blank" rel="noreferrer">
-                    2
-                  </a>
-                  : author and licence). They need the internet to play.
-                </p>
+                <p className="muted small adhan-credit">{Tr(
+                    "Adhan 1 and 2 are free recordings from Wikimedia Commons ({0}, {1}: author and licence). They need the internet to play.",
+                    <a href={BUILTIN_ADHANS.adhan.page} target="_blank" rel="noreferrer">
+                      1
+                    </a>,
+                    <a href={BUILTIN_ADHANS.adhan2.page} target="_blank" rel="noreferrer">
+                      2
+                    </a>
+                  )}</p>
               )}
             </div>
           );

@@ -298,9 +298,7 @@ export default function Home({ session }) {
         ]) : T("Track habits");
       case '/spend':
         return (
-          <>
-            <CountUp to={spentToday} format={money} /> today
-          </>
+          Tr('{0} today', <CountUp to={spentToday} format={money} />)
         )
       case '/words':
         return d.wordsLeft ? (

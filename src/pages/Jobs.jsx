@@ -220,9 +220,7 @@ function Board({ settings, onChangeBoard, onDisconnect }) {
         subtitle={board ? T("{0} jobs · {1}", [total, board.name]) : T("Trello")}
         right={
           lists?.length > 0 && (
-            <button className="btn btn--sm" onClick={() => setAdding(true)}>
-              + Add job
-            </button>
+            <button className="btn btn--sm" onClick={() => setAdding(true)}>{T("+ Add job")}</button>
           )
         }
       />

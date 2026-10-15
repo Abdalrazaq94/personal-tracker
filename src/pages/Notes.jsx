@@ -41,9 +41,7 @@ export default function Notes() {
         subtitle={T('{0} notes', [notes.rows.length])}
         right={
           books.rows.length > 0 && (
-            <button className="btn btn--sm" onClick={() => setOpen('new')}>
-              + New note
-            </button>
+            <button className="btn btn--sm" onClick={() => setOpen('new')}>{T("+ New note")}</button>
           )
         }
       />
@@ -61,7 +59,7 @@ export default function Notes() {
 
       {!q && (
         <Collections
-          noun="notebook"
+          noun={T("notebook")}
           placeholder={T("e.g. Daily notes")}
           items={books.rows}
           counts={counts}

@@ -215,9 +215,9 @@ function PrayerCard({ place, today, day, setDay, logs, mark, onChangePlace, show
       {next && (
         <p className="prayer__next">{Tr(
             "Next: {0} at {1}{2} · in {3}",
-            <strong>{next.name}</strong>,
+            <strong>{prayerName(next)}</strong>,
             clock(next.at, place.tz),
-            next.tomorrow ? ' tomorrow' : '',
+            next.tomorrow ? T(' tomorrow') : '',
             inWords(next.inMs)
           )}</p>
       )}
@@ -244,19 +244,15 @@ function PrayerCard({ place, today, day, setDay, logs, mark, onChangePlace, show
               </span>
               <span className="prayer-row__time">{clock(times[p.key], place.tz)}</span>
               {notYet ? (
-                <span className="prayer-row__wait muted small">Not yet</span>
+                <span className="prayer-row__wait muted small">{T("Not yet")}</span>
               ) : (
                 <span className="prayer-row__acts" role="group" aria-label={T('{0}: prayed?', [prayerName(p)])}>
-                  <button className={log && !log.late ? 'is-on' : ''} aria-pressed={!!log && !log.late} onClick={() => mark(p.key, false)}>
-                    On time
-                  </button>
-                  <button className={log?.late ? 'is-on' : ''} aria-pressed={!!log?.late} onClick={() => mark(p.key, true)}>
-                    Late
-                  </button>
+                  <button className={log && !log.late ? 'is-on' : ''} aria-pressed={!!log && !log.late} onClick={() => mark(p.key, false)}>{T("On time")}</button>
+                  <button className={log?.late ? 'is-on' : ''} aria-pressed={!!log?.late} onClick={() => mark(p.key, true)}>{T("Late")}</button>
                 </span>
               )}
             </li>
-          )
+          );
         })}
       </ul>
       <p className="muted small prayer__sunrise">{Tr(
@@ -328,7 +324,7 @@ function PrayerWeek({ place, today, logs, onPick, picked }) {
       <div className="prayer-sec">
         <h2>{T("Last 7 days")}</h2>
         <span className="muted small">
-          {prayed} of {possible} prayed{late ? T(" · {0} late", [late]) : ''}
+          {T('{0} of {1} prayed', [prayed, possible])}{late ? T(" · {0} late", [late]) : ''}
           {streak > 1 ? T(" · {0} full days in a row", [streak]) : ''}
         </span>
       </div>

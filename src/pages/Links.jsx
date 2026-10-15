@@ -54,7 +54,7 @@ export default function Links() {
 
       {!q && (
         <Collections
-          noun="section"
+          noun={T("section")}
           placeholder={T("e.g. YouTube videos")}
           items={sections.rows}
           counts={counts}

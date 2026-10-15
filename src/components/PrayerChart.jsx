@@ -190,7 +190,7 @@ export default function PrayerChart({ logs, today, days = 30 }) {
             </span>
             <span className="prayer-rates__num">
               {p.done}/{p.of}
-              {p.late ? <span className="muted"> · {p.late} late</span> : null}
+              {p.late ? <span className="muted">{T(' · {0} late', [p.late])}</span> : null}
             </span>
           </li>
         ))}
