@@ -1349,3 +1349,49 @@ html.theme-anim, html.theme-anim * { transition: background-color .3s ease, bord
 .today-budget { display: grid; gap: 6px; margin-top: 10px; }
 .today-budget .budget__bar { height: 8px; }
 .today-budget p { margin: 0; font-size: 13.5px; }
+
+/* ---------- sleep ---------- */
+.sleep-now { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: center; }
+.sleep-now__icon { font-size: 34px; line-height: 1; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 16px; background: var(--soft); }
+.sleep-now__text { display: grid; gap: 2px; min-width: 0; }
+.sleep-now__text strong { font-size: 18px; }
+.sleep-now__acts { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
+.sleep-now__acts .btn { flex: 1; min-width: 180px; }
+.sleep-now.is-asleep { background: var(--sleep-night); color: #f4f4f6; border-color: var(--sleep-night); }
+.sleep-now.is-asleep .muted, .sleep-now.is-asleep .link { color: #b9bccb; }
+.sleep-now.is-asleep .sleep-now__icon { background: rgba(255, 255, 255, .1); }
+.sleep-now.is-asleep .btn { background: #fff; color: #111; }
+.sleep-rate { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); margin-top: 6px; font-weight: 600; }
+.sleep-faces { display: flex; gap: 6px; flex-wrap: wrap; }
+.sleep-faces button { width: 46px; height: 46px; font-size: 24px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); transition: transform .15s, background .15s; }
+.sleep-faces button:active { transform: scale(.9); }
+.sleep-faces button.is-on { background: var(--fg); border-color: var(--fg); }
+.sleep-form h2 { margin: 0; font-size: 17px; }
+.sleep-goal { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 0 4px; }
+.sleep-chart { margin: 0; display: grid; gap: 4px; }
+.sleep-chart svg { width: 100%; height: auto; touch-action: pan-y; }
+.sleep-chart__title { font-size: 13px; font-weight: 700; margin-top: 8px; }
+.sleep-chart__avg { stroke: var(--fg); stroke-width: 1; stroke-dasharray: 4 4; opacity: .55; }
+.sleep-chart__goal { stroke: var(--fg); stroke-width: 1.2; stroke-dasharray: 5 4; opacity: .7; }
+.sleep-chart__legend { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0; }
+.sleep-chart__dash { display: inline-block; width: 18px; border-top: 1.5px dashed var(--fg); opacity: .6; }
+.sleep-chart__sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+.sleep-chart__sw + .sleep-chart__sw, .sleep-chart__legend .sleep-chart__sw:not(:first-child) { margin-inline-start: 8px; }
+.sleep-insights { margin: 0; padding-inline-start: 18px; display: grid; gap: 8px; font-size: 15px; line-height: 1.5; }
+.sleep-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.sleep-list li { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--line); }
+.sleep-list li:last-child { border-bottom: 0; }
+.sleep-list__main { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) auto auto 24px; gap: 10px; align-items: center; padding: 10px 2px; background: none; border: 0; text-align: start; color: inherit; font: inherit; min-width: 0; }
+.sleep-list__day { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sleep-list__times { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+.sleep-list__main strong { font-variant-numeric: tabular-nums; }
+.sleep-list__main strong.is-good { color: var(--w-memorized-ink); }
+.sleep-wake { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; background: var(--sleep-night); color: #f4f4f6; border-color: var(--sleep-night); }
+.sleep-wake > span { font-size: 26px; }
+.sleep-wake__text { display: grid; gap: 2px; color: inherit; text-decoration: none; min-width: 0; }
+.sleep-wake .muted { color: #b9bccb; }
+.sleep-wake .btn { background: #fff; color: #111; }
+:root { --sleep-night: #1d2140; }
+[data-theme='dark'] { --sleep-night: #232850; }
+@media (max-width: 420px) { .sleep-list__times { font-size: 13px; } .sleep-list__main { gap: 8px; } }
+.sleep-chart svg { direction: ltr; }

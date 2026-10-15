@@ -1,53 +1,40 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { money, parseYmd, today } from '../lib/dates'
-import { change, lastN, periodFor, previousOf, statsFor, trend } from '../lib/review'
-import { isAr, LANG, LOCALE, T, Tr } from '../lib/i18n'
+import { change, previousOf, statsFor, trend } from '../lib/review'
+import { LANG, LOCALE, T, Tr } from '../lib/i18n'
 import { PRAYERS, prayerName } from '../lib/prayer'
 import { callAi } from '../lib/ai'
 import { chartColors, useTheme } from '../lib/theme'
-import { ErrorBar, PageHeader, Segmented } from '../components/ui'
+import { ErrorBar, PageHeader } from '../components/ui'
 import { Markdown } from '../components/AiPanel'
 import Reveal from '../components/bits/Reveal'
 import CountUp from '../components/bits/CountUp'
+import PeriodPicker, { fmtDay, periodLabel, usePeriod } from '../components/PeriodPicker'
 import { loadBudget } from '../lib/budget'
+import { clockFromNoon, hoursText, loadSleepGoal, sleepStats, sleepSummary } from '../lib/sleep'
+import { Link } from 'react-router-dom'
 
-const PRESETS = [
-  { id: '2w', n: 2, unit: 'week', label: 'Last 2 weeks' },
-  { id: '1m', n: 1, unit: 'month', label: 'Last month' },
-  { id: '2m', n: 2, unit: 'month', label: 'Last 2 months' },
-  { id: '3m', n: 3, unit: 'month', label: 'Last 3 months' },
-  { id: '6m', n: 6, unit: 'month', label: 'Last 6 months' },
-]
-
-const fmtDay = (s, opts) => parseYmd(s).toLocaleDateString(LOCALE, opts)
 const pct = (x) => (x == null ? '—' : `${Math.round(x * 100)}%`)
 
-/** "This week", "Last month", "October 2026", "2026", "12 Aug – 15 Oct" */
-function periodLabel(p, offset) {
-  if (p.kind === 'week')
-    return offset === 0 ? T('This week') : offset === -1 ? T('Last week') : `${fmtDay(p.from, { day: 'numeric', month: 'short' })} – ${fmtDay(p.to, { day: 'numeric', month: 'short', year: 'numeric' })}`
-  if (p.kind === 'month') return offset === 0 ? T('This month') : fmtDay(p.from, { month: 'long', year: 'numeric' })
-  if (p.kind === 'year') return offset === 0 ? T('This year') : p.from.slice(0, 4)
-  return `${fmtDay(p.from, { day: 'numeric', month: 'short' })} – ${fmtDay(p.to, { day: 'numeric', month: 'short', year: 'numeric' })}`
-}
 const prevWord = (p) => (p.kind === 'week' ? T('vs the week before') : p.kind === 'month' ? T('vs the month before') : p.kind === 'year' ? T('vs the year before') : T('vs the same length before'))
 
 export default function Review() {
-  const [kind, setKind] = useState('week')
-  const [offset, setOffset] = useState(0)
-  const [custom, setCustom] = useState(() => lastN(2, 'month'))
-  const [preset, setPreset] = useState('2m')
+  const pick = usePeriod('week')
+  const { period, offset } = pick
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [budget, setBudget] = useState(null)
+  const [sleepGoal, setSleepGoal] = useState(8)
   useEffect(() => {
     loadBudget()
       .then((b) => setBudget(b.budget))
       .catch(() => {})
+    loadSleepGoal()
+      .then(setSleepGoal)
+      .catch(() => {})
   }, [])
 
-  const period = kind === 'custom' ? custom : periodFor(kind, offset)
   const prev = useMemo(() => previousOf(period), [period.from, period.to, period.kind]) // eslint-disable-line react-hooks/exhaustive-deps
   const t = today()
 
@@ -58,7 +45,7 @@ export default function Review() {
     const from = prev.from
     const to = period.to < t ? period.to : t
     ;(async () => {
-      const [tasks, plans, habits, logs, prayers, first, expenses, words, notes, links] = await Promise.all([
+      const [tasks, plans, habits, logs, prayers, first, expenses, words, notes, links, sleep] = await Promise.all([
         supabase.from('tasks').select('*'),
         supabase.from('plans').select('plan_date, done').gte('plan_date', from).lte('plan_date', to),
         supabase.from('habits').select('*'),
@@ -69,6 +56,7 @@ export default function Review() {
         supabase.from('words').select('created_at').gte('created_at', from),
         supabase.from('notes').select('created_at').gte('created_at', from),
         supabase.from('links').select('created_at').gte('created_at', from),
+        supabase.from('sleep_logs').select('night, bed_at, wake_at, quality').gte('night', from).lte('night', to),
       ])
       if (!alive) return
       const err = [tasks, plans, habits, logs, expenses].find((r) => r.error)?.error
@@ -84,6 +72,7 @@ export default function Review() {
         words: words.data || [],
         notes: notes.data || [],
         links: links.data || [],
+        sleep: sleep.error ? [] : sleep.data || [], // empty until 017_sleep.sql is run
       })
     })()
     return () => {
@@ -91,7 +80,8 @@ export default function Review() {
     }
   }, [period.from, period.to, prev.from]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const now = data && statsFor(data, period, t)
+  const now = data && { ...statsFor(data, period, t), sleep: sleepStats(data.sleep, { from: period.from, to: period.to < t ? period.to : t }, sleepGoal) }
+  const sleepBefore = data && sleepStats(data.sleep, prev, sleepGoal)
   const before = data && statsFor(data, prev, t)
   const tr = data && trend(data, period, t)
   const future = period.from > t
@@ -102,81 +92,7 @@ export default function Review() {
       <ErrorBar error={error} onClose={() => setError(null)} />
 
       {/* ------------------------------ choose the period ------------------------------ */}
-      <section className="card review-pick">
-        <Segmented
-          value={kind}
-          onChange={(k) => {
-            setKind(k)
-            setOffset(0)
-          }}
-          options={[
-            { value: 'week', label: T('Week') },
-            { value: 'month', label: T('Month') },
-            { value: 'year', label: T('Year') },
-            { value: 'custom', label: T('Custom') },
-          ]}
-        />
-        {kind !== 'custom' ? (
-          <div className="review-nav">
-            <button type="button" className="round-btn" aria-label={T('Earlier')} onClick={() => setOffset((o) => o - 1)}>
-              {isAr ? '›' : '‹'}
-            </button>
-            <div className="review-nav__label">
-              <strong>{periodLabel(period, offset)}</strong>
-              <span className="muted small">
-                {fmtDay(period.from, { day: 'numeric', month: 'short' })} – {fmtDay(period.to, { day: 'numeric', month: 'short', year: 'numeric' })}
-              </span>
-            </div>
-            <button type="button" className="round-btn" aria-label={T('Later')} disabled={offset >= 0} onClick={() => setOffset((o) => Math.min(0, o + 1))}>
-              {isAr ? '‹' : '›'}
-            </button>
-          </div>
-        ) : (
-          <div className="review-custom">
-            <div className="chips-row">
-              {PRESETS.map((x) => (
-                <button
-                  key={x.id}
-                  type="button"
-                  className={`chip ${preset === x.id ? 'is-active chip--solid' : ''}`}
-                  onClick={() => {
-                    setPreset(x.id)
-                    setCustom(lastN(x.n, x.unit))
-                  }}
-                >
-                  {T(x.label)}
-                </button>
-              ))}
-            </div>
-            <div className="review-dates">
-              <label className="field">
-                <span>{T('From')}</span>
-                <input
-                  type="date"
-                  value={custom.from}
-                  max={custom.to}
-                  onChange={(e) => {
-                    setPreset('')
-                    if (e.target.value) setCustom((c) => ({ ...c, from: e.target.value }))
-                  }}
-                />
-              </label>
-              <label className="field">
-                <span>{T('To')}</span>
-                <input
-                  type="date"
-                  value={custom.to}
-                  min={custom.from}
-                  onChange={(e) => {
-                    setPreset('')
-                    if (e.target.value) setCustom((c) => ({ ...c, to: e.target.value }))
-                  }}
-                />
-              </label>
-            </div>
-          </div>
-        )}
-      </section>
+      <PeriodPicker state={pick} />
 
       {future ? (
         <div className="empty muted">{T('This period hasn’t started yet.')}</div>
@@ -315,6 +231,22 @@ export default function Review() {
             )}
           </Reveal>
 
+          {now.sleep.count > 0 && (
+            <Reveal as="section" className="card review-card">
+              <h2>{T('Sleep')}</h2>
+              <Rows
+                rows={[
+                  [T('Average sleep'), hoursText(now.sleep.avgMin), sleepBefore.count ? hoursText(sleepBefore.avgMin) : '—'],
+                  [T('Bedtime'), clockFromNoon(now.sleep.avgBed), sleepBefore.count ? clockFromNoon(sleepBefore.avgBed) : '—'],
+                  [T('Wake-up'), clockFromNoon(now.sleep.avgWake), sleepBefore.count ? clockFromNoon(sleepBefore.avgWake) : '—'],
+                  [T('Nights logged'), now.sleep.count, sleepBefore.count],
+                ]}
+              />
+              <Meter name={T('Nights that met your goal')} rate={now.sleep.metGoal / now.sleep.count} note={T('{0} of {1} nights · goal {2}', [now.sleep.metGoal, now.sleep.count, hoursText(sleepGoal * 60)])} />
+              <Link to="/sleep" className="link small">{T('Open Sleep for the full analysis →')}</Link>
+            </Reveal>
+          )}
+
           <Reveal as="section" className="card review-card">
             <h2>{T('Learning and notes')}</h2>
             <Rows
@@ -326,7 +258,7 @@ export default function Review() {
             />
           </Reveal>
 
-          <AiReview period={period} label={periodLabel(period, offset)} now={now} before={before} />
+          <AiReview period={period} label={periodLabel(period, offset)} now={now} before={before} sleepBefore={sleepBefore} sleepGoal={sleepGoal} />
         </>
       )}
     </div>
@@ -435,7 +367,7 @@ function Bars({ buckets, field, unit, label, format = (n) => String(Math.round(n
 }
 
 /** The AI writes the review from the numbers (in Arabic when the app is in Arabic). */
-function AiReview({ period, label, now, before }) {
+function AiReview({ period, label, now, before, sleepBefore, sleepGoal }) {
   const key = `review:${LANG}:${period.from}:${period.to}`
   const [text, setText] = useState(() => {
     try {
@@ -459,7 +391,7 @@ function AiReview({ period, label, now, before }) {
     setBusy(true)
     setError('')
     try {
-      const r = await callAi({ kind: 'review', label, from: period.from, to: period.to, summary: summaryText(now, before) })
+      const r = await callAi({ kind: 'review', label, from: period.from, to: period.to, summary: summaryText(now, before) + (now.sleep.count ? '\nSLEEP:\n' + sleepSummary(now.sleep, sleepBefore, sleepGoal) : '') })
       setText(r.text)
       try {
         localStorage.setItem(key, r.text)

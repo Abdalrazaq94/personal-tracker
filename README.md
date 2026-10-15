@@ -116,6 +116,15 @@ how often each prayer was prayed or late, and an AI review with tips. It needs t
 
 Setup (once): run `supabase/migrations/006_prayers.sql` in Supabase → SQL Editor, and redeploy the `ai` function.
 
+## Sleep
+
+**Sleep** (Home tile 😴 or the menu): tap **Going to sleep** at bedtime and **I'm awake** in the morning (also on Home),
+or **Add a night** with the times by hand; rate the night and add a note if you like. Pick a week, month, year or your
+own range to see average sleep, bedtime, wake-up, consistency, charts of every night, and findings such as weekend
+shift, Fajr on time vs bedtime, and tasks done after good or short nights. **Deep analysis** asks the AI for patterns,
+your best routine and what to try this week. Review includes sleep too.
+Setup: run `supabase/migrations/017_sleep.sql` and redeploy the `ai` function.
+
 ## Monthly budget
 
 **Spend** → **Set budget**. The card shows what's left, how much you can spend per day for the rest of the month,

@@ -15,6 +15,7 @@ import { currentStatus } from '../lib/push'
 import { T, Tr, LOCALE } from '../lib/i18n'
 import { savePrayerLog, statusOf } from '../lib/prayerStatus'
 import { budgetStats, loadBudget } from '../lib/budget'
+import { clockOf, hoursText, minutesSlept } from '../lib/sleep'
 
 const PRIORITY = { doing: 0, todo: 1 }
 
@@ -29,6 +30,7 @@ const TILES = [
   { to: '/notes', icon: '📝', label: T("Notes") },
   { to: '/links', icon: '🔗', label: T("Links") },
   { to: '/jobs', icon: '💼', label: T("Jobs") },
+  { to: '/sleep', icon: '😴', label: T("Sleep") },
   { to: '/reminders', icon: '🔔', label: T("Reminders") },
   { to: '/review', icon: '📊', label: T("Review"), wide: true },
 ]
@@ -67,6 +69,7 @@ export default function Home({ session }) {
   const [prayerLogs, setPrayerLogs] = useState(null) // today's marked prayers: Map prayer → row
   const [remind, setRemind] = useState(null) // reminders on / off on this phone
   const [budget, setBudget] = useState(null) // monthly budget (null = none set)
+  const [sleepRows, setSleepRows] = useState([]) // the last 2 nights (empty if Sleep isn't set up)
 
   useEffect(() => {
     currentStatus()
@@ -75,6 +78,12 @@ export default function Home({ session }) {
     loadBudget()
       .then((b) => setBudget(b.budget))
       .catch(() => {})
+    supabase
+      .from('sleep_logs')
+      .select('*')
+      .order('night', { ascending: false })
+      .limit(2)
+      .then(({ data, error }) => !error && setSleepRows(data || []))
     supabase.auth.getUser().then(async ({ data }) => {
       const pl = data?.user?.user_metadata?.prayer || null
       setPlace(pl)
@@ -252,6 +261,19 @@ export default function Home({ session }) {
   const spentToday = d ? d.spend.filter((x) => x.spent_on === t).reduce((a, x) => a + Number(x.amount), 0) : 0
   const spentMonth = d ? d.spend.reduce((a, x) => a + Number(x.amount), 0) : 0
   const bud = d && budget ? budgetStats(d.spend, budget, t) : null
+  const sleepOpen = sleepRows.find((r) => !r.wake_at && Date.now() - Date.parse(r.bed_at) < 20 * 3600e3)
+  const wakeUp = async () => {
+    const at = new Date().toISOString()
+    if (Date.now() - Date.parse(sleepOpen.bed_at) < 5 * 60000) {
+      // tapped by mistake: nothing to save
+      setSleepRows((l) => l.filter((r) => r.id !== sleepOpen.id))
+      await supabase.from('sleep_logs').delete().eq('id', sleepOpen.id)
+      return
+    }
+    setSleepRows((l) => l.map((r) => (r.id === sleepOpen.id ? { ...r, wake_at: at } : r)))
+    const { error } = await supabase.from('sleep_logs').update({ wake_at: at, updated_at: at }).eq('id', sleepOpen.id)
+    if (error) setError(error.message)
+  }
 
   /** A plain summary of today, used when the AI can't answer. */
   function plainBrief() {
@@ -329,6 +351,11 @@ export default function Home({ session }) {
         return T("Applications");
       case '/review':
         return T('Your week, month or year at a glance')
+      case '/sleep': {
+        if (sleepOpen) return T('Sleeping since {0}', [clockOf(sleepOpen.bed_at)])
+        const last = sleepRows.find((r) => r.wake_at)
+        return last && last.night >= addDays(t, -1) ? T('{0} last night', [hoursText(minutesSlept(last))]) : T('Log your sleep')
+      }
       case '/reminders':
         return remind === 'on' ? T("On") : remind === 'blocked' ? T("Blocked") : T("Off");
       default:
@@ -380,6 +407,19 @@ export default function Home({ session }) {
           </GlareHover>
         ))}
       </nav>
+
+      {sleepOpen && (
+        <section className="card sleep-wake">
+          <span aria-hidden>🌙</span>
+          <Link to="/sleep" className="sleep-wake__text">
+            <strong>{T('Sleeping since {0}', [clockOf(sleepOpen.bed_at)])}</strong>
+            <span className="muted small">{T('{0} so far', [hoursText((Date.now() - Date.parse(sleepOpen.bed_at)) / 60000)])}</span>
+          </Link>
+          <button className="btn btn--sm" onClick={wakeUp}>
+            {T('☀️ I’m awake')}
+          </button>
+        </section>
+      )}
 
       {!d ? (
         <div className="empty muted loading-text">{T("Loading your day…")}</div>

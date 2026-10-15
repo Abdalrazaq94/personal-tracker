@@ -94,6 +94,8 @@ Deno.serve(async (req) => {
         return json(await parse(db, body))
       case 'review':
         return json(await review(body))
+      case 'sleep':
+        return json(await sleep(db, body))
       default:
         return json({ error: 'Unknown request.' }, 400)
     }
@@ -536,6 +538,117 @@ async function review(b: Body) {
       'Be kind and encouraging, never judgmental; for prayers be respectful. Max ~180 words. Never invent data; skip areas with no data.' +
       (inArabic(b) ? ARABIC : ''),
     `Period: ${label} (${x.from} to ${x.to}).\n\n${summary}`
+  )
+  return { text }
+}
+
+/* -------------------------------- sleep --------------------------------- */
+
+// deno-lint-ignore no-explicit-any
+async function sleep(db: any, b: Body) {
+  const x = b as { label?: string; from?: string; to?: string; summary?: string; goal?: number; tz?: string; question?: string }
+  const day = /^\d{4}-\d{2}-\d{2}$/
+  if (!day.test(x.from ?? '') || !day.test(x.to ?? '')) throw new Error('Choose a period first.')
+  let tz = 'Europe/London'
+  try {
+    if (x.tz) {
+      new Intl.DateTimeFormat('en-GB', { timeZone: x.tz })
+      tz = x.tz
+    }
+  } catch {
+    /* keep London */
+  }
+  const goal = Number(x.goal) >= 4 && Number(x.goal) <= 12 ? Number(x.goal) : 8
+  const [logs, fajr, tasks] = await Promise.all([
+    db.from('sleep_logs').select('night, bed_at, wake_at, quality, note').gte('night', x.from).lte('night', x.to).order('night').limit(400),
+    db.from('prayer_logs').select('*').eq('prayer', 'fajr').gte('day', x.from).lte('day', x.to),
+    db.from('tasks').select('done_at').gte('done_at', x.from).lte('done_at', x.to + 'T23:59:59Z'),
+  ])
+  if (logs.error) throw new Error(/sleep_logs/.test(logs.error.message) ? 'Run supabase/migrations/017_sleep.sql in Supabase first.' : logs.error.message)
+  // deno-lint-ignore no-explicit-any
+  const rows = (logs.data ?? []).filter((r: any) => r.wake_at)
+  if (!rows.length) throw new Error('No nights logged in this period yet.')
+
+  const clock = (ts: string) => new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(ts))
+  const localDay = (ts: string) => new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date(ts))
+  const fajrOf = new Map<string, string>()
+  // deno-lint-ignore no-explicit-any
+  for (const l of fajr.data ?? []) fajrOf.set(l.day, (l as any).status || ((l as any).late ? 'late' : 'ontime'))
+  const doneOf = new Map<string, number>()
+  // deno-lint-ignore no-explicit-any
+  for (const t of tasks.data ?? []) if ((t as any).done_at) doneOf.set(localDay((t as any).done_at), (doneOf.get(localDay((t as any).done_at)) ?? 0) + 1)
+  const hm = (min: number) => `${Math.floor(min / 60)}h${String(Math.round(min % 60)).padStart(2, '0')}`
+
+  // deno-lint-ignore no-explicit-any
+  const lines = rows.map((r: any) => {
+    const min = (Date.parse(r.wake_at) - Date.parse(r.bed_at)) / 60000
+    const wd = WEEK[new Date(r.night + 'T00:00:00Z').getUTCDay()].slice(0, 3)
+    return [
+      `${r.night} ${wd}`,
+      `bed ${clock(r.bed_at)}`,
+      `wake ${clock(r.wake_at)}`,
+      hm(min),
+      r.quality ? `quality ${r.quality}/5` : '',
+      fajrOf.has(r.night) ? `Fajr ${fajrOf.get(r.night)}` : 'Fajr not marked',
+      `tasks done ${doneOf.get(r.night) ?? 0}`,
+      r.note ? `note: ${clip(r.note, 80)}` : '',
+    ]
+      .filter(Boolean)
+      .join(' | ')
+  })
+  // long periods: one line per week keeps the answer fast
+  let nightsText = lines.join('\n')
+  if (lines.length > 70) {
+    const weeks = new Map<string, string[]>()
+    // deno-lint-ignore no-explicit-any
+    rows.forEach((r: any, i: number) => {
+      const d = new Date(r.night + 'T00:00:00Z')
+      d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7))
+      const k = d.toISOString().slice(0, 10)
+      weeks.set(k, [...(weeks.get(k) ?? []), lines[i]])
+    })
+    nightsText =
+      'Too many nights to list; one line per week (week starting | nights | average sleep | average bed | average wake):\n' +
+      [...weeks.entries()]
+        .map(([k, ls]) => {
+          const rs = ls.map((l) => l.split(' | '))
+          const mins = rs.map((p) => {
+            const [h, m] = p[3].split('h').map(Number)
+            return h * 60 + m
+          })
+          const avg = (a: number[]) => a.reduce((s, v) => s + v, 0) / a.length
+          const noon = (c: string) => {
+            const [h, m] = c.slice(-5).split(':').map(Number)
+            return (h * 60 + m + 720) % 1440
+          }
+          const back = (v: number) => {
+            const z = Math.round(v + 720) % 1440
+            return `${String(Math.floor(z / 60)).padStart(2, '0')}:${String(z % 60).padStart(2, '0')}`
+          }
+          return `${k} | ${ls.length} | ${hm(avg(mins))} | ${back(avg(rs.map((p) => noon(p[1]))))} | ${back(avg(rs.map((p) => noon(p[2]))))}`
+        })
+        .join('\n')
+  }
+
+  const question = clip(x.question, 400)
+  const text = await askText(
+    'You are a sleep coach inside a personal tracker app. You give a deep but easy-to-read analysis of the user\'s own sleep data. ' +
+      'Use the real numbers and dates. Never invent data. Not medical advice: if something looks worrying (often under 5 hours, ' +
+      'very irregular for weeks), gently suggest talking to a doctor. Be warm and practical, never judgmental. ' +
+      (question
+        ? 'Answer the user\'s question first and fully, using the data; then add one short tip. '
+        : 'Structure, with "## " headings: ' +
+          '"## Overview" (2–3 sentences: how much and how regularly they sleep vs their goal, compared with the period before). ' +
+          '"## Patterns" (3–5 bullets: bedtime drift, weekday vs weekend shift (social jet lag), best and worst nights and what they had in common, ' +
+          'which days of the week are hardest, trend over the period). ' +
+          '"## Effects on your day" (2–3 bullets: link sleep with Fajr on time and tasks done the next day, only if the data shows it). ' +
+          '"## Your best routine" (a suggested bedtime and wake-up time that fits their goal and Fajr, based on their own best nights). ' +
+          '"## Try this week" (3 small, specific actions). ') +
+      '**Bold** key numbers and times. Max ~350 words.' +
+      (inArabic(b) ? ARABIC : ''),
+    `Period: ${clip(x.label, 80) || 'this period'} (${x.from} to ${x.to}). Sleep goal: ${goal} hours. Time zone: ${tz}.\n\n` +
+      `WORKED-OUT NUMBERS:\n${clip(x.summary, 3000) || '(none)'}\n\nNIGHTS (date of the morning | bedtime | wake-up | hours slept | quality | Fajr that morning | tasks done that day | note):\n${nightsText}` +
+      (question ? `\n\nMy question: ${question}` : '')
   )
   return { text }
 }

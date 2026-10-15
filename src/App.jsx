@@ -25,6 +25,7 @@ const PAGES = {
   commit: () => import('./pages/Commit'),
   reminders: () => import('./pages/Reminders'),
   review: () => import('./pages/Review'),
+  sleep: () => import('./pages/Sleep'),
 }
 const Words = lazy(PAGES.words)
 const Tasks = lazy(PAGES.tasks)
@@ -37,6 +38,7 @@ const Jobs = lazy(PAGES.jobs)
 const Commit = lazy(PAGES.commit)
 const Reminders = lazy(PAGES.reminders)
 const Review = lazy(PAGES.review)
+const Sleep = lazy(PAGES.sleep)
 function prefetchPages() {
   const go = () => Object.values(PAGES).forEach((load) => load().catch(() => {}))
   if ('requestIdleCallback' in window) window.requestIdleCallback(go, { timeout: 4000 })
@@ -53,6 +55,7 @@ export const SECTIONS = [
   { to: '/notes', label: T("Notes"), hint: T("Notebooks with note cards") },
   { to: '/jobs', label: T("Jobs"), hint: T("Jobs applied · Trello") },
   { to: '/commit', label: T("Commit"), hint: T("Commitments · prayer times") },
+  { to: '/sleep', label: T("Sleep"), hint: T("Bedtime, wake-up · AI analysis") },
   { to: '/review', label: T("Review"), hint: T("Week, month or year at a glance") },
   { to: '/reminders', label: T("Reminders"), hint: T("Notifications for plans & prayers") },
 ]
@@ -116,7 +119,8 @@ export default function App() {
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/commit" element={<Commit />} />
             <Route path="/reminders" element={<Reminders />} />
-          <Route path="/review" element={<Review />} />
+            <Route path="/review" element={<Review />} />
+            <Route path="/sleep" element={<Sleep />} />
             <Route path="/more" element={<More />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
