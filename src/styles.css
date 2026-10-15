@@ -884,3 +884,4 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .install--compact { padding: 12px 16px; border-top: 1px solid var(--line); }
 .install__help { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
 .install__help p { margin: 0; }
+.rem-diag { font-size: 12px; overflow-wrap: anywhere; }

@@ -119,6 +119,7 @@ export default function Reminders() {
           )}
         </div>
         {note && note !== 'Saved.' && <p className="small rem-note">{note}</p>}
+        <Diagnostics status={status} />
       </section>
 
       <section className="card rem-card">
@@ -247,4 +248,36 @@ export default function Reminders() {
       </section>
     </div>
   )
+}
+
+/** One line of facts for troubleshooting (send a screenshot of it). */
+function Diagnostics({ status }) {
+  const [info, setInfo] = useState('')
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      const perm = 'Notification' in window ? Notification.permission : 'none'
+      let android = ''
+      try {
+        const q = await navigator.permissions?.query({ name: 'notifications' })
+        if (q) android = q.state
+      } catch {
+        /* not available */
+      }
+      const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null
+      const sub = await reg?.pushManager?.getSubscription?.().catch(() => null)
+      const app = window.matchMedia?.('(display-mode: standalone)').matches ? 'app' : 'browser tab'
+      const ua = navigator.userAgent.match(/(SamsungBrowser|EdgA|Edg|Firefox|OPR|CriOS|Chrome|Version)\/[\d.]+/)?.[0] || ''
+      if (alive)
+        setInfo(
+          `Details: ${status} · permission ${perm}${android && android !== perm ? ` / ${android}` : ''} · helper ${reg ? (reg.active ? 'ready' : 'starting') : 'missing'} · ${
+            sub ? 'subscribed' : 'not subscribed'
+          } · ${app} · ${ua}`
+        )
+    })()
+    return () => {
+      alive = false
+    }
+  }, [status])
+  return info ? <p className="muted small rem-diag">{info}</p> : null
 }
