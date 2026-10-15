@@ -375,7 +375,7 @@ export default function Home({ session }) {
           <DayBrief fallback={plainBrief()} />
 
           {/* ------------------------------ daily tasks: chart, then the list ------------------------------ */}
-          <Reveal as="section" className="today-card">
+          <Reveal as="section" className="today-card today-card--tasks">
             <SectionHead title="Daily tasks" to="/tasks" note={`${d.tasks.filter((x) => x.status !== 'done').length} to do`} />
             <TaskChart tasks={d.allTasks} today={t} />
             {d.allTasks.length > 0 && !d.allTasks.some((x) => 'done_at' in x) && (
@@ -410,7 +410,7 @@ export default function Home({ session }) {
           </Reveal>
 
           {/* ------------------------------ plans: today and coming up ------------------------------ */}
-          <Reveal as="section" className="today-card">
+          <Reveal as="section" className="today-card today-card--plans">
             <SectionHead title="Plans" to="/plan" />
             {planGroups.length === 0 ? (
               <p className="muted small">
@@ -570,7 +570,7 @@ function PrayerToday({ place, logs, onMark }) {
   if (place === undefined) return null
   if (!place)
     return (
-      <Reveal as="section" className="today-card">
+      <Reveal as="section" className="today-card today-card--prayers">
         <SectionHead title="Prayers" to="/commit" />
         <p className="muted small">
           Choose your city in <Link to="/commit">Prayers</Link> to see prayer times here.
@@ -606,7 +606,7 @@ function PrayerToday({ place, logs, onMark }) {
   }
 
   return (
-    <Reveal as="section" className="today-card">
+    <Reveal as="section" className="today-card today-card--prayers">
       <SectionHead title="Prayers" to="/commit" note={`Next: ${next.name} ${clock(next.at, place.tz)} · in ${inWords(next.inMs)}`} />
       <ul className="pt-row" aria-label="Today's prayers">
         {rows.map((r) => (

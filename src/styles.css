@@ -999,3 +999,22 @@ select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rg
 .star-border.home-tile:hover { border-color: transparent; }
 @media (min-width: 720px) { .star-border.home-tile { flex-direction: column; align-items: flex-start; gap: 8px; } }
 .star-border.home-tile .home-tile__text { text-align: left; }
+
+/* boxes sit on the moving grid: give them solid backgrounds (white by default, soft colours for the three main ones) */
+.card, .today-card, .item, .ai-panel, .toolbar .segmented { background: var(--bg); }
+.today-card--tasks { background: #eef6f0; border-color: #d3e7d8; }
+.today-card--plans { background: #edf2fa; border-color: #d2deef; }
+.today-card--prayers { background: #f8f2e8; border-color: #ecdfc9; }
+.today-card--tasks .today-list li, .today-card--plans .today-list li { border-top-color: rgba(10, 10, 10, .08); }
+.today-card--tasks .check, .today-card--plans .check { background: #fff; }
+.today-card--tasks .check.is-on, .today-card--plans .check.is-on { background: var(--fg); }
+.today-card--tasks .tag:not(.tag--solid), .today-card--plans .tag:not(.tag--solid) { background: #fff; }
+.today-card--tasks .habit-chart__info, .today-card--plans .up-day { color: #4d5a50; }
+.today-card--plans .up-day { color: #4b5a70; }
+.today-card--plans .up-day.is-late { color: #b3261e; }
+.today-card--prayers .pt { background: #fff; }
+.today-card--prayers .pt--done, .today-card--prayers .pt--late { background: #e6f2e8; }
+.today-card--prayers .pt--now { background: var(--fg); }
+.today-card--prayers .pt--missed { background: #fbe9e7; }
+.today-card--prayers .pt-act { border-top-color: rgba(10, 10, 10, .08); }
+.today-card--prayers .btn--ghost { background: #fff; }
