@@ -1395,3 +1395,63 @@ html.theme-anim, html.theme-anim * { transition: background-color .3s ease, bord
 [data-theme='dark'] { --sleep-night: #232850; }
 @media (max-width: 420px) { .sleep-list__times { font-size: 13px; } .sleep-list__main { gap: 8px; } }
 .sleep-chart svg { direction: ltr; }
+
+/* ---------- promises ---------- */
+.promise-new { align-self: flex-start; }
+.promise-empty { display: grid; justify-items: center; text-align: center; gap: 4px; padding: 28px 18px; }
+.promise-empty__icon { font-size: 40px; }
+.promise-empty p { margin: 0; }
+.promise { display: grid; gap: 14px; }
+.promise__head { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+.promise__emoji { font-size: 26px; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; background: var(--soft); }
+.promise__title { display: grid; gap: 2px; min-width: 0; }
+.promise__title h2 { margin: 0; font-size: 17px; line-height: 1.3; overflow-wrap: anywhere; }
+.promise__menu { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip--danger { color: var(--missed); border-color: var(--missed-line); }
+.promise__main { display: grid; grid-template-columns: 116px 1fr; gap: 16px; align-items: center; }
+.promise-ring { position: relative; width: 116px; height: 116px; }
+.promise-ring svg { width: 100%; height: 100%; }
+.promise-ring__track { fill: none; stroke: var(--soft); stroke-width: 9; }
+.promise-ring__fill { fill: none; stroke: var(--w-memorized-ink); stroke-width: 9; stroke-linecap: round; transition: stroke-dasharray .8s cubic-bezier(.22,1,.36,1); }
+.promise--broken .promise-ring__fill { stroke: var(--qada); }
+.promise-ring__text { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; line-height: 1.1; }
+.promise-ring__text strong { font-size: 32px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.promise-ring__text span { font-size: 11.5px; color: var(--muted); font-weight: 600; max-width: 80px; }
+.promise__facts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.promise__facts li { display: grid; gap: 1px; padding: 8px 10px; border-radius: 12px; background: var(--soft); min-width: 0; }
+.promise__facts li > span:first-child { font-size: 12px; color: var(--muted); font-weight: 600; }
+.promise__facts strong { font-size: 16px; font-variant-numeric: tabular-nums; }
+.promise__facts strong.is-good { color: var(--w-memorized-ink); }
+.promise__win { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--w-memorized); font-size: 14px; }
+.promise__why { margin: 0; font-size: 14px; color: var(--muted); }
+.promise__why em { color: var(--fg); font-style: normal; font-weight: 600; }
+.promise__today { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14.5px; flex-wrap: wrap; }
+.promise__ok { color: var(--w-memorized-ink); font-weight: 700; }
+.promise--broken .promise__today > span:first-child { color: var(--missed); font-weight: 700; }
+.promise__break { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.promise__kind { grid-column: 1 / -1; }
+.promise-cal__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; max-width: 360px; }
+.promise-cal__head { text-align: center; font-size: 11px; color: var(--muted); font-weight: 700; }
+.promise-cal__day { aspect-ratio: 1; border-radius: 9px; border: 1px solid transparent; background: transparent; font-size: 12px; font-weight: 600; color: var(--muted); padding: 0; font-variant-numeric: tabular-nums; }
+.promise-cal__day:disabled { opacity: .35; cursor: default; }
+.promise-cal__day.is-kept { background: var(--w-memorized-ink); color: #fff; }
+.promise-cal__day.is-broken { background: var(--missed); color: #fff; }
+.promise-cal__day.is-missed { background: var(--missed-bg); border-color: var(--missed-line); color: var(--missed); }
+.promise-cal__day.is-pending { border: 1.5px dashed var(--muted); color: var(--fg); }
+.promise-cal__day.is-today { outline: 2px solid var(--fg); outline-offset: 1px; }
+.promise-cal__legend { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 6px 0 0; }
+.promise-cal__dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+.promise-cal__dot.is-kept { background: var(--w-memorized-ink); }
+.promise-cal__dot.is-broken { background: var(--missed); margin-inline-start: 6px; }
+.promise-sec { margin: 0 0 8px; font-size: 17px; }
+.promise-ended { list-style: none; margin: 0; padding: 0; display: grid; }
+.promise-ended li { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.promise-ended li:last-child { border-bottom: 0; }
+.promise-ended__text { display: grid; gap: 2px; min-width: 0; }
+.promise-report__title { margin: 14px 4px 0; font-size: 20px; }
+.promise-form h2 { margin: 0; font-size: 17px; }
+.promise-emojis { display: flex; flex-wrap: wrap; gap: 6px; }
+.promise-emojis button { width: 42px; height: 42px; font-size: 21px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); }
+.promise-emojis button.is-on { background: var(--fg); border-color: var(--fg); }
+@media (max-width: 380px) { .promise__main { grid-template-columns: 1fr; justify-items: center; } .promise__facts { width: 100%; } }
+[data-theme='dark'] .promise-cal__day.is-kept, [data-theme='dark'] .promise-cal__day.is-broken { color: #111; }

@@ -96,6 +96,8 @@ Deno.serve(async (req) => {
         return json(await review(body))
       case 'sleep':
         return json(await sleep(db, body))
+      case 'promises':
+        return json(await promises(body))
       default:
         return json({ error: 'Unknown request.' }, 400)
     }
@@ -648,6 +650,33 @@ async function sleep(db: any, b: Body) {
       (inArabic(b) ? ARABIC : ''),
     `Period: ${clip(x.label, 80) || 'this period'} (${x.from} to ${x.to}). Sleep goal: ${goal} hours. Time zone: ${tz}.\n\n` +
       `WORKED-OUT NUMBERS:\n${clip(x.summary, 3000) || '(none)'}\n\nNIGHTS (date of the morning | bedtime | wake-up | hours slept | quality | Fajr that morning | tasks done that day | note):\n${nightsText}` +
+      (question ? `\n\nMy question: ${question}` : '')
+  )
+  return { text }
+}
+
+/* ------------------------------- promises -------------------------------- */
+
+async function promises(b: Body) {
+  const x = b as { label?: string; from?: string; to?: string; summary?: string; question?: string; today?: string }
+  const summary = clip(x.summary, 6000)
+  if (!summary) throw new Error('Add a promise first.')
+  const question = clip(x.question, 400)
+  const text = await askText(
+    'You are a warm, wise coach inside a personal tracker app. The user makes promises to themselves ' +
+      '("not to smoke", "no coffee", "read every day"). Analyse their own data and help them keep the promises. ' +
+      'Use the real numbers, dates and their own notes. Never invent data. Never shame them for breaking a promise; ' +
+      'a slip is information, not failure. If a promise is about quitting smoking, alcohol or drugs, you may mention once that ' +
+      'free support services exist (for example the NHS in the UK) — no medical advice. ' +
+      (question
+        ? 'Answer the user\'s question first and fully from the data, then add one short practical tip. '
+        : 'Structure, with "## " headings: "## Where you stand" (one bullet per promise: streak, days kept, progress to goal, money saved if any). ' +
+          '"## Patterns" (2–4 bullets: which weekdays or situations they break it, what their notes say about triggers, whether it is getting better over time). ' +
+          '"## Next milestone" (the nearest milestone per promise and what reaching it would mean). ' +
+          '"## Plan" (3 specific, small actions for the hardest promise, based on its triggers and their own reason). ') +
+      '**Bold** key numbers. Max ~300 words.' +
+      (inArabic(b) ? ARABIC : ''),
+    `Today is ${clip(x.today, 10) || 'today'}. Period: ${clip(x.label, 80) || 'all time'}${x.from ? ` (${clip(x.from, 10)} to ${clip(x.to, 10)})` : ''}.\n\n${summary}` +
       (question ? `\n\nMy question: ${question}` : '')
   )
   return { text }

@@ -125,6 +125,16 @@ shift, Fajr on time vs bedtime, and tasks done after good or short nights. **Dee
 your best routine and what to try this week. Review includes sleep too.
 Setup: run `supabase/migrations/017_sleep.sql` and redeploy the `ai` function.
 
+## Promises
+
+**Promises** (Home tile 🤝 or the menu): promises you make to yourself. Choose **Not to…** ("not to smoke": every day
+counts as kept unless you tap **I broke it**) or **To… every day** ("read 10 pages": tap **I did it** each day). Add a
+reason, a start date (it can be in the past), a goal (7–365 days or for good) and, optionally, what it costs a day to
+see money saved. Each promise shows days in a row, best streak, kept rate, progress to the goal, the next milestone and
+a 5-week calendar (tap a day to change it). The progress report covers any week, month, year or range, and the AI
+analysis finds what makes you slip and gives you a plan. Review includes promises too.
+Setup: run `supabase/migrations/018_promises.sql` and redeploy the `ai` function.
+
 ## Monthly budget
 
 **Spend** → **Set budget**. The card shows what's left, how much you can spend per day for the rest of the month,

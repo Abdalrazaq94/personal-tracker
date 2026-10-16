@@ -13,6 +13,7 @@ import CountUp from '../components/bits/CountUp'
 import PeriodPicker, { fmtDay, periodLabel, usePeriod } from '../components/PeriodPicker'
 import { loadBudget } from '../lib/budget'
 import { clockFromNoon, hoursText, loadSleepGoal, sleepStats, sleepSummary } from '../lib/sleep'
+import { promisesReport } from '../lib/promises'
 import { Link } from 'react-router-dom'
 
 const pct = (x) => (x == null ? '—' : `${Math.round(x * 100)}%`)
@@ -45,7 +46,7 @@ export default function Review() {
     const from = prev.from
     const to = period.to < t ? period.to : t
     ;(async () => {
-      const [tasks, plans, habits, logs, prayers, first, expenses, words, notes, links, sleep] = await Promise.all([
+      const [tasks, plans, habits, logs, prayers, first, expenses, words, notes, links, sleep, promises, promiseLogs] = await Promise.all([
         supabase.from('tasks').select('*'),
         supabase.from('plans').select('plan_date, done').gte('plan_date', from).lte('plan_date', to),
         supabase.from('habits').select('*'),
@@ -57,6 +58,8 @@ export default function Review() {
         supabase.from('notes').select('created_at').gte('created_at', from),
         supabase.from('links').select('created_at').gte('created_at', from),
         supabase.from('sleep_logs').select('night, bed_at, wake_at, quality').gte('night', from).lte('night', to),
+        supabase.from('promises').select('*'),
+        supabase.from('promise_logs').select('*').gte('day', from).lte('day', to),
       ])
       if (!alive) return
       const err = [tasks, plans, habits, logs, expenses].find((r) => r.error)?.error
@@ -73,6 +76,8 @@ export default function Review() {
         notes: notes.data || [],
         links: links.data || [],
         sleep: sleep.error ? [] : sleep.data || [], // empty until 017_sleep.sql is run
+        promises: promises.error || promiseLogs.error ? [] : promises.data || [], // empty until 018_promises.sql is run
+        promiseLogs: promiseLogs.data || [],
       })
     })()
     return () => {
@@ -82,6 +87,7 @@ export default function Review() {
 
   const now = data && { ...statsFor(data, period, t), sleep: sleepStats(data.sleep, { from: period.from, to: period.to < t ? period.to : t }, sleepGoal) }
   const sleepBefore = data && sleepStats(data.sleep, prev, sleepGoal)
+  const promisesNow = data && promisesReport(data.promises, data.promiseLogs, period, prev, t)
   const before = data && statsFor(data, prev, t)
   const tr = data && trend(data, period, t)
   const future = period.from > t
@@ -247,6 +253,20 @@ export default function Review() {
             </Reveal>
           )}
 
+          {promisesNow.rows.length > 0 && (
+            <Reveal as="section" className="card review-card">
+              <h2>{T('Promises')}</h2>
+              <p className="review-note">
+                {T('{0}% of days kept · {1} times broken', [Math.round((promisesNow.rate || 0) * 100), promisesNow.broken])}
+                {promisesNow.rateBefore != null ? ` · ${T('{0}% before', [Math.round(promisesNow.rateBefore * 100)])}` : ''}
+              </p>
+              {promisesNow.rows.map(({ p, now: c }) => (
+                <Meter key={p.id} name={`${p.emoji} ${p.title}`} rate={c.rate} bad={c.rate != null && c.rate < 0.5} note={T('{0} of {1} days kept', [c.kept, c.days])} />
+              ))}
+              <Link to="/promises" className="link small">{T('Open Promises →')}</Link>
+            </Reveal>
+          )}
+
           <Reveal as="section" className="card review-card">
             <h2>{T('Learning and notes')}</h2>
             <Rows
@@ -258,7 +278,7 @@ export default function Review() {
             />
           </Reveal>
 
-          <AiReview period={period} label={periodLabel(period, offset)} now={now} before={before} sleepBefore={sleepBefore} sleepGoal={sleepGoal} />
+          <AiReview period={period} label={periodLabel(period, offset)} now={now} before={before} sleepBefore={sleepBefore} sleepGoal={sleepGoal} promises={promisesNow} />
         </>
       )}
     </div>
@@ -367,7 +387,7 @@ function Bars({ buckets, field, unit, label, format = (n) => String(Math.round(n
 }
 
 /** The AI writes the review from the numbers (in Arabic when the app is in Arabic). */
-function AiReview({ period, label, now, before, sleepBefore, sleepGoal }) {
+function AiReview({ period, label, now, before, sleepBefore, sleepGoal, promises }) {
   const key = `review:${LANG}:${period.from}:${period.to}`
   const [text, setText] = useState(() => {
     try {
@@ -391,7 +411,14 @@ function AiReview({ period, label, now, before, sleepBefore, sleepGoal }) {
     setBusy(true)
     setError('')
     try {
-      const r = await callAi({ kind: 'review', label, from: period.from, to: period.to, summary: summaryText(now, before) + (now.sleep.count ? '\nSLEEP:\n' + sleepSummary(now.sleep, sleepBefore, sleepGoal) : '') })
+      const r = await callAi({ kind: 'review', label, from: period.from, to: period.to, summary:
+          summaryText(now, before) +
+          (now.sleep.count ? '\nSLEEP:\n' + sleepSummary(now.sleep, sleepBefore, sleepGoal) : '') +
+          (promises.rows.length
+            ? `\nPROMISES (to themselves): ${Math.round((promises.rate || 0) * 100)}% of days kept, broken ${promises.broken} times (before ${promises.brokenBefore}); ` +
+              promises.rows.map(({ p, now: c }) => `${p.kind === 'avoid' ? 'not to' : 'to'} "${p.title}" ${c.kept}/${c.days} days kept`).join('; ')
+            : ''),
+      })
       setText(r.text)
       try {
         localStorage.setItem(key, r.text)

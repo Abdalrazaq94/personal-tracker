@@ -16,6 +16,7 @@ import { T, Tr, LOCALE } from '../lib/i18n'
 import { savePrayerLog, statusOf } from '../lib/prayerStatus'
 import { budgetStats, loadBudget } from '../lib/budget'
 import { clockOf, hoursText, minutesSlept } from '../lib/sleep'
+import { promiseStats } from '../lib/promises'
 
 const PRIORITY = { doing: 0, todo: 1 }
 
@@ -31,6 +32,7 @@ const TILES = [
   { to: '/links', icon: '🔗', label: T("Links") },
   { to: '/jobs', icon: '💼', label: T("Jobs") },
   { to: '/sleep', icon: '😴', label: T("Sleep") },
+  { to: '/promises', icon: '🤝', label: T("Promises") },
   { to: '/reminders', icon: '🔔', label: T("Reminders") },
   { to: '/review', icon: '📊', label: T("Review"), wide: true },
 ]
@@ -70,6 +72,7 @@ export default function Home({ session }) {
   const [remind, setRemind] = useState(null) // reminders on / off on this phone
   const [budget, setBudget] = useState(null) // monthly budget (null = none set)
   const [sleepRows, setSleepRows] = useState([]) // the last 2 nights (empty if Sleep isn't set up)
+  const [promises, setPromises] = useState(null) // { list, logs } of running promises (null until loaded / not set up)
 
   useEffect(() => {
     currentStatus()
@@ -84,6 +87,9 @@ export default function Home({ session }) {
       .order('night', { ascending: false })
       .limit(2)
       .then(({ data, error }) => !error && setSleepRows(data || []))
+    Promise.all([supabase.from('promises').select('*').is('ended_at', null), supabase.from('promise_logs').select('*').gte('day', today())])
+      .then(([p, l]) => !p.error && !l.error && setPromises({ list: p.data || [], logs: l.data || [] }))
+      .catch(() => {})
     supabase.auth.getUser().then(async ({ data }) => {
       const pl = data?.user?.user_metadata?.prayer || null
       setPlace(pl)
@@ -355,6 +361,11 @@ export default function Home({ session }) {
         if (sleepOpen) return T('Sleeping since {0}', [clockOf(sleepOpen.bed_at)])
         const last = sleepRows.find((r) => r.wake_at)
         return last && last.night >= addDays(t, -1) ? T('{0} last night', [hoursText(minutesSlept(last))]) : T('Log your sleep')
+      }
+      case '/promises': {
+        if (!promises?.list.length) return T('Make a promise')
+        const kept = promises.list.filter((p) => promiseStats(p, promises.logs, t).today === 'kept').length
+        return T('{0} of {1} kept today', [kept, promises.list.length])
       }
       case '/reminders':
         return remind === 'on' ? T("On") : remind === 'blocked' ? T("Blocked") : T("Off");

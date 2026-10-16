@@ -5,5 +5,6 @@ import c from './ar3'
 import d from './ar4'
 import e from './ar5'
 import f from './ar6'
+import g from './ar7'
 
-export default { ...a, ...b, ...c, ...d, ...e, ...f }
+export default { ...a, ...b, ...c, ...d, ...e, ...f, ...g }
