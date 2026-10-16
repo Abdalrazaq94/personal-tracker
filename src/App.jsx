@@ -59,6 +59,20 @@ function prefetchPages() {
   else setTimeout(go, 2500)
 }
 
+/** Saved AI answers, an unfinished workout and this person's Home layout are removed from this browser on sign-out. */
+function clearPrivateCache() {
+  const PREFIXES = ['review:', 'sleep-ai|', 'promises-ai|', 'faith-ai|', 'gym-ai|', 'gym-session', 'tracker-layout', 'today-brief', 'brief:']
+  for (const store of [window.localStorage, window.sessionStorage]) {
+    try {
+      Object.keys(store)
+        .filter((k) => PREFIXES.some((p) => k.startsWith(p)) || k.startsWith('ai-answer|'))
+        .forEach((k) => store.removeItem(k))
+    } catch {
+      /* fine */
+    }
+  }
+}
+
 export const SECTIONS = [
   { to: '/words', label: T("Words"), hint: T("New English words & translations") },
   { to: '/tasks', label: T("Tasks"), hint: T("Daily tasks · AI analysis") },
@@ -101,7 +115,10 @@ export default function App() {
       }
       followAccountLang(data.session?.user) // use the language saved in your account
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'SIGNED_OUT') clearPrivateCache() // a shared computer shouldn't show the last person's answers
+      setSession(s)
+    })
     return () => sub.subscription.unsubscribe()
   }, [])
 
