@@ -254,6 +254,11 @@ async function brief(db: any, b: Body) {
   const today = /^\d{4}-\d{2}-\d{2}$/.test(b.today ?? '') ? b.today! : isoDay(new Date())
   const currency = clip(b.currency, 5) || 'GBP'
   const hour = Number.isFinite(b.hour) ? Number(b.hour) : 9
+  // Home feature choices are saved in the account, not supplied by the browser.
+  const { data: settings, error: settingsError } = await db.from('user_settings').select('home_layout').maybeSingle()
+  if (settingsError) throw new Error(settingsError.message)
+  const choices = settings?.home_layout?.features
+  const enabled = (key: string) => !Array.isArray(choices) || choices.find((f: { key?: string; on?: boolean }) => f?.key === key)?.on !== false
   const [tasks, plans, habits, logs, spend, words, budget] = await Promise.all([
     db.from('tasks').select('title, priority, status').neq('status', 'done').limit(40),
     db.from('plans').select('title, plan_date, done').gte('plan_date', shiftDay(today, -7)).lte('plan_date', shiftDay(today, 1)),
@@ -286,17 +291,17 @@ async function brief(db: any, b: Body) {
   const data = [
     `Today is ${WEEK[new Date(today + 'T00:00:00Z').getUTCDay()]} ${today}, local time about ${hour}:00.`,
     // deno-lint-ignore no-explicit-any
-    'OPEN TASKS: ' + (tasks.data.map((t: any) => `${t.title}${t.priority === 'important' ? ' [important]' : ''}${t.status === 'doing' ? ' [doing]' : ''}`).join('; ') || 'none'),
+    enabled('tasks') ? 'OPEN TASKS: ' + (tasks.data.map((t: any) => `${t.title}${t.priority === 'important' ? ' [important]' : ''}${t.status === 'doing' ? ' [doing]' : ''}`).join('; ') || 'none') : '',
     // deno-lint-ignore no-explicit-any
-    'OVERDUE PLANS: ' + (plans.data.filter((p: any) => !p.done && p.plan_date < today).map((p: any) => `${p.title} (${p.plan_date})`).join('; ') || 'none'),
+    enabled('plan') ? 'OVERDUE PLANS: ' + (plans.data.filter((p: any) => !p.done && p.plan_date < today).map((p: any) => `${p.title} (${p.plan_date})`).join('; ') || 'none') : '',
     // deno-lint-ignore no-explicit-any
-    'PLANNED TODAY: ' + (plans.data.filter((p: any) => p.plan_date === today).map((p: any) => `${p.title}${p.done ? ' [done]' : ''}`).join('; ') || 'none'),
+    enabled('plan') ? 'PLANNED TODAY: ' + (plans.data.filter((p: any) => p.plan_date === today).map((p: any) => `${p.title}${p.done ? ' [done]' : ''}`).join('; ') || 'none') : '',
     // deno-lint-ignore no-explicit-any
-    'PLANNED TOMORROW: ' + (plans.data.filter((p: any) => p.plan_date === shiftDay(today, 1)).map((p: any) => p.title).join('; ') || 'none'),
-    'HABITS: ' + (habitLines.join(' | ') || 'none'),
-    `SPENDING (${currency}): today ${todaySpend.toFixed(2)}, this month ${monthSpend.toFixed(2)}, usual per day ${avgDay.toFixed(2)}`,
-    budgetLine(budget, monthSpend, today),
-    `WORDS: ${wordCounts.new ?? 0} not yet, ${wordCounts.learning ?? 0} learning, ${wordCounts.memorized ?? 0} memorized`,
+    enabled('plan') ? 'PLANNED TOMORROW: ' + (plans.data.filter((p: any) => p.plan_date === shiftDay(today, 1)).map((p: any) => p.title).join('; ') || 'none') : '',
+    enabled('habits') ? 'HABITS: ' + (habitLines.join(' | ') || 'none') : '',
+    enabled('spend') ? `SPENDING (${currency}): today ${todaySpend.toFixed(2)}, this month ${monthSpend.toFixed(2)}, usual per day ${avgDay.toFixed(2)}` : '',
+    enabled('spend') ? budgetLine(budget, monthSpend, today) : '',
+    enabled('words') ? `WORDS: ${wordCounts.new ?? 0} not yet, ${wordCounts.learning ?? 0} learning, ${wordCounts.memorized ?? 0} memorized`,
   ]
     .filter(Boolean)
     .join('\n')
