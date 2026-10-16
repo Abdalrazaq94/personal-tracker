@@ -8,7 +8,7 @@ import { setTheme, themeChoice, useTheme } from '../lib/theme'
 import { ACCENTS, ACCESSORIES, FURS } from '../lib/look'
 import { PageHeader } from '../components/ui'
 import GlareHover from '../components/reactbits/GlareHover'
-import Cat from '../components/Cat'
+import Cat, { MOVES } from '../components/Cat'
 
 /** Settings: colours, light / dark, language, the cat, your faith, and which features and Home cards you see. Saves straight away. */
 export default function Customize() {
@@ -353,9 +353,12 @@ function Appearance({ look }) {
   )
 }
 
+const MOVE_NAMES = { wave: '👋 Wave', stretch: '🙆 Stretch', yawn: '🥱 Yawn', groom: '🐾 Wash', look: '👀 Look around', chase: '🌀 Chase tail', dance: '💃 Dance', loaf: '🍞 Loaf' }
+
 /** Design your own cat: name, fur and what it wears. */
 function CatStudio({ cat }) {
   const [name, setName] = useState(cat.name)
+  const [play, setPlay] = useState(null)
   const save = (c) => saveLook({ cat: { ...cat, ...c } })
   return (
     <section className="card" id="cat">
@@ -369,7 +372,7 @@ function CatStudio({ cat }) {
       {cat.on && (
         <div className="cat-studio">
           <div className="set-stage">
-            <Cat look={cat} wins={3} awake />
+            <Cat look={cat} wins={3} awake play={play} />
           </div>
           <div className="cat-studio__opts">
             <label className="field">
@@ -397,6 +400,16 @@ function CatStudio({ cat }) {
                     style={{ background: `radial-gradient(circle at 35% 30%, ${f.l}, ${f.c} 55%, ${f.d})` }}
                     onClick={() => save({ fur: f.key })}
                   />
+                ))}
+              </div>
+            </div>
+            <div className="field">
+              <span>{T('Try a move')}</span>
+              <div className="chips-row">
+                {Object.keys(MOVES).map((m) => (
+                  <button key={m} type="button" className="chip" onClick={() => setPlay((p) => ({ name: m, n: (p?.n || 0) + 1 }))}>
+                    {T(MOVE_NAMES[m])}
+                  </button>
                 ))}
               </div>
             </div>

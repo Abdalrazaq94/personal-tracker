@@ -294,7 +294,7 @@ export default function Home({ session }) {
     ? d.allTasks.filter((x) => x.status === 'done' && x.done_at && ymd(new Date(x.done_at)) === t).length +
       d.plans.filter((p) => p.done).length +
       goodHabits.filter((h) => success(h, logOn(d.logs, h.id, t).count)).length
-    : 0
+    : null // still loading
 
   const spentToday = d ? d.spend.filter((x) => x.spent_on === t).reduce((a, x) => a + Number(x.amount), 0) : 0
   const spentMonth = d ? d.spend.reduce((a, x) => a + Number(x.amount), 0) : 0

@@ -174,6 +174,10 @@ The **⚙︎** button in the top bar opens Settings:
   finger, sleeps at night (23:00–05:00) and smiles once you've done 3 things today (tasks, plans, good habits). Tap it
   and it jumps, spins and sends a heart. You can rename it, pick its fur (6 colours) and what it wears (bow, bell
   collar, scarf, glasses, crown), or hide it. Drawn in SVG (`src/components/Cat.jsx`), no images.
+  Moves: every 5–11 seconds it does something by itself (wave, stretch, yawn, wash its paw, look around, chase its
+  tail, dance, settle like a loaf; only stretches and yawns at night). It drops in when Home opens, its ears perk up
+  when your finger comes close, three quick taps make it purr, and it jumps and spins with confetti when you finish
+  a task, plan or habit. Settings → Your cat → Try a move plays each one. Reduced-motion phones get a still cat.
   The cat is also the face of the AI: on Home it tells you the first line of "Your day" (tap the bubble to read
   it all), and every "Analyse with AI" box shows the cat, which looks up and thinks (…) while the AI is working.
 

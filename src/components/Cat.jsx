@@ -43,6 +43,7 @@ export function CatArt({ fur = 'ginger', acc = 'none', mood = 'normal' }) {
 
       <ellipse className="cat__shadow" cx="60" cy="117" rx="34" ry="5.5" fill="#000" opacity=".14" />
 
+      <g className="cat__all">
       <g className="cat__tail">
         <path d="M86 106 C104 106 112 92 106 76 C103 68 96 66 94 72" fill="none" stroke={f.d} strokeWidth="11" strokeLinecap="round" />
         <path d="M86 106 C104 106 112 92 106 76 C103 68 96 66 94 72" fill="none" stroke={f.c} strokeWidth="6" strokeLinecap="round" opacity=".7" />
@@ -53,8 +54,7 @@ export function CatArt({ fur = 'ginger', acc = 'none', mood = 'normal' }) {
         <ellipse cx="60" cy="98" rx="18" ry="15" fill={g('belly')} />
         {calico && <path d="M30 92 C34 78 46 76 48 84 C50 92 40 100 32 100 Z" fill="#f5a35c" opacity=".9" />}
         <ellipse cx="46" cy="114" rx="9.5" ry="6" fill={f.l} stroke={f.d} strokeOpacity=".35" />
-        <ellipse cx="74" cy="114" rx="9.5" ry="6" fill={f.l} stroke={f.d} strokeOpacity=".35" />
-        <path d="M43 113.5v3M49 113.5v3M71 113.5v3M77 113.5v3" stroke={f.d} strokeOpacity=".5" strokeWidth="1.2" strokeLinecap="round" />
+        <path d="M43 113.5v3M49 113.5v3" stroke={f.d} strokeOpacity=".5" strokeWidth="1.2" strokeLinecap="round" />
 
         {acc === 'bell' && (
           <g>
@@ -77,8 +77,10 @@ export function CatArt({ fur = 'ginger', acc = 'none', mood = 'normal' }) {
           <path d="M30 42 L33 13 L54 30 Z" fill={f.c} stroke={f.c} strokeWidth="6" strokeLinejoin="round" />
           <path d="M34 36 L36 20 L48 30 Z" fill={inner} stroke={inner} strokeWidth="2" strokeLinejoin="round" />
         </g>
-        <path d="M90 42 L87 13 L66 30 Z" fill={calico ? '#3a3a44' : f.c} stroke={calico ? '#3a3a44' : f.c} strokeWidth="6" strokeLinejoin="round" />
-        <path d="M86 36 L84 20 L72 30 Z" fill={inner} stroke={inner} strokeWidth="2" strokeLinejoin="round" />
+        <g className="cat__ear--r">
+          <path d="M90 42 L87 13 L66 30 Z" fill={calico ? '#3a3a44' : f.c} stroke={calico ? '#3a3a44' : f.c} strokeWidth="6" strokeLinejoin="round" />
+          <path d="M86 36 L84 20 L72 30 Z" fill={inner} stroke={inner} strokeWidth="2" strokeLinejoin="round" />
+        </g>
 
         <ellipse cx="60" cy="54" rx="36" ry="30" fill={g('fur')} />
         {calico && (
@@ -113,7 +115,11 @@ export function CatArt({ fur = 'ginger', acc = 'none', mood = 'normal' }) {
         <ellipse cx="36" cy="66" rx="6" ry="3.6" fill="#ff7fa0" opacity=".45" />
         <ellipse cx="84" cy="66" rx="6" ry="3.6" fill="#ff7fa0" opacity=".45" />
         <path d="M57 63.5 Q60 62 63 63.5 Q61.5 66.5 60 67 Q58.5 66.5 57 63.5 Z" fill="#ff8fa8" />
-        <path d="M54 69 Q57 72.5 60 69 Q63 72.5 66 69" stroke={ink} strokeWidth="1.8" strokeLinecap="round" fill="none" />
+        <path className="cat__mouth" d="M54 69 Q57 72.5 60 69 Q63 72.5 66 69" stroke={ink} strokeWidth="1.8" strokeLinecap="round" fill="none" />
+        <g className="cat__yawn">
+          <ellipse cx="60" cy="72" rx="5.5" ry="6.5" fill="#5a2335" />
+          <ellipse cx="60" cy="75.5" rx="3.6" ry="2.6" fill="#ff8fa8" />
+        </g>
         <path d="M30 64 L18 62 M30 68 L19 70 M90 64 L102 62 M90 68 L101 70" stroke={dark ? '#9a9aa8' : f.d} strokeWidth="1.3" strokeLinecap="round" opacity=".7" />
 
         {acc === 'bow' && (
@@ -138,6 +144,13 @@ export function CatArt({ fur = 'ginger', acc = 'none', mood = 'normal' }) {
         )}
       </g>
 
+      <g className="cat__paw">
+        <rect className="cat__arm" x="67" y="113" width="14" height="26" rx="7" fill={f.c} />
+        <ellipse cx="74" cy="114" rx="9.5" ry="6" fill={f.l} stroke={f.d} strokeOpacity=".35" />
+        <path d="M71 113.5v3M77 113.5v3" stroke={f.d} strokeOpacity=".5" strokeWidth="1.2" strokeLinecap="round" />
+      </g>
+      </g>
+
       <g className="cat__dots" fill={dark ? '#c9c9d6' : 'currentColor'}>
         <circle cx="94" cy="20" r="3" />
         <circle cx="103" cy="14" r="3" />
@@ -160,18 +173,28 @@ export function firstSentence(text) {
   return s.length > 110 ? s.slice(0, 107).trimEnd() + '…' : s
 }
 
+// idle moves: name → how long it lasts (ms)
+export const MOVES = { wave: 2200, stretch: 2400, yawn: 2600, groom: 3000, look: 2800, chase: 1900, dance: 2600, loaf: 3200 }
+const AWAKE_MOVES = ['wave', 'stretch', 'yawn', 'groom', 'look', 'chase', 'dance', 'look', 'groom', 'loaf']
+const SLEEPY_MOVES = ['yawn', 'stretch']
+
 const TAP = ['Purr…', 'You’ve got this!', 'Time for some water 💧', 'Stretch a little 🙆', 'I believe in you!', 'Meow!', 'One thing at a time.']
 
 /** What Mochi says, from how your day is going. */
 export function catLine(wins, hour) {
+  wins = wins || 0
   if (hour >= 23 || hour < 5) return { mood: 'sleepy', text: T('Zzz… time to rest.') }
   if (wins >= 3) return { mood: 'happy', text: T('{0} done today. I’m so proud of you!', [wins]) }
   if (wins > 0) return { mood: 'normal', text: T('{0} done today. Keep going!', [wins]) }
   return { mood: 'normal', text: hour < 12 ? T('Good morning! Start with one small thing.') : T('One small thing is a great start.') }
 }
 
-export default function Cat({ look, wins = 0, size, awake = false, brief = null, onBrief }) {
+export default function Cat({ look, wins = 0, size, awake = false, brief = null, onBrief, play = null }) {
   const ref = useRef(null)
+  const [act, setAct] = useState('enter')
+  const actT = useRef(0)
+  const taps = useRef([])
+  const [near, setNear] = useState(false)
   const [hop, setHop] = useState(0)
   const [hearts, setHearts] = useState([])
   const [say, setSay] = useState(null)
@@ -182,6 +205,55 @@ export default function Cat({ look, wins = 0, size, awake = false, brief = null,
   // tells you how your day is going: the first sentence of the AI summary (not at night)
   const line = !awake && brief && base.mood !== 'sleepy' ? { mood: base.mood, text: firstSentence(brief), brief: true } : base
   const mood = hop && line.mood === 'sleepy' ? 'normal' : line.mood
+
+  const doAct = (name, ms = MOVES[name] || 1800) => {
+    clearTimeout(actT.current)
+    setAct(null)
+    requestAnimationFrame(() => setAct(name)) // restart even if it's the same move
+    actT.current = setTimeout(() => setAct(null), ms)
+  }
+  useEffect(() => {
+    actT.current = setTimeout(() => setAct(null), 900) // drop-in when Home opens
+    return () => clearTimeout(actT.current)
+  }, [])
+
+  // every few seconds, do something cat-like (only while you can see it)
+  const still = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  useEffect(() => {
+    if (still) return
+    let t
+    const next = () => {
+      t = setTimeout(() => {
+        if (!document.hidden) {
+          const list = mood === 'sleepy' ? SLEEPY_MOVES : AWAKE_MOVES
+          if (mood !== 'sleepy' || Math.random() < 0.35) doAct(list[Math.floor(Math.random() * list.length)])
+        }
+        next()
+      }, 5000 + Math.random() * 6000)
+    }
+    next()
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mood, still])
+
+  // a move asked for from Settings ("Try a move")
+  useEffect(() => {
+    if (play?.name) doAct(play.name)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [play?.n])
+
+  // you finished something: celebrate!
+  const lastWins = useRef(wins)
+  useEffect(() => {
+    // null = Home is still loading: just remember the count, don't celebrate old wins
+    if (wins != null && lastWins.current != null && wins > lastWins.current) {
+      doAct('party', 1600)
+      burst(['🎉', '✨', '💖', '⭐', '🎉'])
+      setTimeout(() => setSay(wins >= 3 ? T('Yay! {0} done today!', [wins]) : T('Nice one! 🎉')), 60)
+    }
+    lastWins.current = wins
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wins])
 
   // say hello for a few seconds, then stay quiet until tapped
   useEffect(() => {
@@ -208,6 +280,9 @@ export default function Cat({ look, wins = 0, size, awake = false, brief = null,
         el.style.setProperty('--hy', `${dy * 2}px`)
         el.style.setProperty('--px', `${dx * 1.6}px`)
         el.style.setProperty('--py', `${dy * 1.6}px`)
+        // ears up when your finger or mouse comes close
+        const d = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2))
+        setNear(d < r.width * 1.1)
       })
     }
     window.addEventListener('pointermove', move, { passive: true })
@@ -217,13 +292,28 @@ export default function Cat({ look, wins = 0, size, awake = false, brief = null,
     }
   }, [])
 
+  const burst = (emojis) => {
+    const now = Date.now()
+    const list = emojis.map((e, i) => ({ id: now + i, dx: Math.round((i - (emojis.length - 1) / 2) * 22 + Math.random() * 10), e, d: i * 90 }))
+    setHearts((h) => [...h.slice(-6), ...list])
+    setTimeout(() => setHearts((h) => h.filter((x) => !list.includes(x))), 1600)
+  }
+
   const poke = () => {
-    setHop((h) => h + 1)
-    setTap((n) => n + 1)
-    setSay(T(TAP[tap % TAP.length]))
-    const heart = { id: Date.now(), dx: Math.round(Math.random() * 40 - 20), e: ['💖', '💕', '✨', '💗'][tap % 4] }
-    setHearts((h) => [...h.slice(-4), heart])
-    setTimeout(() => setHearts((h) => h.filter((x) => x.id !== heart.id)), 1200)
+    // three quick taps = a long purr and lots of hearts
+    const now = Date.now()
+    taps.current = [...taps.current.filter((t) => now - t < 2000), now]
+    if (taps.current.length >= 3) {
+      taps.current = []
+      doAct('purr', 1800)
+      setSay(T('Purrrrr… 💕'))
+      burst(['💖', '💕', '💗', '💞'])
+    } else {
+      setHop((h) => h + 1)
+      setTap((n) => n + 1)
+      setSay(T(TAP[tap % TAP.length]))
+      burst([['💖', '💕', '✨', '💗'][tap % 4]])
+    }
     try {
       navigator.vibrate?.(12)
     } catch {
@@ -247,7 +337,7 @@ export default function Cat({ look, wins = 0, size, awake = false, brief = null,
         ref={ref}
         type="button"
         key={hop}
-        className={`cat ${size === 'sm' ? 'cat--sm' : ''} ${hop ? 'is-hop' : ''} cat--${mood}`}
+        className={`cat ${size === 'sm' ? 'cat--sm' : ''} ${hop ? 'is-hop' : ''} cat--${mood} ${act ? `act-${act}` : ''} ${near ? 'is-near' : ''}`}
         aria-label={T('{0} the cat — tap to say hi', [name])}
         title={name}
         onClick={poke}
@@ -255,7 +345,7 @@ export default function Cat({ look, wins = 0, size, awake = false, brief = null,
         <CatArt fur={look?.fur} acc={look?.acc} mood={mood} />
       </button>
       {hearts.map((h) => (
-        <span key={h.id} className="cat__heart" style={{ '--dx': `${h.dx}px` }} aria-hidden>
+        <span key={h.id} className="cat__heart" style={{ '--dx': `${h.dx}px`, animationDelay: `${h.d || 0}ms` }} aria-hidden>
           {h.e}
         </span>
       ))}
