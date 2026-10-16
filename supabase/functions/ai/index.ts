@@ -256,8 +256,8 @@ async function brief(db: any, b: Body) {
   const hour = Number.isFinite(b.hour) ? Number(b.hour) : 9
   // Home feature choices are saved in the account, not supplied by the browser.
   const { data: settings, error: settingsError } = await db.from('user_settings').select('home_layout').maybeSingle()
-  if (settingsError) throw new Error(settingsError.message)
-  const choices = settings?.home_layout?.features
+  // a preference only: if it can't be read (e.g. 019_home_layout.sql not run yet), include everything
+  const choices = settingsError ? null : settings?.home_layout?.features
   const enabled = (key: string) => !Array.isArray(choices) || choices.find((f: { key?: string; on?: boolean }) => f?.key === key)?.on !== false
   const [tasks, plans, habits, logs, spend, words, budget] = await Promise.all([
     db.from('tasks').select('title, priority, status').neq('status', 'done').limit(40),
