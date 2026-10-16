@@ -165,7 +165,7 @@ Setup: run `supabase/migrations/020_faith.sql` and redeploy the `ai` and `notify
 
 The **⚙︎** button in the top bar opens Settings:
 
-- **Colours**: seven themes (Colourful, Pink, Green, Blue, Orange, Purple, Black & white), each with a light and a
+- **Colours**: seven themes (Black & white — the default —, Colourful, Pink, Green, Blue, Orange, Purple), each with a light and a
   dark look. Soft tinted pages, white rounded cards, a pastel colour for each Home button, and a rounded font
   (Nunito). Black & white is the original look. Themes live in `src/themes.css`: each one is just a main colour plus
   six pastels, and the rest is mixed from those.

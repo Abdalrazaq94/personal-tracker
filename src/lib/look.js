@@ -5,15 +5,15 @@
 
 // name: English key (translated where shown). sw = colours for the little preview in Settings.
 export const ACCENTS = [
+  { key: 'classic', name: 'Black & white', sw: ['#0a0a0a', '#e7e7e7', '#ffffff', '#737373'] },
   { key: 'colourful', name: 'Colourful', sw: ['#ff8db4', '#ffd36b', '#7fd6a8', '#8fb3ff'] },
   { key: 'blossom', name: 'Pink', sw: ['#ff8db4', '#ffb3c8', '#f7a1d0', '#ffc9a8'] },
   { key: 'mint', name: 'Green', sw: ['#5cc98f', '#9fe0b8', '#b9e47a', '#7fd3cf'] },
   { key: 'ocean', name: 'Blue', sw: ['#5b8cff', '#8fd0ff', '#7fb0f0', '#a3a8ff'] },
   { key: 'sunset', name: 'Orange', sw: ['#ff9248', '#ffc163', '#ff8f7a', '#ffd88c'] },
   { key: 'lavender', name: 'Purple', sw: ['#9b7bff', '#c5a8ff', '#f0a6e6', '#9fb5ff'] },
-  { key: 'classic', name: 'Black & white', sw: ['#0a0a0a', '#e7e7e7', '#ffffff', '#737373'] },
 ]
-export const DEFAULT_ACCENT = 'colourful'
+export const DEFAULT_ACCENT = 'classic'
 
 // Mochi's fur, and what Mochi wears
 export const FURS = [
