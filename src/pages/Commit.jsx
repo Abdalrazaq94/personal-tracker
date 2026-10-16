@@ -10,6 +10,7 @@ import PrayerChart from '../components/PrayerChart'
 import { METHODS, PRAYERS, clock, currentPrayer, findPlaces, hijri, inWords, nextPrayer, placeToday, prayerName, timesFor } from '../lib/prayer'
 import { T, Tr, isAr, LOCALE } from '../lib/i18n'
 import { STATUSES, STATUS_HINT, isPrayed, savePrayerLog, statusLabel, statusOf } from '../lib/prayerStatus'
+import { AiCat } from '../components/Cat'
 
 const NEEDS_TABLE =
   'Prayer needs a small database update: in Supabase open SQL Editor, paste the file supabase/migrations/006_prayers.sql and press Run. Then refresh this page.'
@@ -165,9 +166,7 @@ function PrayerInsights({ logs, today }) {
       </div>
       <PrayerChart logs={logs} today={today} />
       <div className="prayer-ask">
-        <p className="prayer-ask__title">{Tr("{0} Ask the AI", <span className="ai-spark" aria-hidden>
-            ✦
-          </span>)}</p>
+        <p className="prayer-ask__title">{Tr("{0} Ask the AI", <AiCat />)}</p>
         <div className="prayer-ask__chips">
           {QUESTIONS.map((item) => (
             <button key={item.label} type="button" className={`chip${asked === item.label ? ' is-active' : ''}`} disabled={busy} onClick={() => ask(item)}>

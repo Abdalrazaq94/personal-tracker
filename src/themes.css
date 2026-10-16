@@ -218,3 +218,30 @@ html[data-soft], html[data-soft] body { background: var(--page); }
 .topbar a.settings-btn.is-active { color: var(--on-primary); }
 .topbar a.settings-btn::after { display: none; }
 html[data-soft]:not([data-theme='dark']) .rem-switch:checked { background: var(--primary); }
+
+/* ---------- the cat is the AI ---------- */
+.ai-cat {
+  display: inline-grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, var(--bg), var(--primary-soft)); overflow: visible;
+}
+.ai-cat svg { width: 36px; height: 36px; margin-top: -2px; overflow: visible; }
+.ai-cat .cat__shadow, .ai-cat .cat__zz { display: none; }
+.day-brief .ai-cat { background: color-mix(in srgb, var(--on-primary) 92%, transparent); }
+.day-brief__head h2, .ai-panel__head h2 { display: flex; align-items: center; gap: 10px; }
+.ai-toggle .ai-cat { width: 44px; height: 44px; }
+.ai-toggle .ai-cat svg { width: 40px; height: 40px; }
+.cat__dots { opacity: 0; }
+.cat--think .cat__dots { opacity: 1; }
+.cat--think .cat__dots circle { animation: cat-dot 1.2s ease-in-out infinite; }
+.cat--think .cat__dots circle:nth-child(2) { animation-delay: .15s; }
+.cat--think .cat__dots circle:nth-child(3) { animation-delay: .3s; }
+.cat--think .cat__pupils { transform: translate(1.5px, -2.5px); }
+.cat--think .cat__head { animation: cat-ponder 2.4s ease-in-out infinite; transform-origin: 60px 64px; }
+.ai-cat .cat__dots { display: none; }
+.ai-cat.is-busy { animation: cat-bob .9s ease-in-out infinite; }
+@keyframes cat-dot { 0%, 100% { opacity: .25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-2px); } }
+@keyframes cat-ponder { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+@keyframes cat-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.cat-say--brief { cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 700; max-width: 200px; text-align: start; }
+.cat-say--brief:hover { border-color: var(--primary); }
+@media (prefers-reduced-motion: reduce) { .ai-cat.is-busy, .cat--think .cat__head, .cat--think .cat__dots circle { animation: none !important; } }

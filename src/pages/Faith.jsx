@@ -28,6 +28,7 @@ import { Markdown } from '../components/AiPanel'
 import Reveal from '../components/bits/Reveal'
 import { PlacePicker } from './Commit'
 import { PracticeRow, usePractices } from '../components/Practices'
+import { AiCat } from '../components/Cat'
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 0] // Monday first
 const dayName = (d, style = 'short') => new Date(2026, 0, 4 + d).toLocaleDateString(LOCALE, { weekday: style }) // 4 Jan 2026 was a Sunday
@@ -472,7 +473,7 @@ function FaithAi({ faith, list, counts, today, period, label }) {
   }
   return (
     <Reveal as="section" className="card review-ai">
-      <h2>{Tr('{0} AI analysis', <span className="ai-spark" aria-hidden>✦</span>)}</h2>
+      <h2>{Tr('{0} AI analysis', <AiCat />)}</h2>
       {!text && !busy && <p className="small">{T('The AI looks at which practices you keep, which days are hardest, and suggests a simple routine. It never gives religious rulings.')}</p>}
       <button type="button" className="btn btn--sm" disabled={busy} onClick={run}>
         {text ? T('↻ Analyse again') : T('✦ Analyse my practices')}

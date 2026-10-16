@@ -174,6 +174,8 @@ The **⚙︎** button in the top bar opens Settings:
   finger, sleeps at night (23:00–05:00) and smiles once you've done 3 things today (tasks, plans, good habits). Tap it
   and it jumps, spins and sends a heart. You can rename it, pick its fur (6 colours) and what it wears (bow, bell
   collar, scarf, glasses, crown), or hide it. Drawn in SVG (`src/components/Cat.jsx`), no images.
+  The cat is also the face of the AI: on Home it tells you the first line of "Your day" (tap the bubble to read
+  it all), and every "Analyse with AI" box shows the cat, which looks up and thinks (…) while the AI is working.
 
 Theme and cat are saved with your Home layout (same `home_layout` column, no new SQL), so all devices match.
 

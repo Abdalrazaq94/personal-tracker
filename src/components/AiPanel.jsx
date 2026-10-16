@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { callAi } from '../lib/ai'
 import { today } from '../lib/dates'
-import { T, Tr } from '../lib/i18n'
+import { T } from '../lib/i18n'
+import { AiCat, useCat, useThinking } from './Cat'
 
 const CURRENCY = import.meta.env.VITE_CURRENCY || 'GBP'
 const FRESH_MS = 30 * 60e3 // reuse an answer for 30 minutes, so opening the box again is instant
@@ -30,6 +31,8 @@ export default function AiPanel({ kind, examples = [], children, extra = {}, lab
   const [busy, setBusy] = useState(false)
   const [text, setText] = useState('')
   const [error, setError] = useState(null)
+  const cat = useCat()
+  const thinking = useThinking()
 
   const run = async (q = question, fresh = false) => {
     const hit = !fresh && cached(kind, q)
@@ -53,9 +56,9 @@ export default function AiPanel({ kind, examples = [], children, extra = {}, lab
   if (!open)
     return (
       <button type="button" className="ai-toggle" onClick={() => setOpen(true)}>
-        <span className="ai-spark" aria-hidden>✦</span>
+        <AiCat />
         <span>
-          <strong>{T("Analyse with AI")}</strong>
+          <strong>{cat ? T('Ask {0} to look', [cat.name]) : T("Analyse with AI")}</strong>
           <span className="muted small"> · {label || (kind === 'tasks' ? T("how your tasks are going") : kind === 'habits' ? T("graphs + how your habits are going") : kind === 'prayers' ? T("graph + how your prayers are going") : T("where your money goes"))}</span>
         </span>
       </button>
@@ -64,7 +67,10 @@ export default function AiPanel({ kind, examples = [], children, extra = {}, lab
   return (
     <section className="ai-panel">
       <div className="ai-panel__head">
-        <h2>{Tr("{0} AI analysis", <span className="ai-spark" aria-hidden>✦</span>)}</h2>
+        <h2>
+          <AiCat busy={busy} done={!!text} />
+          {cat ? T('{0} looked at it', [cat.name]) : T('AI analysis')}
+        </h2>
         <button type="button" className="icon-btn" aria-label={T("Close")} onClick={() => setOpen(false)}>
           ×
         </button>
@@ -108,7 +114,7 @@ export default function AiPanel({ kind, examples = [], children, extra = {}, lab
         </div>
       )}
 
-      {busy && <div className="ai-loading">{T("Thinking…")}</div>}
+      {busy && <div className="ai-loading">{thinking}</div>}
       {error && <p className="error-text">{error}</p>}
       {text && !busy && <Markdown text={text} />}
       {text && !busy && (

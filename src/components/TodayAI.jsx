@@ -7,6 +7,7 @@ import { actionFromDraft, draftFromAction, guessLocal, runActions } from '../lib
 import { supabase } from '../lib/supabase'
 import { Markdown } from './AiPanel'
 import { T, Tr, LOCALE, LANG, isAr } from '../lib/i18n'
+import { AiCat, useCat, useThinking } from './Cat'
 
 const CURRENCY = import.meta.env.VITE_CURRENCY || 'GBP'
 
@@ -261,10 +262,15 @@ const readCache = () => {
     return null
   }
 }
+/** Today's AI summary text (if there is one yet), for the cat on Home to tell you. */
+export const readBrief = () => readCache()?.text || null
+export const BRIEF_EVENT = 'tracker-brief'
 
 /** "Your day": a short AI summary of today. Refresh asks the AI again; otherwise it updates once a day.
  *  If the AI can't answer, it shows `fallback` (a plain summary made in the app). */
 export function DayBrief({ fallback }) {
+  const cat = useCat()
+  const thinking = useThinking()
   const [brief, setBrief] = useState(readCache)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -279,6 +285,7 @@ export function DayBrief({ fallback }) {
       try {
         localStorage.setItem(KEY(), JSON.stringify(b))
       } catch {}
+      window.dispatchEvent(new CustomEvent(BRIEF_EVENT, { detail: b.text }))
     } catch (e) {
       setError(/unknown request/i.test(e.message) ? T("The AI part needs updating on the server, so here’s a simple summary.") : e.message)
     }
@@ -294,16 +301,17 @@ export function DayBrief({ fallback }) {
   const at = brief?.at ? new Date(brief.at).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' }) : null
 
   return (
-    <section className="day-brief">
+    <section className={`day-brief ${cat ? 'day-brief--cat' : ''}`} id="your-day">
       <div className="day-brief__head">
-        <h2>{Tr("{0} Your day", <span className="ai-spark" aria-hidden>
-            ✦
-          </span>)}</h2>
+        <h2>
+          <AiCat busy={busy} done={!!brief} />
+          <span>{cat ? T('Your day, from {0}', [cat.name]) : T('Your day')}</span>
+        </h2>
         <button type="button" className="link small" onClick={load} disabled={busy}>
-          {busy ? T("Thinking…") : at ? T("Refresh · {0}", [at]) : T("Refresh")}
+          {busy ? thinking : at ? T("Refresh · {0}", [at]) : T("Refresh")}
         </button>
       </div>
-      {busy && !brief && <div className="ai-loading">{T("Looking at your day…")}</div>}
+      {busy && !brief && <div className="ai-loading">{cat ? thinking : T("Looking at your day…")}</div>}
       {brief ? <Markdown text={brief.text} /> : !busy && fallback ? <Markdown text={fallback} /> : null}
       {error && (
         <p className="day-brief__note small">

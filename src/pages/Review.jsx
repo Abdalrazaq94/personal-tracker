@@ -15,6 +15,7 @@ import { loadBudget } from '../lib/budget'
 import { clockFromNoon, hoursText, loadSleepGoal, sleepStats, sleepSummary } from '../lib/sleep'
 import { promisesReport } from '../lib/promises'
 import { Link } from 'react-router-dom'
+import { AiCat } from '../components/Cat'
 
 const pct = (x) => (x == null ? '—' : `${Math.round(x * 100)}%`)
 
@@ -435,9 +436,7 @@ function AiReview({ period, label, now, before, sleepBefore, sleepGoal, promises
     <Reveal as="section" className="day-brief review-ai">
       <div className="day-brief__head">
         <h2>
-          <span className="ai-spark" aria-hidden>
-            ✦
-          </span>{' '}
+          <AiCat />{' '}
           {T('AI review')}
         </h2>
         {text && (

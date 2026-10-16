@@ -54,4 +54,11 @@ export default {
   'I believe in you!': 'أنا أؤمن بك!',
   'Meow!': 'مياو!',
   'One thing at a time.': 'خطوة واحدة في كل مرة.',
+  '{0} is thinking…': '{0} تفكّر…',
+  'Your day, from {0}': 'يومك، من {0}',
+  'Your day': 'يومك',
+  'Ask {0} to look': 'اطلب من {0} أن تنظر',
+  '{0} looked at it': 'نظرت {0} في الأمر',
+  'AI analysis': 'تحليل بالذكاء الاصطناعي',
+  'See your day': 'شاهد يومك',
 }

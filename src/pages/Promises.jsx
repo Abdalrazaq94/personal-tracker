@@ -22,6 +22,7 @@ import PeriodPicker, { usePeriod } from '../components/PeriodPicker'
 import { Markdown } from '../components/AiPanel'
 import Reveal from '../components/bits/Reveal'
 import { parseYmd } from '../lib/dates'
+import { AiCat } from '../components/Cat'
 
 const promiseLine = (p) => (p.kind === 'avoid' ? T('I promise not to {0}', [p.title]) : T('I promise to {0}', [p.title]))
 
@@ -502,7 +503,7 @@ function PromisesAi({ promises, logs, today, period, label }) {
 
   return (
     <Reveal as="section" className="card review-ai">
-      <h2>{Tr('{0} AI analysis', <span className="ai-spark" aria-hidden>✦</span>)}</h2>
+      <h2>{Tr('{0} AI analysis', <AiCat />)}</h2>
       {!text && !busy && <p className="small">{T('The AI looks at your streaks, the days you slipped and your notes, and gives you a plan.')}</p>}
       <div className="chips-row">
         <button type="button" className={`chip ${!asked && text ? 'is-active chip--solid' : ''}`} disabled={busy} onClick={() => run(null)}>

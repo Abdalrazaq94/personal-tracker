@@ -26,6 +26,7 @@ import PeriodPicker, { fmtDay, usePeriod } from '../components/PeriodPicker'
 import SleepChart from '../components/SleepChart'
 import { Markdown } from '../components/AiPanel'
 import Reveal from '../components/bits/Reveal'
+import { AiCat } from '../components/Cat'
 
 export const FACES = ['😫', '😕', '😐', '🙂', '😄']
 const FACE_NAMES = ['Slept very badly', 'Slept badly', 'Slept OK', 'Slept well', 'Slept very well']
@@ -406,7 +407,7 @@ function SleepAi({ period, label, now, before, goal }) {
 
   return (
     <Reveal as="section" className="card review-ai sleep-ai">
-      <h2>{Tr('{0} Deep analysis', <span className="ai-spark" aria-hidden>✦</span>)}</h2>
+      <h2>{Tr('{0} Deep analysis', <AiCat />)}</h2>
       {!text && !busy && <p className="small">{T('The AI looks at your bedtimes, wake-ups, weekends, Fajr and how much you get done, and suggests your best routine.')}</p>}
       <div className="chips-row">
         <button type="button" className={`chip ${!asked && text ? 'is-active chip--solid' : ''}`} disabled={busy} onClick={() => run(null)}>

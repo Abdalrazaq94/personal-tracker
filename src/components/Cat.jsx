@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { FURS } from '../lib/look'
 import { T } from '../lib/i18n'
+import { useLayout } from '../lib/layout'
 
 /**
  * Mochi: the app's own cat. Drawn in SVG with soft light and shade so it looks round (3D), and it tilts towards
@@ -137,12 +138,26 @@ export function CatArt({ fur = 'ginger', acc = 'none', mood = 'normal' }) {
         )}
       </g>
 
+      <g className="cat__dots" fill={dark ? '#c9c9d6' : 'currentColor'}>
+        <circle cx="94" cy="20" r="3" />
+        <circle cx="103" cy="14" r="3" />
+        <circle cx="112" cy="8" r="3" />
+      </g>
+
       <g className="cat__zz" fill={dark ? '#c9c9d6' : 'currentColor'} fontWeight="900" fontFamily="Nunito, sans-serif">
         <text x="96" y="26" fontSize="12">z</text>
         <text x="104" y="16" fontSize="9">z</text>
       </g>
     </svg>
   )
+}
+
+/** First sentence of the AI's text, without ** marks, kept short for the speech bubble. */
+export function firstSentence(text) {
+  const plain = String(text || '').replace(/\*\*?/g, '').replace(/\s+/g, ' ').trim()
+  const m = plain.match(/^(.+?[.!?؟。])(\s|$)/)
+  const s = m ? m[1] : plain
+  return s.length > 110 ? s.slice(0, 107).trimEnd() + '…' : s
 }
 
 const TAP = ['Purr…', 'You’ve got this!', 'Time for some water 💧', 'Stretch a little 🙆', 'I believe in you!', 'Meow!', 'One thing at a time.']
@@ -155,7 +170,7 @@ export function catLine(wins, hour) {
   return { mood: 'normal', text: hour < 12 ? T('Good morning! Start with one small thing.') : T('One small thing is a great start.') }
 }
 
-export default function Cat({ look, wins = 0, size, awake = false }) {
+export default function Cat({ look, wins = 0, size, awake = false, brief = null, onBrief }) {
   const ref = useRef(null)
   const [hop, setHop] = useState(0)
   const [hearts, setHearts] = useState([])
@@ -163,13 +178,15 @@ export default function Cat({ look, wins = 0, size, awake = false }) {
   const [tap, setTap] = useState(0)
   const hour = new Date().getHours()
   const name = look?.name || 'Mochi'
-  const line = awake ? { mood: 'happy', text: T('Hi! I’m {0}.', [name]) } : catLine(wins, hour)
+  const base = awake ? { mood: 'happy', text: T('Hi! I’m {0}.', [name]) } : catLine(wins, hour)
+  // tells you how your day is going: the first sentence of the AI summary (not at night)
+  const line = !awake && brief && base.mood !== 'sleepy' ? { mood: base.mood, text: firstSentence(brief), brief: true } : base
   const mood = hop && line.mood === 'sleepy' ? 'normal' : line.mood
 
   // say hello for a few seconds, then stay quiet until tapped
   useEffect(() => {
     setSay(line.text)
-    const t = setTimeout(() => setSay(null), 7000)
+    const t = setTimeout(() => setSay(null), line.brief ? 15000 : 7000)
     return () => clearTimeout(t)
   }, [line.text])
 
@@ -216,11 +233,16 @@ export default function Cat({ look, wins = 0, size, awake = false }) {
 
   return (
     <div className="cat-wrap">
-      {say && (
-        <p className="cat-say" role="status" key={say}>
-          {say}
-        </p>
-      )}
+      {say &&
+        (say === line.text && line.brief && onBrief ? (
+          <button type="button" className="cat-say cat-say--brief" key={say} onClick={onBrief} title={T('See your day')}>
+            {say}
+          </button>
+        ) : (
+          <p className="cat-say" role="status" key={say}>
+            {say}
+          </p>
+        ))}
       <button
         ref={ref}
         type="button"
@@ -239,4 +261,32 @@ export default function Cat({ look, wins = 0, size, awake = false }) {
       ))}
     </div>
   )
+}
+
+/** Your cat, if it's switched on: { name, fur, acc } — otherwise null. */
+export function useCat() {
+  const c = useLayout().look.cat
+  return c.on ? c : null
+}
+
+/** The face of the AI: a little cat (thinking while busy), or ✦ if you hid the cat. */
+export function AiCat({ busy = false, done = false }) {
+  const cat = useCat()
+  if (!cat)
+    return (
+      <span className="ai-spark" aria-hidden>
+        ✦
+      </span>
+    )
+  return (
+    <span className={`ai-cat ${busy ? 'is-busy' : ''}`} aria-hidden>
+      <CatArt fur={cat.fur} acc={cat.acc} mood={busy ? 'think' : done ? 'happy' : 'normal'} />
+    </span>
+  )
+}
+
+/** "Mochi is thinking…" (or the plain words if the cat is hidden). */
+export function useThinking() {
+  const cat = useCat()
+  return cat ? T('{0} is thinking…', [cat.name]) : T('Thinking…')
 }

@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { money, parseYmd, startOfMonth, today, ymd } from '../lib/dates'
 import { dayState, isBad, logOn, planned, success } from '../lib/habits'
 import { SpeakButton } from '../lib/speech'
-import { DayBrief, QuickAddAll } from '../components/TodayAI'
+import { BRIEF_EVENT, DayBrief, QuickAddAll, readBrief } from '../components/TodayAI'
 import { inWords, nextPrayer, placeToday, prayerName, PRAYERS, timesFor } from '../lib/prayer'
 import TaskChart from '../components/TaskChart'
 import BlurText from '../components/bits/BlurText'
@@ -69,6 +69,12 @@ export default function Home({ session }) {
   const faith = faithKey(layout)
   const practices = usePractices(faith) // other faiths: today's practices (nothing is loaded for Islam)
   const practiceCounts = useMemo(() => countMap(practices.logs), [practices.logs])
+  const [brief, setBrief] = useState(readBrief) // today's AI summary: the cat tells you the first line
+  useEffect(() => {
+    const on = (e) => setBrief(e.detail)
+    window.addEventListener(BRIEF_EVENT, on)
+    return () => window.removeEventListener(BRIEF_EVENT, on)
+  }, [])
   const [welcome, setWelcome] = useState(false) // brand-new account: "What do you want to track?"
   const [tip, setTip] = useState(() => {
     try {
@@ -603,7 +609,14 @@ export default function Home({ session }) {
           <p className="muted">{date}</p>
           <BlurText as="h1" className="display" text={`${greet}.`} />
         </div>
-        {layout.look.cat.on && <Cat look={layout.look.cat} wins={wins} />}
+        {layout.look.cat.on && (
+          <Cat
+            look={layout.look.cat}
+            wins={wins}
+            brief={brief}
+            onBrief={() => document.getElementById('your-day')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+          />
+        )}
       </header>
 
       {error && (

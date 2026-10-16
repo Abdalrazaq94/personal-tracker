@@ -29,6 +29,7 @@ import { DeleteButton, ErrorBar, PageHeader, Segmented } from '../components/ui'
 import PeriodPicker, { usePeriod } from '../components/PeriodPicker'
 import { Markdown } from '../components/AiPanel'
 import Reveal from '../components/bits/Reveal'
+import { AiCat } from '../components/Cat'
 
 const EX = new Map(EXERCISES.map((e) => [e.id, e]))
 const exName = (id) => EX.get(id)?.name || id.replace(/_/g, ' ')
@@ -727,7 +728,7 @@ function GymAi({ plan, workouts, sets, weights, today }) {
       <h2 className="promise-report__title">{T('Progress report')}</h2>
       <PeriodPicker state={pick} />
       <Reveal as="section" className="card review-ai">
-        <h2>{Tr('{0} AI coach', <span className="ai-spark" aria-hidden>✦</span>)}</h2>
+        <h2>{Tr('{0} AI coach', <AiCat />)}</h2>
         {!text && !busy && <p className="small">{T('The AI looks at your workouts, weights and consistency, and tells you what to lift next and how to keep improving.')}</p>}
         <button type="button" className="btn btn--sm" disabled={busy} onClick={run}>
           {text ? T('↻ Analyse again') : T('✦ Analyse my training')}
