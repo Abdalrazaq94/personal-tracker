@@ -99,7 +99,7 @@ function useSections() {
     .sort((a, b) => order.indexOf(a.to) - order.indexOf(b.to))
     .map((s) => (s.to === '/commit' && faithKey(layout) !== 'islam' ? { ...s, label: T(faith.label), hint: T(faith.hint) } : s))
 }
-const CUSTOMIZE = { to: '/customize', label: T('Customise Home'), hint: T('Choose what you track and what Home shows') }
+const CUSTOMIZE = { to: '/settings', label: T('Settings'), hint: T('Colours, your cat and what you track') }
 
 export default function App() {
   const [session, setSession] = useState(undefined)
@@ -148,7 +148,7 @@ export default function App() {
               {n.label}
             </NavLink>
           ))}
-          <TopControls className="top-controls--top" />
+          <TopControls className="top-controls--top" settings />
         </nav>
 
         <main className="content">
@@ -170,6 +170,7 @@ export default function App() {
             <Route path="/review" element={<Review />} />
             <Route path="/sleep" element={<Sleep />} />
             <Route path="/promises" element={<Promises />} />
+            <Route path="/settings" element={<Customize />} />
             <Route path="/customize" element={<Customize />} />
             <Route path="/gym" element={<Gym />} />
             <Route path="/more" element={<More sections={sections} />} />
@@ -219,7 +220,7 @@ function MobileBar({ pathname, email, sections }) {
           <span />
         </button>
         <span className="mobilebar__title">{here}</span>
-        <TopControls />
+        <TopControls settings />
       </header>
 
       {open && (

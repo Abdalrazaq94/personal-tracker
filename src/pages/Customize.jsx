@@ -1,11 +1,16 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FEATURES, HOME_SECTIONS, STARTER, faithKey, featureView, normalize, saveLayout, useLayout } from '../lib/layout'
+import { FEATURES, HOME_SECTIONS, STARTER, faithKey, featureView, getLayout, normalize, saveLayout, saveLook, useLayout } from '../lib/layout'
 import { FAITHS } from '../lib/faith'
-import { T } from '../lib/i18n'
+import { LANG, setLang, T } from '../lib/i18n'
+import { supabase } from '../lib/supabase'
+import { setTheme, themeChoice, useTheme } from '../lib/theme'
+import { ACCENTS, ACCESSORIES, FURS } from '../lib/look'
 import { PageHeader } from '../components/ui'
+import GlareHover from '../components/reactbits/GlareHover'
+import Cat from '../components/Cat'
 
-/** Customise Home: switch features and Home cards on or off, and move them up or down. Saves straight away. */
+/** Settings: colours, light / dark, language, the cat, your faith, and which features and Home cards you see. Saves straight away. */
 export default function Customize() {
   const layout = useLayout()
 
@@ -24,9 +29,12 @@ export default function Customize() {
   return (
     <div className="page customize">
       <PageHeader
-        title={T('Customise Home')}
-        subtitle={T('Choose what you track and what your Home shows. Your data is kept even when a feature is hidden.')}
+        title={T('Settings')}
+        subtitle={T('Make the app yours: colours, your cat, and what you track. Your data is kept even when a feature is hidden.')}
       />
+
+      <Appearance look={layout.look} />
+      <CatStudio cat={layout.look.cat} />
 
       <section className="card" id="faith">
         <h2 className="cust-title">{T('Faith')}</h2>
@@ -142,7 +150,7 @@ export default function Customize() {
       </section>
 
       <div className="cust-foot">
-        <button type="button" className="btn btn--ghost" onClick={() => saveLayout(normalize(null))}>
+        <button type="button" className="btn btn--ghost" onClick={() => saveLayout({ ...normalize(null), look: layout.look, faith: layout.faith })}>
           {T('Show everything again')}
         </button>
         <Link to="/" className="btn">
@@ -193,6 +201,7 @@ function Picker({ initial, onDone }) {
     const base = normalize(null)
     saveLayout({
       ...base,
+      look: getLayout().look,
       faith: chosenFaith,
       features: base.features.map((f) => ({ ...f, on: f.key === 'commit' ? chosenFaith !== 'none' : picked.has(f.key) })),
     })
@@ -217,7 +226,7 @@ function Picker({ initial, onDone }) {
   return (
     <section className="card welcome-pick" aria-labelledby="welcome-title">
       <h2 id="welcome-title">{T('Welcome! What do you want to track?')}</h2>
-      <p className="muted small">{T('Tap to choose. You can change this any time in Customise Home.')}</p>
+      <p className="muted small">{T('Tap to choose. You can change this any time in Settings.')}</p>
       <div className="welcome-grid">
         {FEATURES.filter((f) => f.key !== 'commit').map((f) => (
           <button
@@ -241,6 +250,169 @@ function Picker({ initial, onDone }) {
       <button type="button" className="btn welcome-go" disabled={picked.size === 0} onClick={() => setStep('faith')}>
         {T('Continue')}
       </button>
+    </section>
+  )
+}
+
+/** Colour themes (React Bits GlareHover cards, each one a live preview), light / dark and language. */
+function Appearance({ look }) {
+  const mode = useTheme()
+  const [choice, setChoice] = useState(themeChoice)
+  const pickMode = (m) => {
+    setTheme(m)
+    setChoice(m)
+  }
+  return (
+    <section className="card" id="look">
+      <h2 className="cust-title">{T('Colours')}</h2>
+      <p className="muted small">{T('Pick a theme. Each one has a light and a dark look.')}</p>
+      <div className="theme-grid" role="radiogroup" aria-label={T('Colours')}>
+        {ACCENTS.map((a) => {
+          const on = look.accent === a.key
+          const classic = a.key === 'classic'
+          const dark = mode === 'dark'
+          return (
+            <GlareHover
+              key={a.key}
+              className="theme-glare"
+              background="var(--bg)"
+              borderColor="var(--line)"
+              borderRadius="20px"
+              glareColor="#ffffff"
+              glareOpacity={0.45}
+              glareAngle={-35}
+              glareSize={60}
+              variant="sheen"
+              blendMode="screen"
+              transitionDuration={700}
+            >
+              <button
+                type="button"
+                role="radio"
+                aria-checked={on}
+                className={`theme-card ${on ? 'is-on' : ''}`}
+                onClick={() => saveLook({ accent: a.key })}
+              >
+                <span
+                  className="theme-card__preview"
+                  data-accent={a.key}
+                  {...(classic ? {} : { 'data-soft': '' })}
+                  style={{ background: classic ? (dark ? '#0e0e10' : '#f5f5f5') : 'var(--page)' }}
+                  aria-hidden
+                >
+                  {a.sw.map((c, i) => (
+                    <i key={i} style={{ background: classic ? (i % 2 ? (dark ? '#2a2a2f' : '#e7e7e7') : dark ? '#18181c' : '#ffffff') : `color-mix(in srgb, ${c} var(--sw-mix), var(--t-base))` }} />
+                  ))}
+                  <b style={{ background: classic ? (dark ? '#f2f2f3' : '#0a0a0a') : 'var(--primary)' }} />
+                </span>
+                <span className="theme-card__name">
+                  {T(a.name)}
+                  {on && (
+                    <span className="theme-card__tick" aria-hidden>
+                      ✓
+                    </span>
+                  )}
+                </span>
+              </button>
+            </GlareHover>
+          )
+        })}
+      </div>
+
+      <div className="set-row">
+        <span>
+          <strong>{T('Light or dark')}</strong>
+          <span className="muted small">{T('Auto follows your phone.')}</span>
+        </span>
+        <div className="segmented" role="group" aria-label={T('Light or dark')}>
+          {[
+            ['light', T('☀️ Light')],
+            ['dark', T('🌙 Dark')],
+            ['system', T('Auto')],
+          ].map(([k, label]) => (
+            <button key={k} type="button" className={choice === k ? 'is-active' : ''} aria-pressed={choice === k} onClick={() => pickMode(k)}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="set-row">
+        <span>
+          <strong>{T('Language')}</strong>
+        </span>
+        <div className="segmented" role="group" aria-label={T('Language')}>
+          <button type="button" lang="en" className={LANG === 'en' ? 'is-active' : ''} aria-pressed={LANG === 'en'} onClick={() => LANG !== 'en' && setLang('en', supabase)}>
+            English
+          </button>
+          <button type="button" lang="ar" className={LANG === 'ar' ? 'is-active' : ''} aria-pressed={LANG === 'ar'} onClick={() => LANG !== 'ar' && setLang('ar', supabase)}>
+            العربية
+          </button>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/** Design your own cat: name, fur and what it wears. */
+function CatStudio({ cat }) {
+  const [name, setName] = useState(cat.name)
+  const save = (c) => saveLook({ cat: { ...cat, ...c } })
+  return (
+    <section className="card" id="cat">
+      <div className="set-row">
+        <span>
+          <h2 className="cust-title">{T('Your cat')}</h2>
+          <span className="muted small">{T('A little friend on Home who cheers you on. Tap it!')}</span>
+        </span>
+        <input type="checkbox" className="rem-switch" aria-label={T('Show the cat on Home')} checked={cat.on} onChange={(e) => save({ on: e.target.checked })} />
+      </div>
+      {cat.on && (
+        <div className="cat-studio">
+          <div className="set-stage">
+            <Cat look={cat} wins={3} awake />
+          </div>
+          <div className="cat-studio__opts">
+            <label className="field">
+              <span>{T('Name')}</span>
+              <input
+                dir="auto"
+                maxLength={20}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={() => name.trim() && name.trim() !== cat.name && save({ name: name.trim() })}
+              />
+            </label>
+            <div className="field">
+              <span>{T('Fur')}</span>
+              <div className="swatches" role="radiogroup" aria-label={T('Fur')}>
+                {FURS.map((f) => (
+                  <button
+                    key={f.key}
+                    type="button"
+                    role="radio"
+                    aria-checked={cat.fur === f.key}
+                    aria-label={T(f.name)}
+                    title={T(f.name)}
+                    className={`swatch swatch--${f.key} ${cat.fur === f.key ? 'is-on' : ''}`}
+                    style={{ background: `radial-gradient(circle at 35% 30%, ${f.l}, ${f.c} 55%, ${f.d})` }}
+                    onClick={() => save({ fur: f.key })}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="field">
+              <span>{T('Wears')}</span>
+              <div className="chips-row">
+                {ACCESSORIES.map((a) => (
+                  <button key={a.key} type="button" className={`chip chip--solid ${cat.acc === a.key ? 'is-active' : ''}`} aria-pressed={cat.acc === a.key} onClick={() => save({ acc: a.key })}>
+                    {T(a.name)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

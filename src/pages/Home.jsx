@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { money, parseYmd, startOfMonth, today, ymd } from '../lib/dates'
-import { dayState, isBad, logOn, planned } from '../lib/habits'
+import { dayState, isBad, logOn, planned, success } from '../lib/habits'
 import { SpeakButton } from '../lib/speech'
 import { DayBrief, QuickAddAll } from '../components/TodayAI'
 import { inWords, nextPrayer, placeToday, prayerName, PRAYERS, timesFor } from '../lib/prayer'
@@ -22,6 +22,7 @@ import { countMap, doneOn, dueOn, faithOf } from '../lib/faith'
 import { PracticeRow, usePractices } from '../components/Practices'
 import { isTrainingDay, nextWorkout } from '../lib/gym'
 import { WelcomePicker } from './Customize'
+import Cat from '../components/Cat'
 
 const PRIORITY = { doing: 0, todo: 1 }
 
@@ -281,6 +282,13 @@ export default function Home({ session }) {
   const allUntimed = d ? d.tasks.filter((x) => !x.remind_at) : []
   const untimed = allUntimed.slice(0, 6)
   const moreTasks = d ? Math.max(0, d.tasks.length - openTasks.length) : 0
+
+  // little wins today, for Mochi the cat: tasks finished, plans done, good habits reached
+  const wins = d
+    ? d.allTasks.filter((x) => x.status === 'done' && x.done_at && ymd(new Date(x.done_at)) === t).length +
+      d.plans.filter((p) => p.done).length +
+      goodHabits.filter((h) => success(h, logOn(d.logs, h.id, t).count)).length
+    : 0
 
   const spentToday = d ? d.spend.filter((x) => x.spent_on === t).reduce((a, x) => a + Number(x.amount), 0) : 0
   const spentMonth = d ? d.spend.reduce((a, x) => a + Number(x.amount), 0) : 0
@@ -590,9 +598,12 @@ export default function Home({ session }) {
 
   return (
     <div className="page">
-      <header className="home-header">
-        <p className="muted">{date}</p>
-        <BlurText as="h1" className="display" text={`${greet}.`} />
+      <header className={`home-header ${layout.look.cat.on ? 'home-header--cat' : ''}`}>
+        <div>
+          <p className="muted">{date}</p>
+          <BlurText as="h1" className="display" text={`${greet}.`} />
+        </div>
+        {layout.look.cat.on && <Cat look={layout.look.cat} wins={wins} />}
       </header>
 
       {error && (
@@ -611,7 +622,7 @@ export default function Home({ session }) {
             key={x.to}
             className={`home-glare ${x.wide ? 'home-glare--wide' : ''}`}
             style={{ '--i': i }}
-            background="var(--tile-bg)"
+            background="var(--tile, var(--tile-bg))"
             borderColor="var(--tile-line)"
             borderRadius="16px"
             glareColor="var(--glare)"
@@ -635,8 +646,8 @@ export default function Home({ session }) {
         ))}
       </nav>
       <div className="home-custom">
-        <Link to="/customize" className="link small">
-          {T('⚙︎ Customise Home')}
+        <Link to="/settings" className="link small">
+          {T('⚙︎ Settings: colours, cat and Home')}
         </Link>
       </div>
 
@@ -649,7 +660,7 @@ export default function Home({ session }) {
             <span className="muted small">{T('Hide what you don’t use and put your favourites first.')}</span>
           </span>
           <span className="home-tip__acts">
-            <Link to="/customize" className="btn btn--sm" onClick={hideTip}>
+            <Link to="/settings" className="btn btn--sm" onClick={hideTip}>
               {T('Customise')}
             </Link>
             <button type="button" className="icon-btn" aria-label={T('Close')} onClick={hideTip}>

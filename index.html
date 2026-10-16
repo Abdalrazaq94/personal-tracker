@@ -9,6 +9,9 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&display=swap" />
     <title>Tracker</title>
     <script>
       // light / dark before anything is drawn (no white flash); same rules as src/lib/theme.js
@@ -16,6 +19,9 @@
         var t = localStorage.getItem('tracker-theme')
         if (t !== 'dark' && t !== 'light') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
         document.documentElement.dataset.theme = t
+        var a = localStorage.getItem('tracker-accent') || 'colourful'
+        document.documentElement.dataset.accent = a
+        if (a !== 'classic') document.documentElement.dataset.soft = ''
         if (localStorage.getItem('tracker-lang') === 'ar') { document.documentElement.dir = 'rtl'; document.documentElement.lang = 'ar' }
       } catch (e) {}
     </script>

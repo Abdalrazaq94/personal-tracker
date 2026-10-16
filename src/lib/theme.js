@@ -31,6 +31,7 @@ export function applyTheme() {
     document.head.append(meta)
   }
   meta.content = t === 'dark' ? '#0e0e10' : '#ffffff'
+  requestAnimationFrame(() => (meta.content = getComputedStyle(document.body).backgroundColor || meta.content)) // the theme's page colour
   listeners.forEach((f) => f(t))
 }
 

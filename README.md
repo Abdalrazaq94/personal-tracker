@@ -161,10 +161,24 @@ today, the last 7 days, streaks, a progress report and an AI analysis (encourage
 religious rulings). Home shows your faith's button and today's practices. Changing faith never deletes anything.
 Setup: run `supabase/migrations/020_faith.sql` and redeploy the `ai` and `notify` functions.
 
-## Customise Home
+## Settings: colours, your cat, and Home
 
-New accounts start with **"What do you want to track?"**: tap the features you want. Any time later, **⚙︎ Customise Home**
-(under the Home buttons, or in the menu) lets you switch features on or off, move them up or down, and choose which
+The **⚙︎** button in the top bar opens Settings:
+
+- **Colours**: seven themes (Colourful, Pink, Green, Blue, Orange, Purple, Black & white), each with a light and a
+  dark look. Soft tinted pages, white rounded cards, a pastel colour for each Home button, and a rounded font
+  (Nunito). Black & white is the original look. Themes live in `src/themes.css`: each one is just a main colour plus
+  six pastels, and the rest is mixed from those.
+- **Light or dark**: Light, Dark or Auto (follows the phone). **Language**: English or العربية.
+- **Your cat**: Mochi, the app's own cat, sits on Home. It breathes, blinks, swishes its tail, tilts towards your
+  finger, sleeps at night (23:00–05:00) and smiles once you've done 3 things today (tasks, plans, good habits). Tap it
+  and it jumps, spins and sends a heart. You can rename it, pick its fur (6 colours) and what it wears (bow, bell
+  collar, scarf, glasses, crown), or hide it. Drawn in SVG (`src/components/Cat.jsx`), no images.
+
+Theme and cat are saved with your Home layout (same `home_layout` column, no new SQL), so all devices match.
+
+New accounts start with **"What do you want to track?"**: tap the features you want. Any time later, **Settings**
+(the ⚙︎ button, under the Home buttons, or in the menu) lets you switch features on or off, move them up or down, and choose which
 cards appear on Home and in what order. Hidden features leave Home and the menu, but their data is kept. Your layout is
 saved to your account, so all your devices match. Setup: run `supabase/migrations/019_home_layout.sql`.
 

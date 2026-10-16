@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import { faithOf } from './faith'
+import { applyLook, normalizeLook } from './look'
 
 /**
  * "Your Home, your way": which features you use (Home buttons + menu) and which cards appear on Home, in your order.
@@ -51,7 +52,7 @@ export function normalize(raw) {
     return [...list.map((x) => ({ key: x.key, on: x.on !== false })), ...defs.filter((d) => !seen.has(d.key)).map((d) => ({ key: d.key, on: true }))]
   }
   const faith = raw?.faith === 'none' || faithOf(raw?.faith) ? raw.faith : null
-  return { features: fix(raw?.features, FEATURES), sections: fix(raw?.sections, HOME_SECTIONS), chosen: !!raw?.chosen, faith }
+  return { features: fix(raw?.features, FEATURES), sections: fix(raw?.sections, HOME_SECTIONS), chosen: !!raw?.chosen, faith, look: normalizeLook(raw?.look) }
 }
 
 function readLocal() {
@@ -66,13 +67,17 @@ function readLocal() {
 let current = readLocal() || normalize(null)
 let hasLocal = !!readLocal()
 const listeners = new Set()
-const emit = () => listeners.forEach((f) => f(current))
+const emit = () => {
+  applyLook(current.look)
+  listeners.forEach((f) => f(current))
+}
+applyLook(current.look)
 
 export const getLayout = () => current
 
 /** Show it everywhere at once, keep it on this phone, then save it to the account. */
-export async function saveLayout(next) {
-  current = normalize({ ...next, chosen: true })
+export async function saveLayout(next, { keepChosen = false } = {}) {
+  current = normalize({ ...next, chosen: keepChosen ? next.chosen : true })
   hasLocal = true
   try {
     localStorage.setItem(KEY, JSON.stringify(current))
@@ -136,3 +141,6 @@ export const shownSections = (l) =>
     .filter((s) => s.on)
     .map((s) => HOME_SECTIONS.find((d) => d.key === s.key))
     .filter((s) => !s.needs || isShown(l, s.needs))
+
+/** Change only the look (theme colours, the cat). Doesn't count as "chose my features". */
+export const saveLook = (look) => saveLayout({ ...current, look: { ...current.look, ...look } }, { keepChosen: true })
