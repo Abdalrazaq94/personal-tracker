@@ -175,6 +175,7 @@ const DEFAULT_SOUNDS: Record<string, { sound: string; ring: boolean }> = {
   prayer: { sound: 'adhan', ring: true },
   budget: { sound: 'ping', ring: false },
   practice: { sound: 'chime', ring: false },
+  gym: { sound: 'digital', ring: false },
 }
 function soundFor(setting: Any, kind: string) {
   const saved = setting?.sounds?.[kind]
@@ -511,6 +512,9 @@ async function tick(db: Any, cfg: Any) {
 
   // ---- faith practices with "Remind me" (Christian, Jewish, Hindu, own) ----
   sent += await practiceReminders(db, cfg, users, setOf, byUser, now)
+
+  // ---- gym: on training days, at the chosen time, if no workout yet ----
+  sent += await gymReminders(db, cfg, users, setOf, byUser, now)
   return { users: users.length, sent }
 }
 
@@ -624,6 +628,44 @@ async function practiceReminders(db: Any, cfg: Any, users: string[], setOf: Map<
       byUser.get(p.user_id)
     )
     await db.from('practices').update({ last_notified: day }).eq('id', p.id)
+  }
+  return sent
+}
+
+async function gymReminders(db: Any, cfg: Any, users: string[], setOf: Map<string, Any>, byUser: Map<string, Any[]>, now: number) {
+  const { data: plans, error } = await db.from('gym_plans').select('*').in('user_id', users).eq('remind', true)
+  if (error || !plans?.length) return 0
+  let sent = 0
+  for (const p of plans) {
+    if (!p.remind_time) continue
+    const s = setOf.get(p.user_id)
+    const tz = safeTz(s?.tz || 'Europe/London')
+    const day = localDay(now, tz)
+    if (p.last_notified === day) continue
+    const weekday = new Date(day + 'T12:00:00Z').getUTCDay()
+    if (!Array.isArray(p.days) || !p.days.includes(weekday)) continue
+    const at = zonedToUtc(day, p.remind_time, tz)
+    if (now < at || now > at + 30 * MIN) continue
+    const { data: done } = await db.from('workouts').select('id').eq('user_id', p.user_id).eq('day', day).limit(1)
+    if (done?.length) continue
+    const snd = soundFor(s, 'gym')
+    sent += await sendToUser(
+      db,
+      cfg,
+      p.user_id,
+      (sub) => ({
+        title: L(s, '🏋️ Time to train', '🏋️ حان وقت التمرين'),
+        body: L(s, "Today's workout is ready, with photos and steps. Tap to start.", 'تمرين اليوم جاهز مع الصور والخطوات. اضغط للبدء.'),
+        tag: `gym-${day}`,
+        renotify: true,
+        requireInteraction: false,
+        sound: snd.sound,
+        ring: false,
+        data: { kind: 'gym', secret: sub.secret, url: '/#/gym', api: API() },
+      }),
+      byUser.get(p.user_id)
+    )
+    await db.from('gym_plans').update({ last_notified: day }).eq('user_id', p.user_id)
   }
   return sent
 }

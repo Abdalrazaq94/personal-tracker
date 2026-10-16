@@ -8,5 +8,6 @@ import f from './ar6'
 import g from './ar7'
 import h from './ar8'
 import i from './ar9'
+import j from './ar10'
 
-export default { ...a, ...b, ...c, ...d, ...e, ...f, ...g, ...h, ...i }
+export default { ...a, ...b, ...c, ...d, ...e, ...f, ...g, ...h, ...i, ...j }

@@ -100,6 +100,8 @@ Deno.serve(async (req) => {
         return json(await promises(body))
       case 'faith':
         return json(await faith(body))
+      case 'gym':
+        return json(await gym(body))
       default:
         return json({ error: 'Unknown request.' }, 400)
     }
@@ -702,6 +704,26 @@ async function faith(b: Body) {
       '"## Patterns" (which days or practices slip, anything improving), "## A simple routine" (3 small, practical suggestions about time, place or reminders). ' +
       '**Bold** key numbers. Max ~220 words.' +
       (inArabic(b) ? ARABIC : ''),
+    `Today is ${clip(x.today, 10) || 'today'}. Period: ${clip(x.label, 80) || 'this period'} (${clip(x.from, 10)} to ${clip(x.to, 10)}).\n\n${summary}`
+  )
+  return { text }
+}
+
+/* --------------------------------- gym ----------------------------------- */
+
+async function gym(b: Body) {
+  const x = b as { label?: string; from?: string; to?: string; summary?: string; today?: string }
+  const summary = clip(x.summary, 7000)
+  if (!summary) throw new Error('Finish a workout first.')
+  const text = await askText(
+    'You are a friendly, knowledgeable strength coach inside a personal tracker app. Analyse only the user\'s own training log. ' +
+      'Use the real exercises, weights, reps and dates. Never invent data. Not medical advice: if they mention pain or an injury, ' +
+      'tell them to stop that exercise and see a professional. Recommend safe, gradual progression (about 2.5–5% or 1–2 reps). ' +
+      'Structure, with "## " headings: "## How you’re doing" (consistency vs plan, workouts, total volume), ' +
+      '"## Getting stronger" (2–4 bullets: exercises that improved, by how much; any that stalled), ' +
+      '"## Next workouts" (specific targets for 3–4 main exercises, e.g. "Squat: 3×8 at 62.5 kg"), ' +
+      '"## Tips" (2–3 short tips about recovery, form or schedule based on the data). **Bold** key numbers. Max ~250 words.' +
+      (inArabic(b) ? ARABIC + ' Keep exercise names in English.' : ''),
     `Today is ${clip(x.today, 10) || 'today'}. Period: ${clip(x.label, 80) || 'this period'} (${clip(x.from, 10)} to ${clip(x.to, 10)}).\n\n${summary}`
   )
   return { text }

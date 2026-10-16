@@ -17,6 +17,7 @@ export const FEATURES = [
   { key: 'commit', to: '/commit', icon: '🕌', label: 'Prayers', hint: 'Islamic prayer times, adhan and tracking' },
   { key: 'promises', to: '/promises', icon: '🤝', label: 'Promises', hint: 'Promises to yourself, with streaks' },
   { key: 'sleep', to: '/sleep', icon: '😴', label: 'Sleep', hint: 'Bedtime, wake-up and how you slept' },
+  { key: 'gym', to: '/gym', icon: '🏋️', label: 'Gym', hint: 'Daily workouts with photos and lessons' },
   { key: 'words', to: '/words', icon: '📖', label: 'Words', hint: 'Learn new English words' },
   { key: 'notes', to: '/notes', icon: '📝', label: 'Notes', hint: 'Notebooks with note cards' },
   { key: 'links', to: '/links', icon: '🔗', label: 'Links', hint: 'Save videos and web links' },
@@ -31,13 +32,14 @@ export const HOME_SECTIONS = [
   { key: 'tasks', label: 'Daily tasks', hint: 'Chart and open tasks', needs: 'tasks' },
   { key: 'plans', label: 'Plans', hint: 'Today and coming up', needs: 'plan' },
   { key: 'prayers', label: 'Prayers', hint: 'Next prayer and any not marked', needs: 'commit' },
+  { key: 'gym', label: 'Gym', hint: 'Today’s workout', needs: 'gym' },
   { key: 'habits', label: 'Habits', hint: 'Today’s habits with +', needs: 'habits' },
   { key: 'words', label: 'Words to practise', hint: 'Today’s words', needs: 'words' },
   { key: 'spending', label: 'Spending', hint: 'Today, this month and budget', needs: 'spend' },
 ]
 
 // What a brand-new person starts with on the "What do you want to track?" screen.
-export const STARTER = ['tasks', 'plan', 'habits', 'spend', 'promises', 'sleep', 'reminders', 'review']
+export const STARTER = ['tasks', 'plan', 'habits', 'spend', 'promises', 'sleep', 'gym', 'reminders', 'review']
 
 const KEY = 'tracker-layout'
 

@@ -20,6 +20,7 @@ import { promiseStats } from '../lib/promises'
 import { faithKey, followAccountLayout, getLayout, shownFeatures, shownSections, useLayout } from '../lib/layout'
 import { countMap, doneOn, dueOn, faithOf } from '../lib/faith'
 import { PracticeRow, usePractices } from '../components/Practices'
+import { isTrainingDay, nextWorkout } from '../lib/gym'
 import { WelcomePicker } from './Customize'
 
 const PRIORITY = { doing: 0, todo: 1 }
@@ -61,6 +62,7 @@ export default function Home({ session }) {
   const [remind, setRemind] = useState(null) // reminders on / off on this phone
   const [budget, setBudget] = useState(null) // monthly budget (null = none set)
   const [sleepRows, setSleepRows] = useState([]) // the last 2 nights (empty if Sleep isn't set up)
+  const [gym, setGym] = useState(null) // { plan, workouts } (null until loaded / not set up)
   const [promises, setPromises] = useState(null) // { list, logs } of running promises (null until loaded / not set up)
   const layout = useLayout() // which features and cards you chose to show (Customise Home)
   const faith = faithKey(layout)
@@ -107,6 +109,9 @@ export default function Home({ session }) {
       .then(({ data, error }) => !error && setSleepRows(data || []))
     Promise.all([supabase.from('promises').select('*').is('ended_at', null), supabase.from('promise_logs').select('*').gte('day', today())])
       .then(([p, l]) => !p.error && !l.error && setPromises({ list: p.data || [], logs: l.data || [] }))
+      .catch(() => {})
+    Promise.all([supabase.from('gym_plans').select('*').maybeSingle(), supabase.from('workouts').select('*').gte('day', addDays(today(), -60))])
+      .then(([p, w]) => !p.error && !w.error && setGym({ plan: p.data || null, workouts: w.data || [] }))
       .catch(() => {})
     supabase.auth.getUser().then(async ({ data }) => {
       const pl = data?.user?.user_metadata?.prayer || null
@@ -371,6 +376,12 @@ export default function Home({ session }) {
         const last = sleepRows.find((r) => r.wake_at)
         return last && last.night >= addDays(t, -1) ? T('{0} last night', [hoursText(minutesSlept(last))]) : T('Log your sleep')
       }
+      case '/gym': {
+        if (!gym?.plan) return T('Set up your training')
+        if (gym.workouts.some((w) => w.day === t && w.finished_at)) return T('✓ Trained today')
+        const nw = nextWorkout(gym.plan, gym.workouts)
+        return isTrainingDay(gym.plan, t) && nw ? T('Today: {0}', [T(nw.title)]) : T('Rest day')
+      }
       case '/promises': {
         if (!promises?.list.length) return T('Make a promise')
         const kept = promises.list.filter((p) => promiseStats(p, promises.logs, t).today === 'kept').length
@@ -465,6 +476,7 @@ export default function Home({ session }) {
         )}
       </>
     ),
+    gym: gym && <GymToday gym={gym} today={t} />,
     habits: todayHabits.length > 0 && (
       <Reveal as="section" className="today-card">
         <SectionHead title={T('Habits')} to="/habits" />
@@ -771,6 +783,47 @@ function PrayerToday({ place, logs, onMark }) {
         </div>
       ))}
       {!current && missed.length === 0 && rows.some((r) => r.state !== 'coming') && <p className="muted small">{T('All prayers so far are marked. ✓')}</p>}
+    </Reveal>
+  )
+}
+
+/** Gym: today's workout (or rest day) with a Start button. */
+function GymToday({ gym, today }) {
+  if (!gym.plan)
+    return (
+      <Reveal as="section" className="today-card">
+        <SectionHead title={T('Gym')} to="/gym" />
+        <p className="muted small">{Tr('Choose a program in {0} to get a daily workout with photos.', <Link to="/gym">{T('Gym')}</Link>)}</p>
+      </Reveal>
+    )
+  const trained = gym.workouts.filter((w) => w.day === today && w.finished_at)
+  const nw = nextWorkout(gym.plan, gym.workouts)
+  const training = isTrainingDay(gym.plan, today)
+  return (
+    <Reveal as="section" className="today-card gym-home">
+      <SectionHead title={T('Gym')} to="/gym" />
+      {trained.length ? (
+        <p className="gym-done">{T('✓ Done today: {0}. Well done!', [trained.map((w) => T(w.title)).join(', ')])}</p>
+      ) : training && nw ? (
+        <div className="gym-home__row">
+          <span className="gym-home__imgs" aria-hidden>
+            {nw.items.slice(0, 3).map((it) => (
+              <img key={it.ex} src={`/ex/${it.ex}-1.webp`} alt="" loading="lazy" width="54" height="36" />
+            ))}
+          </span>
+          <span className="gym-home__text">
+            <strong>
+              {nw.emoji} {T(nw.title)}
+            </strong>
+            <span className="muted small">{T('{0} exercises', [nw.items.length])}</span>
+          </span>
+          <Link to="/gym" className="btn btn--sm">
+            {T('▶ Start')}
+          </Link>
+        </div>
+      ) : (
+        <p className="muted small">{T('Rest day. A short stretch or a walk helps you recover.')}</p>
+      )}
     </Reveal>
   )
 }

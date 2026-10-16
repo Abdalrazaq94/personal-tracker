@@ -30,6 +30,7 @@ const PAGES = {
   promises: () => import('./pages/Promises'),
   customize: () => import('./pages/Customize'),
   faith: () => import('./pages/Faith'),
+  gym: () => import('./pages/Gym'),
 }
 const Words = lazy(PAGES.words)
 const Tasks = lazy(PAGES.tasks)
@@ -46,6 +47,7 @@ const Sleep = lazy(PAGES.sleep)
 const Promises = lazy(PAGES.promises)
 const Customize = lazy(PAGES.customize)
 const Faith = lazy(PAGES.faith)
+const Gym = lazy(PAGES.gym)
 /** The faith page: Islam keeps its prayer-times page; other faiths get their daily practices. */
 function FaithRoute() {
   const layout = useLayout()
@@ -69,6 +71,7 @@ export const SECTIONS = [
   { to: '/commit', label: T("Prayers"), hint: T("Commitments · prayer times") },
   { to: '/sleep', label: T("Sleep"), hint: T("Bedtime, wake-up · AI analysis") },
   { to: '/promises', label: T("Promises"), hint: T("Promises to yourself · streaks") },
+  { to: '/gym', label: T("Gym"), hint: T("Daily workouts with photos and lessons") },
   { to: '/review', label: T("Review"), hint: T("Week, month or year at a glance") },
   { to: '/reminders', label: T("Reminders"), hint: T("Notifications for plans & prayers") },
 ]
@@ -151,6 +154,7 @@ export default function App() {
             <Route path="/sleep" element={<Sleep />} />
             <Route path="/promises" element={<Promises />} />
             <Route path="/customize" element={<Customize />} />
+            <Route path="/gym" element={<Gym />} />
             <Route path="/more" element={<More sections={sections} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

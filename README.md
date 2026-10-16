@@ -135,6 +135,17 @@ a 5-week calendar (tap a day to change it). The progress report covers any week,
 analysis finds what makes you slip and gives you a plan. Review includes promises too.
 Setup: run `supabase/migrations/018_promises.sql` and redeploy the `ai` function.
 
+## Gym
+
+**Gym** (Home tile 🏋️ or the menu): pick a program — **Home workout (no equipment)**, **Gym: beginner full body**,
+**Gym: push / pull / legs**, or **My own workouts** built from the exercise library — and your training days. Each
+training day shows today's workout with a photo of every exercise and a **lesson of the day**. **Start workout** walks
+you through it: start/end photos of the movement, step-by-step instructions, your last weights pre-filled, sets with
+reps and kg (or a countdown for timed exercises), and a rest timer with a sound. Progress shows workouts per week,
+weeks in a row, personal bests, body weight, history, and an AI coach with targets for your next workouts. Optional
+reminder on training days. Photos and steps: [Free Exercise DB](https://github.com/yuhonas/free-exercise-db) (public
+domain), stored in `public/ex`. Setup: run `supabase/migrations/021_gym.sql` and redeploy the `ai` and `notify` functions.
+
 ## Faith for everyone
 
 The second step of the welcome screen (and **Customise Home → Faith**) asks which faith to track: **Islam** (the prayer
