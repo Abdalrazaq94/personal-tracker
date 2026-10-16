@@ -301,7 +301,7 @@ async function brief(db: any, b: Body) {
     enabled('habits') ? 'HABITS: ' + (habitLines.join(' | ') || 'none') : '',
     enabled('spend') ? `SPENDING (${currency}): today ${todaySpend.toFixed(2)}, this month ${monthSpend.toFixed(2)}, usual per day ${avgDay.toFixed(2)}` : '',
     enabled('spend') ? budgetLine(budget, monthSpend, today) : '',
-    enabled('words') ? `WORDS: ${wordCounts.new ?? 0} not yet, ${wordCounts.learning ?? 0} learning, ${wordCounts.memorized ?? 0} memorized`,
+    enabled('words') ? `WORDS: ${wordCounts.new ?? 0} not yet, ${wordCounts.learning ?? 0} learning, ${wordCounts.memorized ?? 0} memorized` : '',
   ]
     .filter(Boolean)
     .join('\n')
