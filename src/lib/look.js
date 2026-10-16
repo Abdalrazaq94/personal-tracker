@@ -15,15 +15,56 @@ export const ACCENTS = [
 ]
 export const DEFAULT_ACCENT = 'classic'
 
-// Mochi's fur, and what Mochi wears
-export const FURS = [
-  { key: 'ginger', name: 'Ginger', c: '#f5a35c', d: '#d97a32', l: '#ffd2a1' },
-  { key: 'cream', name: 'Cream', c: '#f6e3c6', d: '#dcbf95', l: '#fff6e8' },
-  { key: 'grey', name: 'Grey', c: '#a9b0bd', d: '#7d8494', l: '#d9dde5' },
-  { key: 'black', name: 'Black', c: '#3a3a44', d: '#22222a', l: '#5d5d6a' },
-  { key: 'white', name: 'White', c: '#fbfbfd', d: '#d9dbe3', l: '#ffffff' },
-  { key: 'calico', name: 'Calico', c: '#fbf3e6', d: '#d8c6ad', l: '#ffffff' },
+// Your buddy on Home: a cat, a dog or a little robot. c = main colour, d = shade, l = light; glow = robot's eyes.
+export const PETS = [
+  {
+    key: 'cat',
+    name: 'Cat',
+    def: 'Mochi',
+    colours: [
+      { key: 'ginger', name: 'Ginger', c: '#f5a35c', d: '#d97a32', l: '#ffd2a1' },
+      { key: 'cream', name: 'Cream', c: '#f6e3c6', d: '#dcbf95', l: '#fff6e8' },
+      { key: 'grey', name: 'Grey', c: '#a9b0bd', d: '#7d8494', l: '#d9dde5' },
+      { key: 'black', name: 'Black', c: '#3a3a44', d: '#22222a', l: '#5d5d6a' },
+      { key: 'white', name: 'White', c: '#fbfbfd', d: '#d9dbe3', l: '#ffffff' },
+      { key: 'calico', name: 'Calico', c: '#fbf3e6', d: '#d8c6ad', l: '#ffffff' },
+    ],
+  },
+  {
+    key: 'dog',
+    name: 'Dog',
+    def: 'Biscuit',
+    colours: [
+      { key: 'golden', name: 'Golden', c: '#e9b56a', d: '#c08a3e', l: '#ffe2b0' },
+      { key: 'brown', name: 'Brown', c: '#a8714a', d: '#7a4c2e', l: '#d9a57c' },
+      { key: 'white', name: 'White', c: '#fbfaf7', d: '#ddd6cb', l: '#ffffff' },
+      { key: 'black', name: 'Black', c: '#3b3633', d: '#221f1d', l: '#625a54' },
+      { key: 'grey', name: 'Grey', c: '#b4b8c0', d: '#868b95', l: '#e0e3e8' },
+      { key: 'spotty', name: 'Spotty', c: '#fbfaf7', d: '#d9d3c8', l: '#ffffff' },
+    ],
+  },
+  {
+    key: 'robot',
+    name: 'Robot',
+    def: 'Pixel',
+    colours: [
+      { key: 'mint', name: 'Mint', c: '#c8f1e4', d: '#86cdb6', l: '#f2fffa', glow: '#3ff0c0' },
+      { key: 'sky', name: 'Sky', c: '#cfe3ff', d: '#8fb2e6', l: '#f4f8ff', glow: '#59c2ff' },
+      { key: 'peach', name: 'Peach', c: '#ffe0cc', d: '#e8ab86', l: '#fff6f0', glow: '#ffb35c' },
+      { key: 'lilac', name: 'Lilac', c: '#e6dcff', d: '#b29ce6', l: '#faf7ff', glow: '#c08bff' },
+      { key: 'silver', name: 'Silver', c: '#e4e7ec', d: '#a9afba', l: '#ffffff', glow: '#7ff3e0' },
+      { key: 'midnight', name: 'Midnight', c: '#3a4060', d: '#262a40', l: '#5b6290', glow: '#ff7ab0' },
+    ],
+  },
 ]
+export const petOf = (kind) => PETS.find((p) => p.key === kind) || PETS[0]
+export const colourOf = (kind, key) => {
+  const p = petOf(kind)
+  return p.colours.find((c) => c.key === key) || p.colours[0]
+}
+/** @deprecated cat colours, kept for older code */
+export const FURS = PETS[0].colours
+
 export const ACCESSORIES = [
   { key: 'none', name: 'Nothing' },
   { key: 'bow', name: 'Bow' },
@@ -36,13 +77,15 @@ export const ACCESSORIES = [
 const pick = (list, v, d) => (list.some((x) => x.key === v) ? v : d)
 export function normalizeLook(raw) {
   const cat = raw?.cat || {}
+  const pet = petOf(cat.kind)
   return {
     accent: pick(ACCENTS, raw?.accent, DEFAULT_ACCENT),
     cat: {
       on: cat.on !== false,
-      fur: pick(FURS, cat.fur, 'ginger'),
+      kind: pet.key,
+      fur: pick(pet.colours, cat.fur, pet.colours[0].key),
       acc: pick(ACCESSORIES, cat.acc, 'bow'),
-      name: typeof cat.name === 'string' && cat.name.trim() ? cat.name.trim().slice(0, 20) : 'Mochi',
+      name: typeof cat.name === 'string' && cat.name.trim() ? cat.name.trim().slice(0, 20) : pet.def,
     },
   }
 }

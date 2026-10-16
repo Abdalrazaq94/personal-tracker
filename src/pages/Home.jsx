@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { money, parseYmd, startOfMonth, today, ymd } from '../lib/dates'
 import { dayState, isBad, logOn, planned, success } from '../lib/habits'
@@ -17,12 +17,13 @@ import { savePrayerLog, statusOf } from '../lib/prayerStatus'
 import { budgetStats, loadBudget } from '../lib/budget'
 import { clockOf, hoursText, minutesSlept } from '../lib/sleep'
 import { promiseStats } from '../lib/promises'
-import { faithKey, followAccountLayout, getLayout, shownFeatures, shownSections, useLayout } from '../lib/layout'
+import { faithKey, followAccountLayout, getLayout, isShown, shownFeatures, shownSections, useLayout } from '../lib/layout'
 import { countMap, doneOn, dueOn, faithOf } from '../lib/faith'
 import { PracticeRow, usePractices } from '../components/Practices'
 import { isTrainingDay, nextWorkout } from '../lib/gym'
 import { WelcomePicker } from './Customize'
 import Cat from '../components/Cat'
+import { buddyNotes } from '../lib/buddyNotes'
 
 const PRIORITY = { doing: 0, todo: 1 }
 
@@ -69,6 +70,12 @@ export default function Home({ session }) {
   const faith = faithKey(layout)
   const practices = usePractices(faith) // other faiths: today's practices (nothing is loaded for Islam)
   const practiceCounts = useMemo(() => countMap(practices.logs), [practices.logs])
+  const navigate = useNavigate()
+  const [tick, setTick] = useState(0) // re-check reminders every minute
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 60e3)
+    return () => clearInterval(t)
+  }, [])
   const [brief, setBrief] = useState(readBrief) // today's AI summary: the cat tells you the first line
   useEffect(() => {
     const on = (e) => setBrief(e.detail)
@@ -295,6 +302,20 @@ export default function Home({ session }) {
       d.plans.filter((p) => p.done).length +
       goodHabits.filter((h) => success(h, logOn(d.logs, h.id, t).count)).length
     : null // still loading
+
+  // what your buddy reminds you about: prayer time, timed tasks and plans, today's workout
+  const notes = useMemo(
+    () =>
+      buddyNotes({
+        now: new Date(),
+        tasks: isShown(layout, 'tasks') ? d?.tasks : null,
+        plans: isShown(layout, 'plan') ? d?.plans : null,
+        prayer: faith === 'islam' && isShown(layout, 'commit') && place ? { place, logs: prayerLogs, day: placeToday(place.tz) } : null,
+        gym: isShown(layout, 'gym') ? gym : null,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [d, layout, faith, place, prayerLogs, gym, tick],
+  )
 
   const spentToday = d ? d.spend.filter((x) => x.spent_on === t).reduce((a, x) => a + Number(x.amount), 0) : 0
   const spentMonth = d ? d.spend.reduce((a, x) => a + Number(x.amount), 0) : 0
@@ -614,6 +635,8 @@ export default function Home({ session }) {
             look={layout.look.cat}
             wins={wins}
             brief={brief}
+            notes={notes}
+            onNote={(n) => navigate(n.to)}
             onBrief={() => document.getElementById('your-day')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
           />
         )}

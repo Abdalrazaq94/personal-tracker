@@ -170,16 +170,20 @@ The **⚙︎** button in the top bar opens Settings:
   (Nunito). Black & white is the original look. Themes live in `src/themes.css`: each one is just a main colour plus
   six pastels, and the rest is mixed from those.
 - **Light or dark**: Light, Dark or Auto (follows the phone). **Language**: English or العربية.
-- **Your cat**: Mochi, the app's own cat, sits on Home. It breathes, blinks, swishes its tail, tilts towards your
-  finger, sleeps at night (23:00–05:00) and smiles once you've done 3 things today (tasks, plans, good habits). Tap it
-  and it jumps, spins and sends a heart. You can rename it, pick its fur (6 colours) and what it wears (bow, bell
-  collar, scarf, glasses, crown), or hide it. Drawn in SVG (`src/components/Cat.jsx`), no images.
-  Moves: every 5–11 seconds it does something by itself (wave, stretch, yawn, wash its paw, look around, chase its
-  tail, dance, settle like a loaf; only stretches and yawns at night). It drops in when Home opens, its ears perk up
-  when your finger comes close, three quick taps make it purr, and it jumps and spins with confetti when you finish
-  a task, plan or habit. Settings → Your cat → Try a move plays each one. Reduced-motion phones get a still cat.
-  The cat is also the face of the AI: on Home it tells you the first line of "Your day" (tap the bubble to read
-  it all), and every "Analyse with AI" box shows the cat, which looks up and thinks (…) while the AI is working.
+- **Your buddy**: a cat (Mochi), a dog (Biscuit) or a little robot (Pixel) sits on Home, 50% bigger than before.
+  Pick one in Settings, then its colour (6 each), name and what it wears (bow, bell collar, scarf, glasses, crown),
+  or hide it. Drawn in SVG (`src/components/PetArt.jsx`), no images.
+  - **Always moving**: breathes, blinks, and every few seconds waves, stretches, yawns, washes its paw, looks around,
+    chases its tail, dances or settles down. The dog wags and sticks its tongue out when happy; the robot floats on a
+    little jet with a blinking antenna light. Sleepy at night (23:00–05:00). Reduced-motion phones get a still buddy.
+  - **Reminders**: it tells you what's next and waves when something is due: "It's time for Asr", "Asr in 20m",
+    "Time for: Pay rent", "Gym in 15m", "Workout today: Push". Reminders come from prayer times (Islam), tasks with
+    a reminder, plans with a time today and your gym plan (`src/lib/buddyNotes.js`). Several reminders take turns;
+    tap the bubble to open that page.
+  - **Your day**: with nothing due, it tells you the first line of the AI "Your day" summary (tap to read it all).
+    Every "Analyse with AI" box shows your buddy thinking while the AI works.
+  - Tap it to say hi, three quick taps to make it purr / woof / beep, and it celebrates with confetti when you
+    finish a task, plan or habit.
 
 Theme and cat are saved with your Home layout (same `home_layout` column, no new SQL), so all devices match.
 

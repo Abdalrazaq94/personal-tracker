@@ -125,7 +125,7 @@ html[data-soft], html[data-soft] body { background: var(--page); }
 .cat-wrap { position: relative; display: flex; flex-direction: column; align-items: center; perspective: 600px; }
 .cat {
   --fur: #f5a35c; --fur-d: #d97a32; --fur-l: #ffd2a1;
-  position: relative; width: 112px; height: 112px; padding: 0; border: 0; background: none; cursor: pointer;
+  position: relative; width: 168px; height: 168px; padding: 0; border: 0; background: none; cursor: pointer;
   transform-style: preserve-3d; transition: transform .25s cubic-bezier(.22, 1, .36, 1);
   transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
   -webkit-tap-highlight-color: transparent;
@@ -177,7 +177,8 @@ html[data-soft], html[data-soft] body { background: var(--page); }
   .cat__body, .cat__lids, .cat__tail, .cat__ear--l, .cat__shadow, .cat--sleepy .cat__zz { animation: none !important; }
   .cat { transform: none !important; }
 }
-@media (max-width: 380px) { .cat { width: 92px; height: 92px; } .cat-say { max-width: 140px; } }
+@media (max-width: 420px) { .cat { width: 160px; height: 160px; } .cat-say { max-width: 180px; } }
+@media (max-width: 360px) { .cat { width: 136px; height: 136px; } }
 
 /* ---------- Settings ---------- */
 .settings-btn {
@@ -212,8 +213,8 @@ html[data-soft], html[data-soft] body { background: var(--page); }
   box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .12); transition: transform .15s;
 }
 .swatch.is-on { border-color: var(--primary); transform: scale(1.12); box-shadow: 0 0 0 3px var(--primary-soft), inset 0 -4px 0 rgba(0, 0, 0, .12); }
-.swatch--calico { background: conic-gradient(#fbf3e6 0 40%, #f5a35c 0 65%, #3a3a44 0 85%, #fbf3e6 0) !important; }
-.set-stage { display: grid; place-items: center; width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(circle at 50% 40%, var(--bg), var(--primary-soft)); }
+.swatch--cat-calico { background: conic-gradient(#fbf3e6 0 40%, #f5a35c 0 65%, #3a3a44 0 85%, #fbf3e6 0) !important; }
+.set-stage { display: grid; place-items: center; width: 210px; height: 210px; border-radius: 50%; background: radial-gradient(circle at 50% 40%, var(--bg), var(--primary-soft)); }
 .topbar a.settings-btn { padding: 0; color: var(--fg); }
 .topbar a.settings-btn.is-active { color: var(--on-primary); }
 .topbar a.settings-btn::after { display: none; }
@@ -361,3 +362,54 @@ html[data-soft]:not([data-theme='dark']) .rem-switch:checked { background: var(-
 @media (prefers-reduced-motion: reduce) {
   .cat[class*='act-'] svg, .cat[class*='act-'] .cat__all, .cat[class*='act-'] .cat__paw, .cat[class*='act-'] .cat__head { animation: none !important; }
 }
+
+/* ---------- bigger buddy on Home: the greeting makes room ---------- */
+.home-header--cat { gap: 4px; }
+.home-header--cat .display { font-size: clamp(30px, 8.6vw, 40px); }
+.cat-say { max-width: 210px; font-size: 13px; }
+
+/* ---------- pick your buddy ---------- */
+.pet-pick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 6px 0 14px; }
+.pet-pick__item {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px 10px; border-radius: 18px;
+  border: 2px solid var(--line); background: var(--bg); color: var(--fg); font-weight: 800;
+  transition: transform .15s, border-color .15s;
+}
+.pet-pick__item svg { width: 72px; height: 72px; overflow: visible; }
+.pet-pick__item .cat__shadow { opacity: .1; }
+.pet-pick__item .cat__dots, .pet-pick__item .cat__zz { display: none; }
+.pet-pick__item.is-on { border-color: var(--primary); background: var(--primary-soft); }
+.pet-pick__item:active { transform: scale(.96); }
+.swatch--dog-spotty { background: radial-gradient(circle at 30% 35%, #3b3633 0 14%, transparent 15%), radial-gradient(circle at 68% 62%, #3b3633 0 11%, transparent 12%), radial-gradient(circle at 35% 30%, #fff, #fbfaf7 55%, #d9d3c8) !important; }
+
+/* ---------- dog ---------- */
+.pet--dog .cat__tail { transform-origin: 87px 102px; animation-duration: .7s; }
+.pet--dog .dog__tongue { display: none; }
+.pet--dog.cat--happy .dog__tongue, .cat.act-dance .dog__tongue, .cat.act-party .dog__tongue, .cat.act-purr .dog__tongue { display: inline; }
+.pet--dog .cat__ear--l { transform-origin: 32px 32px; }
+.pet--dog .cat__ear--r { transform-origin: 88px 32px; }
+.cat.is-near .pet--dog .cat__ear--l { transform: rotate(14deg); }
+.cat.is-near .pet--dog .cat__ear--r { transform: rotate(-14deg); }
+
+/* ---------- robot: floats, jet flickers, antenna light blinks, chest light pulses ---------- */
+.pet--robot .cat__all { animation: bot-float 3s ease-in-out infinite; }
+.pet--robot .cat__tail { transform-origin: 60px 110px; animation: bot-jet .18s ease-in-out infinite alternate; }
+.pet--robot .cat__ear--l { transform-origin: 60px 26px; }
+.pet--robot .cat__ear--r { transform-origin: 60px 55px; }
+.pet--robot .cat__paw { transform-origin: 88px 100px; }
+.pet--robot .cat__arm { display: none; }
+.pet--robot .bot__bulb { animation: bot-blink 2s ease-in-out infinite; }
+.pet--robot .bot__core { animation: bot-blink 1.6s ease-in-out infinite; }
+.pet--robot .cat__shadow { animation: bot-shadow 3s ease-in-out infinite; }
+.cat.is-near .pet--robot .cat__ear--l { transform: rotate(-10deg) translateY(-2px); }
+@keyframes bot-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes bot-jet { from { transform: scale(.9, .8); opacity: .75; } to { transform: scale(1.08, 1.15); opacity: 1; } }
+@keyframes bot-blink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@keyframes bot-shadow { 0%, 100% { transform: scaleX(1); opacity: .14; } 50% { transform: scaleX(.85); opacity: .08; } }
+
+/* ---------- reminders from your buddy ---------- */
+.cat-say--note { cursor: pointer; font: inherit; font-size: 13px; font-weight: 800; text-align: start; border: 2px solid var(--primary) !important; }
+.cat-say--note::after { border-color: var(--primary) !important; }
+.cat-say--urgent { background: var(--primary); color: var(--on-primary); animation: cat-say-in .35s cubic-bezier(.34, 1.56, .64, 1), note-pulse 1.8s ease-in-out .4s 3; }
+@keyframes note-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+.cat-say__count { display: block; margin-top: 2px; font-size: 11px; font-weight: 700; opacity: .75; }

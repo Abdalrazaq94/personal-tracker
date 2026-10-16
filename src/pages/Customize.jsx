@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FEATURES, HOME_SECTIONS, STARTER, faithKey, featureView, getLayout, normalize, saveLayout, saveLook, useLayout } from '../lib/layout'
 import { FAITHS } from '../lib/faith'
 import { LANG, setLang, T } from '../lib/i18n'
 import { supabase } from '../lib/supabase'
 import { setTheme, themeChoice, useTheme } from '../lib/theme'
-import { ACCENTS, ACCESSORIES, FURS } from '../lib/look'
+import { ACCENTS, ACCESSORIES, PETS, petOf } from '../lib/look'
 import { PageHeader } from '../components/ui'
 import GlareHover from '../components/reactbits/GlareHover'
-import Cat, { MOVES } from '../components/Cat'
+import Cat from '../components/Cat'
+import PetArt from '../components/PetArt'
 
 /** Settings: colours, light / dark, language, the cat, your faith, and which features and Home cards you see. Saves straight away. */
 export default function Customize() {
@@ -353,78 +354,83 @@ function Appearance({ look }) {
   )
 }
 
-const MOVE_NAMES = { wave: '👋 Wave', stretch: '🙆 Stretch', yawn: '🥱 Yawn', groom: '🐾 Wash', look: '👀 Look around', chase: '🌀 Chase tail', dance: '💃 Dance', loaf: '🍞 Loaf' }
-
-/** Design your own cat: name, fur and what it wears. */
+/** Your buddy: cat, dog or robot, then its colour, name and what it wears. */
 function CatStudio({ cat }) {
   const [name, setName] = useState(cat.name)
-  const [play, setPlay] = useState(null)
+  useEffect(() => setName(cat.name), [cat.name])
+  const pet = petOf(cat.kind)
   const save = (c) => saveLook({ cat: { ...cat, ...c } })
+  const pickKind = (k) => {
+    const next = petOf(k)
+    // a default name follows the buddy (Mochi → Biscuit); a name you chose stays
+    const named = PETS.some((p) => p.def === cat.name) ? next.def : cat.name
+    save({ kind: k, fur: next.colours[0].key, name: named })
+  }
   return (
     <section className="card" id="cat">
       <div className="set-row">
         <span>
-          <h2 className="cust-title">{T('Your cat')}</h2>
-          <span className="muted small">{T('A little friend on Home who cheers you on. Tap it!')}</span>
+          <h2 className="cust-title">{T('Your buddy')}</h2>
+          <span className="muted small">{T('A little friend on Home who cheers you on, reminds you what’s next and tells you about your day. Tap it!')}</span>
         </span>
-        <input type="checkbox" className="rem-switch" aria-label={T('Show the cat on Home')} checked={cat.on} onChange={(e) => save({ on: e.target.checked })} />
+        <input type="checkbox" className="rem-switch" aria-label={T('Show your buddy on Home')} checked={cat.on} onChange={(e) => save({ on: e.target.checked })} />
       </div>
       {cat.on && (
-        <div className="cat-studio">
-          <div className="set-stage">
-            <Cat look={cat} wins={3} awake play={play} />
+        <>
+          <div className="pet-pick" role="radiogroup" aria-label={T('Your buddy')}>
+            {PETS.map((p) => (
+              <button key={p.key} type="button" role="radio" aria-checked={cat.kind === p.key} className={`pet-pick__item ${cat.kind === p.key ? 'is-on' : ''}`} onClick={() => cat.kind !== p.key && pickKind(p.key)}>
+                <PetArt kind={p.key} fur={cat.kind === p.key ? cat.fur : p.colours[0].key} acc="none" mood="happy" />
+                <strong>{T(p.name)}</strong>
+              </button>
+            ))}
           </div>
-          <div className="cat-studio__opts">
-            <label className="field">
-              <span>{T('Name')}</span>
-              <input
-                dir="auto"
-                maxLength={20}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onBlur={() => name.trim() && name.trim() !== cat.name && save({ name: name.trim() })}
-              />
-            </label>
-            <div className="field">
-              <span>{T('Fur')}</span>
-              <div className="swatches" role="radiogroup" aria-label={T('Fur')}>
-                {FURS.map((f) => (
-                  <button
-                    key={f.key}
-                    type="button"
-                    role="radio"
-                    aria-checked={cat.fur === f.key}
-                    aria-label={T(f.name)}
-                    title={T(f.name)}
-                    className={`swatch swatch--${f.key} ${cat.fur === f.key ? 'is-on' : ''}`}
-                    style={{ background: `radial-gradient(circle at 35% 30%, ${f.l}, ${f.c} 55%, ${f.d})` }}
-                    onClick={() => save({ fur: f.key })}
-                  />
-                ))}
-              </div>
+          <div className="cat-studio">
+            <div className="set-stage">
+              <Cat look={cat} wins={3} awake />
             </div>
-            <div className="field">
-              <span>{T('Try a move')}</span>
-              <div className="chips-row">
-                {Object.keys(MOVES).map((m) => (
-                  <button key={m} type="button" className="chip" onClick={() => setPlay((p) => ({ name: m, n: (p?.n || 0) + 1 }))}>
-                    {T(MOVE_NAMES[m])}
-                  </button>
-                ))}
+            <div className="cat-studio__opts">
+              <label className="field">
+                <span>{T('Name')}</span>
+                <input
+                  dir="auto"
+                  maxLength={20}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onBlur={() => name.trim() && name.trim() !== cat.name && save({ name: name.trim() })}
+                />
+              </label>
+              <div className="field">
+                <span>{T('Colour')}</span>
+                <div className="swatches" role="radiogroup" aria-label={T('Colour')}>
+                  {pet.colours.map((f) => (
+                    <button
+                      key={f.key}
+                      type="button"
+                      role="radio"
+                      aria-checked={cat.fur === f.key}
+                      aria-label={T(f.name)}
+                      title={T(f.name)}
+                      className={`swatch swatch--${pet.key}-${f.key} ${cat.fur === f.key ? 'is-on' : ''}`}
+                      style={{ background: f.glow ? `radial-gradient(circle at 50% 50%, ${f.glow} 0 28%, ${f.c} 30%, ${f.d})` : `radial-gradient(circle at 35% 30%, ${f.l}, ${f.c} 55%, ${f.d})` }}
+                      onClick={() => save({ fur: f.key })}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-            <div className="field">
-              <span>{T('Wears')}</span>
-              <div className="chips-row">
-                {ACCESSORIES.map((a) => (
-                  <button key={a.key} type="button" className={`chip chip--solid ${cat.acc === a.key ? 'is-active' : ''}`} aria-pressed={cat.acc === a.key} onClick={() => save({ acc: a.key })}>
-                    {T(a.name)}
-                  </button>
-                ))}
+              <div className="field">
+                <span>{T('Wears')}</span>
+                <div className="chips-row">
+                  {ACCESSORIES.map((a) => (
+                    <button key={a.key} type="button" className={`chip chip--solid ${cat.acc === a.key ? 'is-active' : ''}`} aria-pressed={cat.acc === a.key} onClick={() => save({ acc: a.key })}>
+                      {T(a.name)}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </section>
   )
