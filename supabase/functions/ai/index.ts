@@ -115,22 +115,17 @@ const PER_DAY = Number(Deno.env.get('AI_PER_DAY') || 300)
 
 /** null = fine; otherwise the message to show. Counts this request too. */
 // deno-lint-ignore no-explicit-any
-async function overLimit(db: any, userId: string): Promise<string | null> {
-  const hourAgo = new Date(Date.now() - 3600_000).toISOString()
-  const dayAgo = new Date(Date.now() - 86400_000).toISOString()
-  const [hour, day] = await Promise.all([
-    db.from('ai_usage').select('id', { count: 'exact', head: true }).gte('at', hourAgo),
-    db.from('ai_usage').select('id', { count: 'exact', head: true }).gte('at', dayAgo),
-  ])
-  // Fail closed when usage tracking is unavailable, to prevent unmetered AI calls.
-  if (hour.error || day.error || hour.count == null || day.count == null) {
-    return 'AI is temporarily unavailable. Please try again later.'
-  }
-  if (day.count >= PER_DAY) return 'You’ve used the AI a lot today. Please try again tomorrow.'
-  if (hour.count >= PER_HOUR) return 'You’ve used the AI a lot in the last hour. Please try again a bit later.'
-  const { error: usageError } = await db.from('ai_usage').insert({ user_id: userId })
-  if (usageError) return 'AI is temporarily unavailable. Please try again later.'
-  return null
+async function overLimit(db: any, _userId: string): Promise<string | null> {
+  // One database transaction serializes each user's check-and-insert.
+  // Requires migration 023_atomic_ai_usage.sql; fail closed until deployed.
+  const { data, error } = await db.rpc('reserve_ai_usage', {
+    max_per_hour: PER_HOUR,
+    max_per_day: PER_DAY,
+  })
+  if (error || typeof data !== 'string') return 'AI is temporarily unavailable. Please try again later.'
+  if (data === 'hour') return 'You’ve used the AI a lot in the last hour. Please try again a bit later.'
+  if (data === 'day') return 'You’ve used the AI a lot today. Please try again tomorrow.'
+  return data === 'ok' ? null : 'AI is temporarily unavailable. Please try again later.'
 }
 
 /* ------------------------------- words ---------------------------------- */
