@@ -174,6 +174,7 @@ const DEFAULT_SOUNDS: Record<string, { sound: string; ring: boolean }> = {
   task: { sound: 'marimba', ring: false },
   prayer: { sound: 'adhan', ring: true },
   budget: { sound: 'ping', ring: false },
+  practice: { sound: 'chime', ring: false },
 }
 function soundFor(setting: Any, kind: string) {
   const saved = setting?.sounds?.[kind]
@@ -507,6 +508,9 @@ async function tick(db: Any, cfg: Any) {
 
   // ---- monthly budget: one warning at 80%, one when it's gone over (per month) ----
   sent += await budgetWarnings(db, cfg, settings ?? [], byUser, now)
+
+  // ---- faith practices with "Remind me" (Christian, Jewish, Hindu, own) ----
+  sent += await practiceReminders(db, cfg, users, setOf, byUser, now)
   return { users: users.length, sent }
 }
 
@@ -577,6 +581,53 @@ async function budgetWarnings(db: Any, cfg: Any, settings: Any[], byUser: Map<st
   return sent
 }
 
+/** One reminder per practice per day, at its time (Shabbat: 30 minutes before candle lighting), if not done yet. */
+async function practiceReminders(db: Any, cfg: Any, users: string[], setOf: Map<string, Any>, byUser: Map<string, Any[]>, now: number) {
+  const { data: list, error } = await db.from('practices').select('*').in('user_id', users).eq('remind', true).eq('archived', false)
+  if (error || !list?.length) return 0
+  let sent = 0
+  for (const p of list) {
+    const s = setOf.get(p.user_id)
+    const tz = safeTz(s?.tz || 'Europe/London')
+    const day = localDay(now, tz)
+    if (p.last_notified === day) continue
+    const weekday = new Date(day + 'T12:00:00Z').getUTCDay()
+    if (Array.isArray(p.days) && p.days.length && !p.days.includes(weekday)) continue
+    let at: number | null = null
+    if (p.special === 'shabbat') {
+      const place = s?.prayer_place
+      if (!place?.lat) continue
+      at = prayerTimes(place, day).sunset - 18 * MIN - 30 * MIN
+    } else if (p.time) at = zonedToUtc(day, p.time, tz)
+    if (at == null || now < at || now > at + 30 * MIN) continue
+    const { data: log } = await db.from('practice_logs').select('count').eq('practice_id', p.id).eq('day', day).maybeSingle()
+    if ((log?.count ?? 0) >= (p.target || 1)) continue
+    const snd = soundFor(s, 'practice')
+    sent += await sendToUser(
+      db,
+      cfg,
+      p.user_id,
+      (sub) => ({
+        title: `${p.emoji} ${p.title}`,
+        body:
+          p.special === 'shabbat'
+            ? L(s, `Candle lighting in 30 minutes (${clock(at! + 30 * MIN, tz)}). Shabbat shalom!`, `إشعال الشموع بعد 30 دقيقة (${clock(at! + 30 * MIN, tz)}).`)
+            : L(s, `It's time for ${p.title}.`, `حان وقت ${p.title}.`),
+        tag: `practice-${p.id}-${day}`,
+        renotify: true,
+        requireInteraction: false,
+        sound: snd.sound,
+        ring: false,
+        actions: [{ action: 'done', title: L(s, '✓ Done', '✓ تم') }],
+        data: { kind: 'practice', id: p.id, day, secret: sub.secret, url: '/#/commit', api: API() },
+      }),
+      byUser.get(p.user_id)
+    )
+    await db.from('practices').update({ last_notified: day }).eq('id', p.id)
+  }
+  return sent
+}
+
 function prayerTimes(place: Any, day: string) {
   const [y, m, d] = day.split('-').map(Number)
   const coords = new Coordinates(Number(place.lat), Number(place.lon))
@@ -585,7 +636,7 @@ function prayerTimes(place: Any, day: string) {
   params.madhab = place.madhab === 'hanafi' ? Madhab.Hanafi : Madhab.Shafi
   params.highLatitudeRule = HighLatitudeRule.recommended(coords)
   const t = new PrayerTimes(coords, new Date(y, m - 1, d), params)
-  return { fajr: +t.fajr, sunrise: +t.sunrise, dhuhr: +t.dhuhr, asr: +t.asr, maghrib: +t.maghrib, isha: +t.isha } as Record<string, number>
+  return { fajr: +t.fajr, sunrise: +t.sunrise, dhuhr: +t.dhuhr, asr: +t.asr, sunset: +t.sunset, maghrib: +t.maghrib, isha: +t.isha } as Record<string, number>
 }
 
 /* --------------------- buttons on the notification ---------------------- */
@@ -601,6 +652,13 @@ async function act(db: Any, b: Any) {
   if (b.kind === 'task' && b.id) {
     if (b.what === 'done') await db.from('tasks').update({ status: 'done' }).eq('id', b.id).eq('user_id', user)
     if (b.what === 'snooze') await db.from('tasks').update({ snoozed_until: new Date(now + 60 * MIN).toISOString(), last_notified: new Date(now).toISOString() }).eq('id', b.id).eq('user_id', user)
+    return { ok: true }
+  }
+  if (b.kind === 'practice' && b.id && /^\d{4}-\d{2}-\d{2}$/.test(String(b.day ?? ''))) {
+    if (b.what === 'done') {
+      const { data: p } = await db.from('practices').select('id, target').eq('id', b.id).eq('user_id', user).maybeSingle()
+      if (p) await db.from('practice_logs').upsert({ user_id: user, practice_id: p.id, day: b.day, count: p.target || 1 }, { onConflict: 'practice_id,day' })
+    }
     return { ok: true }
   }
   if (b.kind === 'plan' && b.id) {

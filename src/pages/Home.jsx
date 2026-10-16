@@ -17,7 +17,9 @@ import { savePrayerLog, statusOf } from '../lib/prayerStatus'
 import { budgetStats, loadBudget } from '../lib/budget'
 import { clockOf, hoursText, minutesSlept } from '../lib/sleep'
 import { promiseStats } from '../lib/promises'
-import { followAccountLayout, getLayout, shownFeatures, shownSections, useLayout } from '../lib/layout'
+import { faithKey, followAccountLayout, getLayout, shownFeatures, shownSections, useLayout } from '../lib/layout'
+import { countMap, doneOn, dueOn, faithOf } from '../lib/faith'
+import { PracticeRow, usePractices } from '../components/Practices'
 import { WelcomePicker } from './Customize'
 
 const PRIORITY = { doing: 0, todo: 1 }
@@ -61,6 +63,9 @@ export default function Home({ session }) {
   const [sleepRows, setSleepRows] = useState([]) // the last 2 nights (empty if Sleep isn't set up)
   const [promises, setPromises] = useState(null) // { list, logs } of running promises (null until loaded / not set up)
   const layout = useLayout() // which features and cards you chose to show (Customise Home)
+  const faith = faithKey(layout)
+  const practices = usePractices(faith) // other faiths: today's practices (nothing is loaded for Islam)
+  const practiceCounts = useMemo(() => countMap(practices.logs), [practices.logs])
   const [welcome, setWelcome] = useState(false) // brand-new account: "What do you want to track?"
   const [tip, setTip] = useState(() => {
     try {
@@ -347,8 +352,12 @@ export default function Home({ session }) {
         return Tr('{0} today', <CountUp to={spentToday} format={money} />)
       case '/words':
         return d.wordsLeft ? <>{Tr('{0} to learn', <CountUp to={d.wordsLeft} />)}</> : T('Add words')
-      case '/commit':
-        return prayer ? T('{0} in {1}', [prayerName(prayer), inWords(prayer.inMs)]) : T('Prayer times')
+      case '/commit': {
+        if (faith === 'islam') return prayer ? T('{0} in {1}', [prayerName(prayer), inWords(prayer.inMs)]) : T('Prayer times')
+        const due = (practices.list || []).filter((p) => dueOn(p, t))
+        if (!due.length) return T('Nothing planned today')
+        return T('{0} of {1} done today', [due.filter((p) => doneOn(p, practiceCounts, t)).length, due.length])
+      }
       case '/notes':
         return T('{0} notes', [d.notes])
       case '/links':
@@ -449,7 +458,11 @@ export default function Home({ session }) {
     ),
     prayers: (
       <>
-        <PrayerToday place={place} logs={prayerLogs} onMark={markPrayer} />
+        {faith === 'islam' ? (
+          <PrayerToday place={place} logs={prayerLogs} onMark={markPrayer} />
+        ) : (
+          <PracticesToday faith={faith} practices={practices} counts={practiceCounts} today={t} />
+        )}
       </>
     ),
     habits: todayHabits.length > 0 && (
@@ -758,6 +771,28 @@ function PrayerToday({ place, logs, onMark }) {
         </div>
       ))}
       {!current && missed.length === 0 && rows.some((r) => r.state !== 'coming') && <p className="muted small">{T('All prayers so far are marked. ✓')}</p>}
+    </Reveal>
+  )
+}
+
+/** Other faiths: today's practices, tick or count right here. */
+function PracticesToday({ faith, practices, counts, today }) {
+  const info = faithOf(faith)
+  if (!info || !practices.list) return null
+  const due = practices.list.filter((p) => dueOn(p, today))
+  const done = due.filter((p) => doneOn(p, counts, today)).length
+  return (
+    <Reveal as="section" className="today-card today-card--prayers">
+      <SectionHead title={`${info.icon} ${T(info.feature)}`} to="/commit" note={due.length ? T('{0} of {1} done', [done, due.length]) : null} />
+      {due.length === 0 ? (
+        <p className="muted small">{practices.list.length ? T('Nothing planned today.') : Tr('Add your practices in {0}.', <Link to="/commit">{T(info.feature)}</Link>)}</p>
+      ) : (
+        <ul className="faith-list">
+          {due.map((p) => (
+            <PracticeRow key={p.id} p={p} count={counts.get(`${p.id}|${today}`) || 0} onCount={(n) => practices.setCount(p, today, n)} />
+          ))}
+        </ul>
+      )}
     </Reveal>
   )
 }

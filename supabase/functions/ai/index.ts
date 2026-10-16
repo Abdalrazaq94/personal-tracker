@@ -98,6 +98,8 @@ Deno.serve(async (req) => {
         return json(await sleep(db, body))
       case 'promises':
         return json(await promises(body))
+      case 'faith':
+        return json(await faith(body))
       default:
         return json({ error: 'Unknown request.' }, 400)
     }
@@ -678,6 +680,29 @@ async function promises(b: Body) {
       (inArabic(b) ? ARABIC : ''),
     `Today is ${clip(x.today, 10) || 'today'}. Period: ${clip(x.label, 80) || 'all time'}${x.from ? ` (${clip(x.from, 10)} to ${clip(x.to, 10)})` : ''}.\n\n${summary}` +
       (question ? `\n\nMy question: ${question}` : '')
+  )
+  return { text }
+}
+
+/* -------------------------------- faith ---------------------------------- */
+
+const FAITH_NAMES: Record<string, string> = { christian: 'Christian', jewish: 'Jewish', hindu: 'Hindu', custom: 'personal', islam: 'Islamic' }
+
+async function faith(b: Body) {
+  const x = b as { label?: string; from?: string; to?: string; summary?: string; faith?: string; today?: string }
+  const summary = clip(x.summary, 5000)
+  if (!summary) throw new Error('Add a practice first.')
+  const name = FAITH_NAMES[x.faith ?? ''] ?? 'personal'
+  const text = await askText(
+    `You are a warm, respectful coach inside a personal tracker app. The user keeps daily ${name} spiritual practices ` +
+      '(prayer, reading, meditation, fasting…) and wants help being consistent. Analyse only their own data. ' +
+      'Never give religious rulings, doctrine, or tell them what their faith requires; never compare faiths; do not quote scripture. ' +
+      'Speak about routine, timing and consistency, with gentle encouragement, never guilt. Use the real numbers. ' +
+      'Structure, with "## " headings: "## How it’s going" (one bullet per practice: kept X of Y planned days, streak), ' +
+      '"## Patterns" (which days or practices slip, anything improving), "## A simple routine" (3 small, practical suggestions about time, place or reminders). ' +
+      '**Bold** key numbers. Max ~220 words.' +
+      (inArabic(b) ? ARABIC : ''),
+    `Today is ${clip(x.today, 10) || 'today'}. Period: ${clip(x.label, 80) || 'this period'} (${clip(x.from, 10)} to ${clip(x.to, 10)}).\n\n${summary}`
   )
   return { text }
 }

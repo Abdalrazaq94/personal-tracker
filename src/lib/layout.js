@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { faithOf } from './faith'
 
 /**
  * "Your Home, your way": which features you use (Home buttons + menu) and which cards appear on Home, in your order.
@@ -47,7 +48,8 @@ export function normalize(raw) {
     const seen = new Set(list.map((x) => x.key))
     return [...list.map((x) => ({ key: x.key, on: x.on !== false })), ...defs.filter((d) => !seen.has(d.key)).map((d) => ({ key: d.key, on: true }))]
   }
-  return { features: fix(raw?.features, FEATURES), sections: fix(raw?.sections, HOME_SECTIONS), chosen: !!raw?.chosen }
+  const faith = raw?.faith === 'none' || faithOf(raw?.faith) ? raw.faith : null
+  return { features: fix(raw?.features, FEATURES), sections: fix(raw?.sections, HOME_SECTIONS), chosen: !!raw?.chosen, faith }
 }
 
 function readLocal() {
@@ -113,8 +115,18 @@ export function useLayout() {
   return l
 }
 
+/** Your faith: islam | christian | jewish | hindu | custom | none. Accounts from before the choice existed keep Islam. */
+export const faithKey = (l) => l.faith || 'islam'
+
+/** A feature as you see it: the faith button takes your faith's icon and name. */
+export function featureView(def, l) {
+  if (def.key !== 'commit') return def
+  const f = faithOf(faithKey(l))
+  if (!f) return def
+  return { ...def, icon: f.icon, label: f.feature, hint: f.key === 'islam' ? def.hint : 'Daily practices for your faith, with streaks' }
+}
 /** Features switched on, in your order (full definitions). */
-export const shownFeatures = (l) => l.features.filter((f) => f.on).map((f) => FEATURES.find((d) => d.key === f.key))
+export const shownFeatures = (l) => l.features.filter((f) => f.on).map((f) => featureView(FEATURES.find((d) => d.key === f.key), l))
 export const isShown = (l, key) => l.features.find((f) => f.key === key)?.on !== false
 /** Home cards switched on, in your order, whose feature is also on. */
 export const shownSections = (l) =>

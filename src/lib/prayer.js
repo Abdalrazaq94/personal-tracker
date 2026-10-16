@@ -36,7 +36,7 @@ export function timesFor(place, day) {
   params.madhab = place.madhab === 'hanafi' ? Madhab.Hanafi : Madhab.Shafi
   params.highLatitudeRule = HighLatitudeRule.recommended(coords) // keeps Fajr/Isha sensible in Scotland in summer
   const t = new PrayerTimes(coords, new Date(y, m - 1, d), params)
-  return { fajr: t.fajr, sunrise: t.sunrise, dhuhr: t.dhuhr, asr: t.asr, maghrib: t.maghrib, isha: t.isha }
+  return { fajr: t.fajr, sunrise: t.sunrise, dhuhr: t.dhuhr, asr: t.asr, sunset: t.sunset, maghrib: t.maghrib, isha: t.isha }
 }
 
 /** "13:08" in the place's own time zone. */

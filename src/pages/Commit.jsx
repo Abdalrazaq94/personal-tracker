@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useRows } from '../lib/useRows'
 import { useBackToClose } from '../lib/useBack'
@@ -92,7 +93,11 @@ export default function Commit() {
 
   return (
     <div className="page">
-      <PageHeader title={T("Commitments")} subtitle={T("Keep the promises you make to yourself")} />
+      <PageHeader
+        title={T("Commitments")}
+        subtitle={T("Keep the promises you make to yourself")}
+        right={<Link to="/customize" className="link small">{T('Change faith')}</Link>}
+      />
       <ErrorBar error={shownError} onClose={() => setError(null)} />
 
       {place && !picking && <PrayerInsights logs={logs} today={today} />}
@@ -385,7 +390,7 @@ function Row({ p, days, logs, place, today }) {
   )
 }
 
-function PlacePicker({ current, onPick, onCancel }) {
+export function PlacePicker({ current, onPick, onCancel }) {
   const [q, setQ] = useState('')
   const [results, setResults] = useState([])
   const [busy, setBusy] = useState(false)

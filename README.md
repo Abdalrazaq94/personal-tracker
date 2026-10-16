@@ -135,6 +135,21 @@ a 5-week calendar (tap a day to change it). The progress report covers any week,
 analysis finds what makes you slip and gives you a plan. Review includes promises too.
 Setup: run `supabase/migrations/018_promises.sql` and redeploy the `ai` function.
 
+## Faith for everyone
+
+The second step of the welcome screen (and **Customise Home → Faith**) asks which faith to track: **Islam** (the prayer
+page with times, adhan, on time / late / Qada), **Christianity**, **Judaism**, **Hinduism**, **My own practices**, or
+**No thanks**. Other faiths start with ready-made daily practices that you can rename, reorder, delete or add to:
+
+- Christianity: morning and evening prayer, Bible reading, church on Sunday, gratitude
+- Judaism: Shacharit, Mincha, Ma'ariv, Torah study, and Shabbat candles with candle-lighting time from your city's sunset
+- Hinduism: morning puja, japa (count to 108), scripture reading, evening aarti
+
+Each practice is ticked or counted, on the days you choose, at an optional time with a phone reminder. The page shows
+today, the last 7 days, streaks, a progress report and an AI analysis (encouragement and routine only — it never gives
+religious rulings). Home shows your faith's button and today's practices. Changing faith never deletes anything.
+Setup: run `supabase/migrations/020_faith.sql` and redeploy the `ai` and `notify` functions.
+
 ## Customise Home
 
 New accounts start with **"What do you want to track?"**: tap the features you want. Any time later, **⚙︎ Customise Home**

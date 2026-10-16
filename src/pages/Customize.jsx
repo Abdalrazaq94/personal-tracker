@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FEATURES, HOME_SECTIONS, STARTER, normalize, saveLayout, useLayout } from '../lib/layout'
+import { FEATURES, HOME_SECTIONS, STARTER, faithKey, featureView, normalize, saveLayout, useLayout } from '../lib/layout'
+import { FAITHS } from '../lib/faith'
 import { T } from '../lib/i18n'
 import { PageHeader } from '../components/ui'
 
@@ -27,12 +28,23 @@ export default function Customize() {
         subtitle={T('Choose what you track and what your Home shows. Your data is kept even when a feature is hidden.')}
       />
 
+      <section className="card" id="faith">
+        <h2 className="cust-title">{T('Faith')}</h2>
+        <p className="muted small">{T('Choose your faith to track its daily prayers and practices. Changing it never deletes anything.')}</p>
+        <FaithChooser
+          value={layout.faith ? layout.faith : faithKey(layout)}
+          onPick={(faith) =>
+            saveLayout({ ...layout, faith, features: layout.features.map((f) => (f.key === 'commit' ? { ...f, on: faith !== 'none' } : f)) })
+          }
+        />
+      </section>
+
       <section className="card">
         <h2 className="cust-title">{T('Features')}</h2>
         <p className="muted small">{T('Shown as buttons on Home and in the menu.')}</p>
         <ul className="cust-list">
           {layout.features.map((f, i) => {
-            const d = FEATURES.find((x) => x.key === f.key)
+            const d = featureView(FEATURES.find((x) => x.key === f.key), layout)
             return (
               <li key={f.key} className={f.on ? '' : 'is-off'}>
                 <span className="cust-icon" aria-hidden>
@@ -81,14 +93,18 @@ export default function Customize() {
         <p className="muted small">{T('Shown under the buttons, in this order.')}</p>
         <ul className="cust-list">
           {layout.sections.map((s, i) => {
-            const d = HOME_SECTIONS.find((x) => x.key === s.key)
+            const d0 = HOME_SECTIONS.find((x) => x.key === s.key)
+            const d =
+              d0.key === 'prayers' && faithKey(layout) !== 'islam'
+                ? { ...d0, label: featureView(FEATURES.find((x) => x.key === 'commit'), layout).label, hint: 'Today’s practices' }
+                : d0
             const blocked = d.needs && !featureOn(d.needs)
             return (
               <li key={s.key} className={s.on && !blocked ? '' : 'is-off'}>
                 <span className="cust-text">
                   <strong>{T(d.label)}</strong>
                   <span className="muted small">
-                    {blocked ? T('Turn on {0} above to show this', [T(FEATURES.find((x) => x.key === d.needs).label)]) : T(d.hint)}
+                    {blocked ? T('Turn on {0} above to show this', [T(featureView(FEATURES.find((x) => x.key === d.needs), layout).label)]) : T(d.hint)}
                   </span>
                 </span>
                 <span className="cust-move">
@@ -144,25 +160,66 @@ export function WelcomePicker({ onDone }) {
   return <Picker initial={start} onDone={onDone} />
 }
 
+/** Islam · Christianity · Judaism · Hinduism · My own practices · No thanks */
+export function FaithChooser({ value, onPick }) {
+  return (
+    <div className="welcome-grid faith-grid">
+      {[...FAITHS, { key: 'none', icon: '—', name: 'No thanks' }].map((f) => (
+        <button key={f.key} type="button" className={`welcome-item ${value === f.key ? 'is-on' : ''}`} aria-pressed={value === f.key} onClick={() => onPick(f.key)}>
+          <span aria-hidden className="welcome-item__icon">
+            {f.icon}
+          </span>
+          <strong>{T(f.name)}</strong>
+          <span className="welcome-item__tick" aria-hidden>
+            {value === f.key ? '✓' : ''}
+          </span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function Picker({ initial, onDone }) {
   const [picked, setPicked] = useState(initial)
+  const [step, setStep] = useState('features')
+  const [faith, setFaith] = useState(null)
   const toggle = (k) =>
     setPicked((p) => {
       const n = new Set(p)
       n.has(k) ? n.delete(k) : n.add(k)
       return n
     })
-  const finish = () => {
+  const finish = (chosenFaith) => {
     const base = normalize(null)
-    saveLayout({ ...base, features: base.features.map((f) => ({ ...f, on: picked.has(f.key) })) })
+    saveLayout({
+      ...base,
+      faith: chosenFaith,
+      features: base.features.map((f) => ({ ...f, on: f.key === 'commit' ? chosenFaith !== 'none' : picked.has(f.key) })),
+    })
     onDone?.()
   }
+  if (step === 'faith')
+    return (
+      <section className="card welcome-pick" aria-labelledby="welcome-faith">
+        <h2 id="welcome-faith">{T('Would you like to track your faith?')}</h2>
+        <p className="muted small">{T('Daily prayers and practices, with reminders and streaks. You can change this any time.')}</p>
+        <FaithChooser value={faith} onPick={setFaith} />
+        <div className="welcome-acts">
+          <button type="button" className="btn btn--ghost" onClick={() => setStep('features')}>
+            {T('Back')}
+          </button>
+          <button type="button" className="btn welcome-go" disabled={!faith} onClick={() => finish(faith)}>
+            {T('Start')}
+          </button>
+        </div>
+      </section>
+    )
   return (
     <section className="card welcome-pick" aria-labelledby="welcome-title">
       <h2 id="welcome-title">{T('Welcome! What do you want to track?')}</h2>
       <p className="muted small">{T('Tap to choose. You can change this any time in Customise Home.')}</p>
       <div className="welcome-grid">
-        {FEATURES.map((f) => (
+        {FEATURES.filter((f) => f.key !== 'commit').map((f) => (
           <button
             key={f.key}
             type="button"
@@ -181,7 +238,7 @@ function Picker({ initial, onDone }) {
           </button>
         ))}
       </div>
-      <button type="button" className="btn welcome-go" disabled={picked.size === 0} onClick={finish}>
+      <button type="button" className="btn welcome-go" disabled={picked.size === 0} onClick={() => setStep('faith')}>
         {T('Continue')}
       </button>
     </section>

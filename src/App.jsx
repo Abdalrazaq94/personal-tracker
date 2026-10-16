@@ -11,7 +11,7 @@ import { configured, supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import { T, Tr } from './lib/i18n'
-import { followAccountLayout, useLayout } from './lib/layout'
+import { FEATURES, faithKey, featureView, followAccountLayout, useLayout } from './lib/layout'
 
 // Pages load when you open them (Home is part of the first download). After the first screen, the rest load quietly in the background.
 const PAGES = {
@@ -29,6 +29,7 @@ const PAGES = {
   sleep: () => import('./pages/Sleep'),
   promises: () => import('./pages/Promises'),
   customize: () => import('./pages/Customize'),
+  faith: () => import('./pages/Faith'),
 }
 const Words = lazy(PAGES.words)
 const Tasks = lazy(PAGES.tasks)
@@ -44,6 +45,12 @@ const Review = lazy(PAGES.review)
 const Sleep = lazy(PAGES.sleep)
 const Promises = lazy(PAGES.promises)
 const Customize = lazy(PAGES.customize)
+const Faith = lazy(PAGES.faith)
+/** The faith page: Islam keeps its prayer-times page; other faiths get their daily practices. */
+function FaithRoute() {
+  const layout = useLayout()
+  return faithKey(layout) === 'islam' ? <Commit /> : <Faith />
+}
 function prefetchPages() {
   const go = () => Object.values(PAGES).forEach((load) => load().catch(() => {}))
   if ('requestIdleCallback' in window) window.requestIdleCallback(go, { timeout: 4000 })
@@ -70,7 +77,10 @@ export const SECTIONS = [
 function useSections() {
   const layout = useLayout()
   const order = layout.features.filter((f) => f.on).map((f) => '/' + f.key)
-  return SECTIONS.filter((s) => order.includes(s.to)).sort((a, b) => order.indexOf(a.to) - order.indexOf(b.to))
+  const faith = featureView(FEATURES.find((f) => f.key === 'commit'), layout)
+  return SECTIONS.filter((s) => order.includes(s.to))
+    .sort((a, b) => order.indexOf(a.to) - order.indexOf(b.to))
+    .map((s) => (s.to === '/commit' && faithKey(layout) !== 'islam' ? { ...s, label: T(faith.label), hint: T(faith.hint) } : s))
 }
 const CUSTOMIZE = { to: '/customize', label: T('Customise Home'), hint: T('Choose what you track and what Home shows') }
 
@@ -135,7 +145,7 @@ export default function App() {
             <Route path="/links" element={<Links />} />
             <Route path="/notes" element={<Notes />} />
             <Route path="/jobs" element={<Jobs />} />
-            <Route path="/commit" element={<Commit />} />
+            <Route path="/commit" element={<FaithRoute />} />
             <Route path="/reminders" element={<Reminders />} />
             <Route path="/review" element={<Review />} />
             <Route path="/sleep" element={<Sleep />} />
@@ -168,7 +178,7 @@ function MobileBar({ pathname, email, sections }) {
   const navigate = useNavigate()
   useBackToClose(open, () => setOpen(false))
 
-  const here = pathname === '/' ? T('Home') : [...SECTIONS, CUSTOMIZE].find((s) => pathname.startsWith(s.to))?.label || T('Tracker')
+  const here = pathname === '/' ? T('Home') : [...sections, ...SECTIONS, CUSTOMIZE].find((s) => pathname.startsWith(s.to))?.label || T('Tracker')
   const go = (to) => {
     // close the menu first (that takes its own history step back out), then open the page
     const after = () => {

@@ -1487,3 +1487,47 @@ html.theme-anim, html.theme-anim * { transition: background-color .3s ease, bord
 .welcome-item.is-on { border-color: var(--fg); background: var(--soft); }
 .welcome-item.is-on .welcome-item__tick { background: var(--fg); border-color: var(--fg); color: var(--bg); }
 .welcome-go { justify-self: stretch; }
+.faith-grid .welcome-item { grid-template-columns: auto 1fr; align-items: center; justify-items: start; column-gap: 10px; padding: 12px 40px 12px 12px; }
+[dir='rtl'] .faith-grid .welcome-item { padding: 12px 12px 12px 40px; }
+.welcome-acts { display: flex; gap: 10px; }
+.welcome-acts .welcome-go { flex: 1; }
+
+/* ---------- faith practices ---------- */
+.faith-day { display: grid; gap: 12px; }
+.faith-day__nav { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: 8px; border-radius: 14px; background: var(--soft); }
+.faith-day__date { display: grid; justify-items: center; text-align: center; }
+.faith-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.faith-row { display: grid; grid-template-columns: auto auto 1fr; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; transition: background .15s, border-color .15s; }
+.faith-row.is-done { background: var(--w-memorized); border-color: transparent; }
+.faith-row--count { grid-template-columns: auto 1fr; }
+.faith-row--count .faith-count { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
+.faith-row__emoji { font-size: 22px; }
+.faith-row__text { display: grid; gap: 2px; min-width: 0; }
+.faith-row__text strong { font-size: 15.5px; overflow-wrap: anywhere; }
+.faith-bar { display: block; height: 6px; border-radius: 999px; background: var(--soft); overflow: hidden; margin-top: 4px; }
+.faith-row.is-done .faith-bar { background: rgba(255, 255, 255, .6); }
+.faith-bar span { display: block; height: 100%; background: var(--w-memorized-ink); border-radius: 999px; transition: width .3s; }
+.faith-tap { width: auto !important; min-width: 64px; padding: 0 18px; font-weight: 800; }
+.faith-other { margin: 0; }
+.faith-empty { display: grid; gap: 10px; justify-items: start; }
+.faith-empty p { margin: 0; }
+.faith-sec { margin: 0 0 10px; font-size: 17px; }
+.faith-week { display: grid; gap: 8px 4px; align-items: center; justify-items: center; }
+.faith-week__name { justify-self: start; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.faith-manage { display: grid; gap: 10px; }
+.faith-manage__head { display: flex; justify-content: space-between; align-items: center; }
+.faith-manage .cust-list li { grid-template-columns: auto 1fr auto auto; }
+.faith-manage__name { background: none; border: 0; padding: 0; text-align: start; color: inherit; font: inherit; cursor: pointer; }
+.faith-form { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; }
+.faith-form h3 { margin: 0; font-size: 16px; }
+.faith-days { display: flex; gap: 6px; flex-wrap: wrap; }
+.faith-days button { min-width: 44px; height: 38px; padding: 0 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); font: inherit; font-size: 13px; font-weight: 600; }
+.faith-days button.is-on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.faith-remind { display: flex; align-items: center; gap: 10px; align-self: end; padding-bottom: 8px; font-size: 14px; }
+.shabbat { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; background: var(--sleep-night); color: #f4f4f6; border-color: var(--sleep-night); }
+.shabbat__icon { font-size: 34px; }
+.shabbat__text { display: grid; gap: 3px; }
+.shabbat__text strong { font-size: 17px; }
+.shabbat__text b { font-size: 18px; }
+.shabbat .muted, .shabbat .link { color: #c4c7d6; }
+[data-theme='dark'] .faith-row.is-done .faith-bar { background: rgba(255, 255, 255, .1); }
