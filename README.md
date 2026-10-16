@@ -135,6 +135,13 @@ a 5-week calendar (tap a day to change it). The progress report covers any week,
 analysis finds what makes you slip and gives you a plan. Review includes promises too.
 Setup: run `supabase/migrations/018_promises.sql` and redeploy the `ai` function.
 
+## Customise Home
+
+New accounts start with **"What do you want to track?"**: tap the features you want. Any time later, **⚙︎ Customise Home**
+(under the Home buttons, or in the menu) lets you switch features on or off, move them up or down, and choose which
+cards appear on Home and in what order. Hidden features leave Home and the menu, but their data is kept. Your layout is
+saved to your account, so all your devices match. Setup: run `supabase/migrations/019_home_layout.sql`.
+
 ## Monthly budget
 
 **Spend** → **Set budget**. The card shows what's left, how much you can spend per day for the rest of the month,

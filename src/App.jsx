@@ -11,6 +11,7 @@ import { configured, supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import { T, Tr } from './lib/i18n'
+import { followAccountLayout, useLayout } from './lib/layout'
 
 // Pages load when you open them (Home is part of the first download). After the first screen, the rest load quietly in the background.
 const PAGES = {
@@ -27,6 +28,7 @@ const PAGES = {
   review: () => import('./pages/Review'),
   sleep: () => import('./pages/Sleep'),
   promises: () => import('./pages/Promises'),
+  customize: () => import('./pages/Customize'),
 }
 const Words = lazy(PAGES.words)
 const Tasks = lazy(PAGES.tasks)
@@ -41,6 +43,7 @@ const Reminders = lazy(PAGES.reminders)
 const Review = lazy(PAGES.review)
 const Sleep = lazy(PAGES.sleep)
 const Promises = lazy(PAGES.promises)
+const Customize = lazy(PAGES.customize)
 function prefetchPages() {
   const go = () => Object.values(PAGES).forEach((load) => load().catch(() => {}))
   if ('requestIdleCallback' in window) window.requestIdleCallback(go, { timeout: 4000 })
@@ -56,15 +59,20 @@ export const SECTIONS = [
   { to: '/links', label: T("Links"), hint: T("Saved video & web links") },
   { to: '/notes', label: T("Notes"), hint: T("Notebooks with note cards") },
   { to: '/jobs', label: T("Jobs"), hint: T("Jobs applied · Trello") },
-  { to: '/commit', label: T("Commit"), hint: T("Commitments · prayer times") },
+  { to: '/commit', label: T("Prayers"), hint: T("Commitments · prayer times") },
   { to: '/sleep', label: T("Sleep"), hint: T("Bedtime, wake-up · AI analysis") },
   { to: '/promises', label: T("Promises"), hint: T("Promises to yourself · streaks") },
   { to: '/review', label: T("Review"), hint: T("Week, month or year at a glance") },
   { to: '/reminders', label: T("Reminders"), hint: T("Notifications for plans & prayers") },
 ]
 
-// bottom bar on phones: the most used pages + "More"
-const MOBILE = ['/tasks', '/words', '/spend']
+// The pages you chose to show (Customise Home), in your order. Hidden features leave the menus, not your data.
+function useSections() {
+  const layout = useLayout()
+  const order = layout.features.filter((f) => f.on).map((f) => '/' + f.key)
+  return SECTIONS.filter((s) => order.includes(s.to)).sort((a, b) => order.indexOf(a.to) - order.indexOf(b.to))
+}
+const CUSTOMIZE = { to: '/customize', label: T('Customise Home'), hint: T('Choose what you track and what Home shows') }
 
 export default function App() {
   const [session, setSession] = useState(undefined)
@@ -74,7 +82,10 @@ export default function App() {
     if (!configured) return
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
-      if (data.session) prefetchPages() // the other pages, quietly, so opening them is instant
+      if (data.session) {
+        prefetchPages() // the other pages, quietly, so opening them is instant
+        followAccountLayout() // your Home and menu, as you set them on any device
+      }
       followAccountLang(data.session?.user) // use the language saved in your account
     })
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
@@ -86,6 +97,10 @@ export default function App() {
     window.scrollTo(0, 0)
   }, [pathname])
 
+  const sections = useSections()
+  // bottom bar on phones: your first three pages + "More"
+  const MOBILE = sections.filter((s) => s.to !== '/review' && s.to !== '/reminders').slice(0, 3).map((s) => s.to)
+
   if (!configured) return <SetupNotice />
   if (session === undefined) return <div className="splash">{T("Loading…")}</div>;
   if (!session) return <Login />
@@ -94,11 +109,11 @@ export default function App() {
 
   return (
       <div className="shell">
-        <MobileBar pathname={pathname} email={session.user.email} />
+        <MobileBar pathname={pathname} email={session.user.email} sections={sections} />
         <AlarmOverlay />
         <nav className="topbar" aria-label={T("Sections")}>
           <NavLink to="/" end className={({ isActive }) => (isActive ? 'is-active' : '')}>{T("Home")}</NavLink>
-          {SECTIONS.map((n) => (
+          {sections.map((n) => (
             <NavLink key={n.to} to={n.to} className={({ isActive }) => (isActive ? 'is-active' : '')}>
               {n.label}
             </NavLink>
@@ -125,7 +140,8 @@ export default function App() {
             <Route path="/review" element={<Review />} />
             <Route path="/sleep" element={<Sleep />} />
             <Route path="/promises" element={<Promises />} />
-            <Route path="/more" element={<More />} />
+            <Route path="/customize" element={<Customize />} />
+            <Route path="/more" element={<More sections={sections} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           </Suspense>
@@ -147,12 +163,12 @@ export default function App() {
 }
 
 /** Phones: a slim bar at the top with ☰ — opens a list of every page. The phone's back button closes it. */
-function MobileBar({ pathname, email }) {
+function MobileBar({ pathname, email, sections }) {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
   useBackToClose(open, () => setOpen(false))
 
-  const here = pathname === '/' ? T('Home') : SECTIONS.find((s) => pathname.startsWith(s.to))?.label || T('Tracker')
+  const here = pathname === '/' ? T('Home') : [...SECTIONS, CUSTOMIZE].find((s) => pathname.startsWith(s.to))?.label || T('Tracker')
   const go = (to) => {
     // close the menu first (that takes its own history step back out), then open the page
     const after = () => {
@@ -185,7 +201,7 @@ function MobileBar({ pathname, email }) {
               </button>
             </div>
             <ul>
-              {[{ to: '/', label: T("Home"), hint: T("Today at a glance") }, ...SECTIONS].map((s) => {
+              {[{ to: '/', label: T("Home"), hint: T("Today at a glance") }, ...sections, CUSTOMIZE].map((s) => {
                 const active = s.to === '/' ? pathname === '/' : pathname.startsWith(s.to)
                 return (
                   <li key={s.to}>
@@ -212,14 +228,14 @@ function MobileBar({ pathname, email }) {
   );
 }
 
-function More() {
+function More({ sections }) {
   return (
     <div className="page">
       <header className="page-header">
         <h1>{T("All sections")}</h1>
       </header>
       <ul className="list list--tight">
-        {SECTIONS.map((s) => (
+        {[...sections, CUSTOMIZE].map((s) => (
           <li key={s.to} className="item more-item">
             <Link to={s.to}>
               <span>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { money, parseYmd, startOfMonth, today, ymd } from '../lib/dates'
@@ -17,25 +17,12 @@ import { savePrayerLog, statusOf } from '../lib/prayerStatus'
 import { budgetStats, loadBudget } from '../lib/budget'
 import { clockOf, hoursText, minutesSlept } from '../lib/sleep'
 import { promiseStats } from '../lib/promises'
+import { followAccountLayout, getLayout, shownFeatures, shownSections, useLayout } from '../lib/layout'
+import { WelcomePicker } from './Customize'
 
 const PRIORITY = { doing: 0, todo: 1 }
 
 // the buttons at the top of Home (two per row)
-const TILES = [
-  { to: '/tasks', icon: '✅', label: T("Tasks") },
-  { to: '/plan', icon: '🗓️', label: T("Plan") },
-  { to: '/habits', icon: '🔁', label: T("Habits") },
-  { to: '/spend', icon: '💷', label: T("Spend") },
-  { to: '/words', icon: '📖', label: T("Words") },
-  { to: '/commit', icon: '🕌', label: T("Prayers") },
-  { to: '/notes', icon: '📝', label: T("Notes") },
-  { to: '/links', icon: '🔗', label: T("Links") },
-  { to: '/jobs', icon: '💼', label: T("Jobs") },
-  { to: '/sleep', icon: '😴', label: T("Sleep") },
-  { to: '/promises', icon: '🤝', label: T("Promises") },
-  { to: '/reminders', icon: '🔔', label: T("Reminders") },
-  { to: '/review', icon: '📊', label: T("Review"), wide: true },
-]
 
 const addDays = (ymdStr, n) => {
   const d = parseYmd(ymdStr)
@@ -44,9 +31,9 @@ const addDays = (ymdStr, n) => {
 }
 const hhmm = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 function dayWord(day, t) {
-  if (day < t) return T("Overdue");
-  if (day === t) return T("Today");
-  if (day === addDays(t, 1)) return T("Tomorrow");
+  if (day < t) return T('Overdue')
+  if (day === t) return T('Today')
+  if (day === addDays(t, 1)) return T('Tomorrow')
   return parseYmd(day).toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'short' })
 }
 
@@ -73,6 +60,32 @@ export default function Home({ session }) {
   const [budget, setBudget] = useState(null) // monthly budget (null = none set)
   const [sleepRows, setSleepRows] = useState([]) // the last 2 nights (empty if Sleep isn't set up)
   const [promises, setPromises] = useState(null) // { list, logs } of running promises (null until loaded / not set up)
+  const layout = useLayout() // which features and cards you chose to show (Customise Home)
+  const [welcome, setWelcome] = useState(false) // brand-new account: "What do you want to track?"
+  const [tip, setTip] = useState(() => {
+    try {
+      return !getLayout().chosen && !localStorage.getItem('tracker-layout-tip')
+    } catch {
+      return false
+    }
+  })
+  useEffect(() => {
+    followAccountLayout().then((has) => {
+      const created = Date.parse(session?.user?.created_at || 0)
+      if (!has && Date.now() - created < 3 * 864e5) {
+        setWelcome(true)
+        setTip(false)
+      }
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const hideTip = () => {
+    setTip(false)
+    try {
+      localStorage.setItem('tracker-layout-tip', '1')
+    } catch {
+      /* fine */
+    }
+  }
 
   useEffect(() => {
     currentStatus()
@@ -134,14 +147,16 @@ export default function Home({ session }) {
       if (err) setError(err.message)
       setD({
         allTasks: tasks.data || [],
-        tasks: (tasks.data || []).filter((x) => x.status !== 'done').sort(
-          (a, b) =>
-            (a.priority === 'important' ? 0 : 1) - (b.priority === 'important' ? 0 : 1) ||
-            PRIORITY[a.status] - PRIORITY[b.status] ||
-            new Date(b.created_at) - new Date(a.created_at)
-        ),
+        tasks: (tasks.data || [])
+          .filter((x) => x.status !== 'done')
+          .sort(
+            (a, b) =>
+              (a.priority === 'important' ? 0 : 1) - (b.priority === 'important' ? 0 : 1) ||
+              PRIORITY[a.status] - PRIORITY[b.status] ||
+              new Date(b.created_at) - new Date(a.created_at),
+          ),
         plans: (plans.data || []).sort((a, b) =>
-          a.plan_date !== b.plan_date ? (a.plan_date < b.plan_date ? -1 : 1) : (a.plan_time || '99').localeCompare(b.plan_time || '99')
+          a.plan_date !== b.plan_date ? (a.plan_date < b.plan_date ? -1 : 1) : (a.plan_time || '99').localeCompare(b.plan_time || '99'),
         ),
         habits: habits.data || [],
         logs: logs.data || [],
@@ -204,10 +219,7 @@ export default function Home({ session }) {
   const greet = hour < 12 ? T('Good morning') : hour < 18 ? T('Good afternoon') : T('Good evening')
   const date = now.toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' })
 
-  const todayHabits = useMemo(
-    () => (d ? d.habits.filter((h) => planned(h, new Date()) && !logOn(d.logs, h.id, today()).skipped) : []),
-    [d]
-  )
+  const todayHabits = useMemo(() => (d ? d.habits.filter((h) => planned(h, new Date()) && !logOn(d.logs, h.id, today()).skipped) : []), [d])
   const goodHabits = todayHabits.filter((h) => !isBad(h))
   const badHabits = todayHabits.filter(isBad)
 
@@ -253,13 +265,9 @@ export default function Home({ session }) {
     else groups.push([label, [it]])
   }
   const openTasks = d
-    ? [...d.tasks]
-        .sort((a, b) => (a.remind_at ? 0 : 1) - (b.remind_at ? 0 : 1) || (a.remind_at || '').localeCompare(b.remind_at || ''))
-        .slice(0, 8)
+    ? [...d.tasks].sort((a, b) => (a.remind_at ? 0 : 1) - (b.remind_at ? 0 : 1) || (a.remind_at || '').localeCompare(b.remind_at || '')).slice(0, 8)
     : []
-  const planGroups = groups
-    .map(([label, list]) => [label, list.filter((x) => x.kind === 'Plan')])
-    .filter(([, list]) => list.length)
+  const planGroups = groups.map(([label, list]) => [label, list.filter((x) => x.kind === 'Plan')]).filter(([, list]) => list.length)
   const allUntimed = d ? d.tasks.filter((x) => !x.remind_at) : []
   const untimed = allUntimed.slice(0, 6)
   const moreTasks = d ? Math.max(0, d.tasks.length - openTasks.length) : 0
@@ -290,27 +298,30 @@ export default function Home({ session }) {
     const important = d.tasks.filter((x) => x.priority === 'important' && x.status !== 'done')
     const parts = []
     parts.push(
-      todays.length || untimed.length
-        ? T(
-        "You have **{0} things** to do today.",
-        [todays.length + allUntimed.length]
-      )
-        : T("Nothing planned for today.")
+      todays.length || untimed.length ? T('You have **{0} things** to do today.', [todays.length + allUntimed.length]) : T('Nothing planned for today.'),
     )
-    if (next) parts.push(T("Next: **{0}**{1}.", [next.title, next.time ? ` at ${next.time}` : '']))
-    if (late.length) parts.push(T(
-      "**{0} overdue**: {1}.",
-      [late.length, late.slice(0, 2).map((x) => x.title).join(', ')]
-    ))
-    if (important.length) parts.push(T(
-      "Important: {0}.",
-      [important.slice(0, 2).map((x) => `**${x.title}**`).join(', ')]
-    ))
-    if (goodHabits.length) parts.push(T("Habits: {0} of {1} done.", [
-      goodHabits.filter((h) => dayState(h, d.logs, now) === 'ok').length,
-      goodHabits.length
-    ]))
-    parts.push(T("Spent {0} today.", [money(spentToday)]))
+    if (next) parts.push(T('Next: **{0}**{1}.', [next.title, next.time ? ` at ${next.time}` : '']))
+    if (late.length)
+      parts.push(
+        T('**{0} overdue**: {1}.', [
+          late.length,
+          late
+            .slice(0, 2)
+            .map((x) => x.title)
+            .join(', '),
+        ]),
+      )
+    if (important.length)
+      parts.push(
+        T('Important: {0}.', [
+          important
+            .slice(0, 2)
+            .map((x) => `**${x.title}**`)
+            .join(', '),
+        ]),
+      )
+    if (goodHabits.length) parts.push(T('Habits: {0} of {1} done.', [goodHabits.filter((h) => dayState(h, d.logs, now) === 'ok').length, goodHabits.length]))
+    parts.push(T('Spent {0} today.', [money(spentToday)]))
     return parts.join(' ')
   }
 
@@ -320,41 +331,30 @@ export default function Home({ session }) {
     switch (to) {
       case '/tasks': {
         const open = d.tasks.filter((x) => x.status !== 'done').length
-        return open ? (
-          <>{Tr("{0} to do", <CountUp to={open} />)}</>
-        ) : (
-          T("All done")
-        );
+        return open ? <>{Tr('{0} to do', <CountUp to={open} />)}</> : T('All done')
       }
       case '/plan': {
         const late = d.plans.filter((p) => !p.done && p.plan_date < t).length
         const todayN = d.plans.filter((p) => !p.done && p.plan_date === t).length
-        return late ? T('{0} overdue', [late]) : todayN ? T('{0} today', [todayN]) : T("Nothing today");
+        return late ? T('{0} overdue', [late]) : todayN ? T('{0} today', [todayN]) : T('Nothing today')
       }
       case '/habits':
-        return goodHabits.length ? T("{0} of {1} today", [
-          goodHabits.filter((h) => dayState(h, d.logs, now) === 'ok').length,
-          goodHabits.length
-        ]) : T("Track habits");
+        return goodHabits.length
+          ? T('{0} of {1} today', [goodHabits.filter((h) => dayState(h, d.logs, now) === 'ok').length, goodHabits.length])
+          : T('Track habits')
       case '/spend':
         if (bud) return bud.left < 0 ? T('{0} over budget', [money(-bud.left)]) : Tr('{0} left', <CountUp to={bud.left} format={money} />)
-        return (
-          Tr('{0} today', <CountUp to={spentToday} format={money} />)
-        )
+        return Tr('{0} today', <CountUp to={spentToday} format={money} />)
       case '/words':
-        return d.wordsLeft ? (
-          <>{Tr("{0} to learn", <CountUp to={d.wordsLeft} />)}</>
-        ) : (
-          T("Add words")
-        );
+        return d.wordsLeft ? <>{Tr('{0} to learn', <CountUp to={d.wordsLeft} />)}</> : T('Add words')
       case '/commit':
-        return prayer ? T('{0} in {1}', [prayerName(prayer), inWords(prayer.inMs)]) : T("Prayer times");
+        return prayer ? T('{0} in {1}', [prayerName(prayer), inWords(prayer.inMs)]) : T('Prayer times')
       case '/notes':
         return T('{0} notes', [d.notes])
       case '/links':
         return T('{0} saved', [d.links])
       case '/jobs':
-        return T("Applications");
+        return T('Applications')
       case '/review':
         return T('Your week, month or year at a glance')
       case '/sleep': {
@@ -368,10 +368,199 @@ export default function Home({ session }) {
         return T('{0} of {1} kept today', [kept, promises.list.length])
       }
       case '/reminders':
-        return remind === 'on' ? T("On") : remind === 'blocked' ? T("Blocked") : T("Off");
+        return remind === 'on' ? T('On') : remind === 'blocked' ? T('Blocked') : T('Off')
       default:
         return ''
     }
+  }
+
+  // the cards under the Home buttons, shown in the order you chose (Customise Home)
+  const cards = d && {
+    quickadd: (
+      <>
+        <QuickAddAll onChanged={() => setReload((n) => n + 1)} />
+        <DayBrief fallback={plainBrief()} />
+      </>
+    ),
+    tasks: (
+      <>
+        <Reveal as="section" className="today-card today-card--tasks">
+          <SectionHead title={T('Daily tasks')} to="/tasks" note={T('{0} to do', [d.tasks.filter((x) => x.status !== 'done').length])} />
+          <TaskChart tasks={d.allTasks} today={t} />
+          {d.allTasks.length > 0 && !d.allTasks.some((x) => 'done_at' in x) && (
+            <p className="muted small">{T('To see what you finish each day, run supabase/migrations/011_task_done_at.sql in Supabase once.')}</p>
+          )}
+          {openTasks.length === 0 ? (
+            <p className="muted small">{Tr('No tasks to do. {0}', <Link to="/tasks">{T('Add a task')}</Link>)}</p>
+          ) : (
+            <ul className="today-list">
+              {openTasks.map((task) => (
+                <li key={task.id} className={task.status === 'done' ? 'is-done' : ''}>
+                  <button className={`check ${task.status === 'done' ? 'is-on' : ''}`} aria-label={T('Done')} onClick={() => doneTask(task)}>
+                    {task.status === 'done' ? '✓' : ''}
+                  </button>
+                  <span dir="auto" className="today-list__text">
+                    {task.remind_at && <strong className="plan__time">{whenShort(task.remind_at)}</strong>}
+                    {task.title}
+                  </span>
+                  {task.priority === 'important' && <span className="tag tag--solid">!</span>}
+                  {task.status === 'doing' && <span className="tag">{T('Doing')}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+          {moreTasks > 0 && (
+            <Link to="/tasks" className="today-more">
+              {Tr('+{0} more tasks →', moreTasks)}
+            </Link>
+          )}
+        </Reveal>
+      </>
+    ),
+    plans: (
+      <>
+        <Reveal as="section" className="today-card today-card--plans">
+          <SectionHead title={T('Plans')} to="/plan" />
+          {planGroups.length === 0 ? (
+            <p className="muted small">{Tr('No plans for the next 7 days. {0}', <Link to="/plan">{T('Plan something')}</Link>)}</p>
+          ) : (
+            planGroups.map(([label, list]) => (
+              <div key={label} className="up-group">
+                <h3 className={`up-day ${label === T('Overdue') ? 'is-late' : ''}`}>{label}</h3>
+                <ul className="today-list">
+                  {list.map((it) => (
+                    <li key={it.key} className={it.done ? 'is-done' : ''}>
+                      <button className={`check ${it.done ? 'is-on' : ''}`} aria-label={T('Done')} onClick={it.toggle}>
+                        {it.done ? '✓' : ''}
+                      </button>
+                      <span dir="auto" className="today-list__text">
+                        {it.time && <strong className="plan__time">{it.time}</strong>}
+                        {it.title}
+                      </span>
+                      {it.important && <span className="tag tag--solid">!</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))
+          )}
+        </Reveal>
+      </>
+    ),
+    prayers: (
+      <>
+        <PrayerToday place={place} logs={prayerLogs} onMark={markPrayer} />
+      </>
+    ),
+    habits: todayHabits.length > 0 && (
+      <Reveal as="section" className="today-card">
+        <SectionHead title={T('Habits')} to="/habits" />
+        <ul className="today-list">
+          {goodHabits.map((h) => {
+            const c = logOn(d.logs, h.id, t).count
+            const ok = c >= h.target
+            return (
+              <li key={h.id} className={ok ? 'is-done' : ''}>
+                <span className={`check ${ok ? 'is-on' : ''}`} aria-hidden>
+                  {ok ? '✓' : ''}
+                </span>
+                <span dir="auto" className="today-list__text">
+                  {h.name}
+                </span>
+                <span className="today-count">
+                  {c}/{h.target}
+                </span>
+                <button className="round-btn round-btn--solid round-btn--sm" aria-label={T('Add one to {0}', [h.name])} onClick={() => plusHabit(h)}>
+                  +
+                </button>
+              </li>
+            )
+          })}
+          {badHabits.map((h) => {
+            const c = logOn(d.logs, h.id, t).count
+            const clean = c <= h.target
+            return (
+              <li key={h.id}>
+                <span className={`check ${clean ? 'is-on' : 'is-bad'}`} aria-hidden>
+                  {clean ? '✓' : '!'}
+                </span>
+                <span dir="auto" className="today-list__text">
+                  {h.name}
+                </span>
+                <span className="today-count">{c === 0 ? T('None today') : T('{0} today', [c])}</span>
+                <button className="round-btn round-btn--sm" aria-label={T('I did {0} once more', [h.name])} onClick={() => plusHabit(h)}>
+                  +
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      </Reveal>
+    ),
+    words: d.words.length > 0 && (
+      <Reveal as="section" className="today-card">
+        <SectionHead title={T('Words to practise')} to="/words" note={T('{0} not memorized', [d.wordsLeft])} />
+        <ul className="today-words">
+          {d.words.map((w) => (
+            <li key={w.id} className={`word--${w.status}`}>
+              <div>
+                <strong>{w.word}</strong>
+                {w.translation && (
+                  <span dir="auto" className="muted">
+                    {w.translation}
+                  </span>
+                )}
+              </div>
+              <SpeakButton text={w.word} label={T('Hear "{0}"', [w.word])} />
+            </li>
+          ))}
+        </ul>
+        <Link to="/words" className="btn btn--ghost btn--sm today-cta">
+          {T('✦ Practise these words')}
+        </Link>
+      </Reveal>
+    ),
+    spending: (
+      <>
+        <Reveal as="section" className="today-card">
+          <SectionHead title={T('Spending')} to="/spend" />
+          <div className="today-money">
+            <div>
+              <span>{T('Today')}</span>
+              <strong>
+                <CountUp to={spentToday} format={money} />
+              </strong>
+            </div>
+            <div>
+              <span>{T('This month')}</span>
+              <strong>
+                <CountUp to={spentMonth} format={money} />
+              </strong>
+            </div>
+          </div>
+          {bud && (
+            <div className={`today-budget budget--${bud.state}`}>
+              <div className="budget__bar" aria-hidden>
+                <span className="budget__fill" style={{ width: `${Math.min(100, bud.pct * 100)}%` }} />
+                <span className="budget__mark" style={{ insetInlineStart: `${Math.min(100, bud.share * 100)}%` }} />
+              </div>
+              <p>
+                {bud.left < 0
+                  ? T('{0} over your {1} budget', [money(-bud.left), money(bud.budget)])
+                  : T('{0} left of {1} · about {2} a day', [money(bud.left), money(bud.budget), money(bud.perDay)])}
+              </p>
+            </div>
+          )}
+          <form className="today-spend" onSubmit={addSpend}>
+            <input inputMode="decimal" placeholder="0.00" aria-label={T('Amount')} value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <input dir="auto" placeholder={T('What for?')} aria-label={T('What for')} value={note} onChange={(e) => setNote(e.target.value)} />
+            <button className="btn btn--sm" disabled={!amount}>
+              {T('Add')}
+            </button>
+          </form>
+        </Reveal>
+      </>
+    ),
   }
 
   return (
@@ -384,13 +573,15 @@ export default function Home({ session }) {
       {error && (
         <div className="error-bar" role="alert">
           <span>{error}</span>
-          <button className="link" onClick={() => setError(null)}>{T("Dismiss")}</button>
+          <button className="link" onClick={() => setError(null)}>
+            {T('Dismiss')}
+          </button>
         </div>
       )}
 
       {/* ------------------------------ all sections, two per row ------------------------------ */}
-      <nav className="home-tiles" aria-label={T("Sections")}>
-        {TILES.map((x, i) => (
+      <nav className="home-tiles" aria-label={T('Sections')}>
+        {shownFeatures(layout).map((x, i) => (
           <GlareHover
             key={x.to}
             className={`home-glare ${x.wide ? 'home-glare--wide' : ''}`}
@@ -407,17 +598,41 @@ export default function Home({ session }) {
             transitionDuration={700}
           >
             <Link to={x.to} className="home-tile">
-            <span className="home-tile__icon" aria-hidden>
-              {x.icon}
-            </span>
-            <span className="home-tile__text">
-              <strong>{x.label}</strong>
-              <span>{tileNote(x.to)}</span>
-            </span>
-                      </Link>
+              <span className="home-tile__icon" aria-hidden>
+                {x.icon}
+              </span>
+              <span className="home-tile__text">
+                <strong>{T(x.label)}</strong>
+                <span>{tileNote(x.to)}</span>
+              </span>
+            </Link>
           </GlareHover>
         ))}
       </nav>
+      <div className="home-custom">
+        <Link to="/customize" className="link small">
+          {T('⚙︎ Customise Home')}
+        </Link>
+      </div>
+
+      {welcome && <WelcomePicker onDone={() => setWelcome(false)} />}
+      {tip && !welcome && (
+        <section className="card home-tip">
+          <span aria-hidden>✨</span>
+          <span>
+            <strong>{T('New: make Home yours')}</strong>
+            <span className="muted small">{T('Hide what you don’t use and put your favourites first.')}</span>
+          </span>
+          <span className="home-tip__acts">
+            <Link to="/customize" className="btn btn--sm" onClick={hideTip}>
+              {T('Customise')}
+            </Link>
+            <button type="button" className="icon-btn" aria-label={T('Close')} onClick={hideTip}>
+              ×
+            </button>
+          </span>
+        </section>
+      )}
 
       {sleepOpen && (
         <section className="card sleep-wake">
@@ -433,196 +648,23 @@ export default function Home({ session }) {
       )}
 
       {!d ? (
-        <div className="empty muted loading-text">{T("Loading your day…")}</div>
+        <div className="empty muted loading-text">{T('Loading your day…')}</div>
       ) : (
         <>
-          {/* ------------------------------ microphone + AI summary ------------------------------ */}
-          <QuickAddAll onChanged={() => setReload((n) => n + 1)} />
-          <DayBrief fallback={plainBrief()} />
-
-          {/* ------------------------------ daily tasks: chart, then the list ------------------------------ */}
-          <Reveal as="section" className="today-card today-card--tasks">
-            <SectionHead title={T("Daily tasks")} to="/tasks" note={T("{0} to do", [d.tasks.filter((x) => x.status !== 'done').length])} />
-            <TaskChart tasks={d.allTasks} today={t} />
-            {d.allTasks.length > 0 && !d.allTasks.some((x) => 'done_at' in x) && (
-              <p className="muted small">{T(
-                "To see what you finish each day, run supabase/migrations/011_task_done_at.sql in Supabase once."
-              )}</p>
-            )}
-            {openTasks.length === 0 ? (
-              <p className="muted small">{Tr("No tasks to do. {0}", <Link to="/tasks">{T("Add a task")}</Link>)}</p>
-            ) : (
-              <ul className="today-list">
-                {openTasks.map((task) => (
-                  <li key={task.id} className={task.status === 'done' ? 'is-done' : ''}>
-                    <button className={`check ${task.status === 'done' ? 'is-on' : ''}`} aria-label={T("Done")} onClick={() => doneTask(task)}>
-                      {task.status === 'done' ? '✓' : ''}
-                    </button>
-                    <span dir="auto" className="today-list__text">
-                      {task.remind_at && <strong className="plan__time">{whenShort(task.remind_at)}</strong>}
-                      {task.title}
-                    </span>
-                    {task.priority === 'important' && <span className="tag tag--solid">!</span>}
-                    {task.status === 'doing' && <span className="tag">{T("Doing")}</span>}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {moreTasks > 0 && (
-              <Link to="/tasks" className="today-more">{Tr("+{0} more tasks →", moreTasks)}</Link>
-            )}
-          </Reveal>
-
-          {/* ------------------------------ plans: today and coming up ------------------------------ */}
-          <Reveal as="section" className="today-card today-card--plans">
-            <SectionHead title={T("Plans")} to="/plan" />
-            {planGroups.length === 0 ? (
-              <p className="muted small">{Tr(
-                  "No plans for the next 7 days. {0}",
-                  <Link to="/plan">{T("Plan something")}</Link>
-                )}</p>
-            ) : (
-              planGroups.map(([label, list]) => (
-                <div key={label} className="up-group">
-                  <h3 className={`up-day ${label === T('Overdue') ? 'is-late' : ''}`}>{label}</h3>
-                  <ul className="today-list">
-                    {list.map((it) => (
-                      <li key={it.key} className={it.done ? 'is-done' : ''}>
-                        <button className={`check ${it.done ? 'is-on' : ''}`} aria-label={T("Done")} onClick={it.toggle}>
-                          {it.done ? '✓' : ''}
-                        </button>
-                        <span dir="auto" className="today-list__text">
-                          {it.time && <strong className="plan__time">{it.time}</strong>}
-                          {it.title}
-                        </span>
-                        {it.important && <span className="tag tag--solid">!</span>}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))
-            )}
-          </Reveal>
-
-          {/* ------------------------------ prayers: next one, and any missed ------------------------------ */}
-          <PrayerToday place={place} logs={prayerLogs} onMark={markPrayer} />
-
-          {/* ------------------------------ habits ------------------------------ */}
-          {todayHabits.length > 0 && (
-            <Reveal as="section" className="today-card">
-              <SectionHead title={T("Habits")} to="/habits" />
-              <ul className="today-list">
-                {goodHabits.map((h) => {
-                  const c = logOn(d.logs, h.id, t).count
-                  const ok = c >= h.target
-                  return (
-                    <li key={h.id} className={ok ? 'is-done' : ''}>
-                      <span className={`check ${ok ? 'is-on' : ''}`} aria-hidden>
-                        {ok ? '✓' : ''}
-                      </span>
-                      <span dir="auto" className="today-list__text">
-                        {h.name}
-                      </span>
-                      <span className="today-count">
-                        {c}/{h.target}
-                      </span>
-                      <button className="round-btn round-btn--solid round-btn--sm" aria-label={T('Add one to {0}', [h.name])} onClick={() => plusHabit(h)}>
-                        +
-                      </button>
-                    </li>
-                  )
-                })}
-                {badHabits.map((h) => {
-                  const c = logOn(d.logs, h.id, t).count
-                  const clean = c <= h.target
-                  return (
-                    <li key={h.id}>
-                      <span className={`check ${clean ? 'is-on' : 'is-bad'}`} aria-hidden>
-                        {clean ? '✓' : '!'}
-                      </span>
-                      <span dir="auto" className="today-list__text">
-                        {h.name}
-                      </span>
-                      <span className="today-count">{c === 0 ? T('None today') : T('{0} today', [c])}</span>
-                      <button className="round-btn round-btn--sm" aria-label={T('I did {0} once more', [h.name])} onClick={() => plusHabit(h)}>
-                        +
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            </Reveal>
-          )}
-
-          {/* ------------------------------ words ------------------------------ */}
-          {d.words.length > 0 && (
-            <Reveal as="section" className="today-card">
-              <SectionHead title={T("Words to practise")} to="/words" note={T("{0} not memorized", [d.wordsLeft])} />
-              <ul className="today-words">
-                {d.words.map((w) => (
-                  <li key={w.id} className={`word--${w.status}`}>
-                    <div>
-                      <strong>{w.word}</strong>
-                      {w.translation && (
-                        <span dir="auto" className="muted">
-                          {w.translation}
-                        </span>
-                      )}
-                    </div>
-                    <SpeakButton text={w.word} label={T("Hear \"{0}\"", [w.word])} />
-                  </li>
-                ))}
-              </ul>
-              <Link to="/words" className="btn btn--ghost btn--sm today-cta">{T("✦ Practise these words")}</Link>
-            </Reveal>
-          )}
-
-          {/* ------------------------------ spending ------------------------------ */}
-          <Reveal as="section" className="today-card">
-            <SectionHead title={T("Spending")} to="/spend" />
-            <div className="today-money">
-              <div>
-                <span>{T("Today")}</span>
-                <strong>
-                  <CountUp to={spentToday} format={money} />
-                </strong>
-              </div>
-              <div>
-                <span>{T("This month")}</span>
-                <strong>
-                  <CountUp to={spentMonth} format={money} />
-                </strong>
-              </div>
-            </div>
-            {bud && (
-              <div className={`today-budget budget--${bud.state}`}>
-                <div className="budget__bar" aria-hidden>
-                  <span className="budget__fill" style={{ width: `${Math.min(100, bud.pct * 100)}%` }} />
-                  <span className="budget__mark" style={{ insetInlineStart: `${Math.min(100, bud.share * 100)}%` }} />
-                </div>
-                <p>
-                  {bud.left < 0
-                    ? T('{0} over your {1} budget', [money(-bud.left), money(bud.budget)])
-                    : T('{0} left of {1} · about {2} a day', [money(bud.left), money(bud.budget), money(bud.perDay)])}
-                </p>
-              </div>
-            )}
-            <form className="today-spend" onSubmit={addSpend}>
-              <input inputMode="decimal" placeholder="0.00" aria-label={T("Amount")} value={amount} onChange={(e) => setAmount(e.target.value)} />
-              <input dir="auto" placeholder={T("What for?")} aria-label={T("What for")} value={note} onChange={(e) => setNote(e.target.value)} />
-              <button className="btn btn--sm" disabled={!amount}>{T("Add")}</button>
-            </form>
-          </Reveal>
-
+          {shownSections(layout).map((c) => (
+            <Fragment key={c.key}>{cards[c.key]}</Fragment>
+          ))}
         </>
       )}
 
       <footer className="home-footer">
         <span className="muted">{session.user.email}</span>
-        <button className="btn btn--ghost btn--sm" onClick={() => supabase.auth.signOut()}>{T("Sign out")}</button>
+        <button className="btn btn--ghost btn--sm" onClick={() => supabase.auth.signOut()}>
+          {T('Sign out')}
+        </button>
       </footer>
     </div>
-  );
+  )
 }
 
 /** "15:40", or "Tue 15:40" when it isn't today. */
@@ -643,13 +685,10 @@ function PrayerToday({ place, logs, onMark }) {
   if (!place)
     return (
       <Reveal as="section" className="today-card today-card--prayers">
-        <SectionHead title={T("Prayers")} to="/commit" />
-        <p className="muted small">{Tr(
-            "Choose your city in {0} to see prayer times here.",
-            <Link to="/commit">{T("Prayers")}</Link>
-          )}</p>
+        <SectionHead title={T('Prayers')} to="/commit" />
+        <p className="muted small">{Tr('Choose your city in {0} to see prayer times here.', <Link to="/commit">{T('Prayers')}</Link>)}</p>
       </Reveal>
-    );
+    )
 
   const day = placeToday(place.tz)
   let times
@@ -683,10 +722,7 @@ function PrayerToday({ place, logs, onMark }) {
 
   return (
     <Reveal as="section" className="today-card today-card--prayers">
-      <SectionHead title={T("Prayers")} to="/commit" note={T(
-        "Next: {0} {1} · in {2}",
-        [prayerName(next), clock(next.at, place.tz), inWords(next.inMs)]
-      )} />
+      <SectionHead title={T('Prayers')} to="/commit" note={T('Next: {0} {1} · in {2}', [prayerName(next), clock(next.at, place.tz), inWords(next.inMs)])} />
       <ul className="pt-row" aria-label={T("Today's prayers")}>
         {rows.map((r) => (
           <li key={r.key} className={`pt pt--${r.state}`}>
@@ -697,27 +733,33 @@ function PrayerToday({ place, logs, onMark }) {
       </ul>
       {current && (
         <div className="pt-act">
-          <span>{Tr("It’s {0} time now", <b>{prayerName(current)}</b>)}</span>
+          <span>{Tr('It’s {0} time now', <b>{prayerName(current)}</b>)}</span>
           <span className="pt-act__btns">
-            <button className="btn btn--sm" onClick={() => onMark(current.key, 'ontime')}>{T("✓ On time")}</button>
-            <button className="btn btn--ghost btn--sm" onClick={() => onMark(current.key, 'late')}>{T("Late")}</button>
+            <button className="btn btn--sm" onClick={() => onMark(current.key, 'ontime')}>
+              {T('✓ On time')}
+            </button>
+            <button className="btn btn--ghost btn--sm" onClick={() => onMark(current.key, 'late')}>
+              {T('Late')}
+            </button>
           </span>
         </div>
       )}
       {missed.map((r) => (
         <div key={r.key} className="pt-act pt-act--missed">
-          <span>{Tr("{0} ({1}) has passed", <b>{prayerName(r)}</b>, clock(r.at, place.tz))}</span>
+          <span>{Tr('{0} ({1}) has passed', <b>{prayerName(r)}</b>, clock(r.at, place.tz))}</span>
           <span className="pt-act__btns">
-            <button className="btn btn--ghost btn--sm" title={T('Made up later, after its time')} onClick={() => onMark(r.key, 'qada')}>{T("Prayed Qada")}</button>
-            <button className="btn btn--ghost btn--sm" onClick={() => onMark(r.key, 'missed')}>{T("Didn’t pray")}</button>
+            <button className="btn btn--ghost btn--sm" title={T('Made up later, after its time')} onClick={() => onMark(r.key, 'qada')}>
+              {T('Prayed Qada')}
+            </button>
+            <button className="btn btn--ghost btn--sm" onClick={() => onMark(r.key, 'missed')}>
+              {T('Didn’t pray')}
+            </button>
           </span>
         </div>
       ))}
-      {!current && missed.length === 0 && rows.some((r) => r.state !== 'coming') && (
-        <p className="muted small">{T("All prayers so far are marked. ✓")}</p>
-      )}
+      {!current && missed.length === 0 && rows.some((r) => r.state !== 'coming') && <p className="muted small">{T('All prayers so far are marked. ✓')}</p>}
     </Reveal>
-  );
+  )
 }
 
 function SectionHead({ title, to, note }) {
@@ -727,7 +769,9 @@ function SectionHead({ title, to, note }) {
         {title}
         {note && <span className="muted small"> · {note}</span>}
       </h2>
-      <Link to={to} aria-label={T("Open {0}", [title])}>{T("Open →")}</Link>
+      <Link to={to} aria-label={T('Open {0}', [title])}>
+        {T('Open →')}
+      </Link>
     </div>
-  );
+  )
 }

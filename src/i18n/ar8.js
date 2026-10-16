@@ -1,0 +1,48 @@
+// Arabic translations, part 8: Customise Home.
+export default {
+  'Customise Home': 'تخصيص الرئيسية',
+  '⚙︎ Customise Home': '⚙︎ تخصيص الرئيسية',
+  Customise: 'تخصيص',
+  'Choose what you track and what Home shows': 'اختر ما تتابعه وما يظهر في الرئيسية',
+  'Choose what you track and what your Home shows. Your data is kept even when a feature is hidden.':
+    'اختر ما تتابعه وما يظهر في صفحتك الرئيسية. بياناتك تبقى محفوظة حتى لو أخفيت الميزة.',
+  Features: 'الميزات',
+  'Shown as buttons on Home and in the menu.': 'تظهر كأزرار في الرئيسية وفي القائمة.',
+  'Cards on Home': 'البطاقات في الرئيسية',
+  'Shown under the buttons, in this order.': 'تظهر تحت الأزرار بهذا الترتيب.',
+  'Move {0} up': 'نقل {0} للأعلى',
+  'Move {0} down': 'نقل {0} للأسفل',
+  'Show {0}': 'إظهار {0}',
+  'Turn on {0} above to show this': 'فعّل «{0}» في الأعلى لإظهار هذه',
+  'Show everything again': 'إظهار كل شيء من جديد',
+  'New: make Home yours': 'جديد: اجعل الرئيسية على ذوقك',
+  'Hide what you don’t use and put your favourites first.': 'أخفِ ما لا تستخدمه وضع ما تحبه أولًا.',
+  'Welcome! What do you want to track?': 'أهلًا بك! ماذا تريد أن تتابع؟',
+  'Tap to choose. You can change this any time in Customise Home.': 'اضغط للاختيار. يمكنك تغيير ذلك في أي وقت من «تخصيص الرئيسية».',
+  Continue: 'متابعة',
+
+  // features
+  'Daily tasks and what you finish': 'المهام اليومية وما تنجزه',
+  'Plan tomorrow and the week': 'خطط للغد وللأسبوع',
+  'Good habits to build, bad ones to cut': 'عادات جيدة تبنيها وأخرى سيئة تتركها',
+  'Spending and a monthly budget': 'المصروف والميزانية الشهرية',
+  'Islamic prayer times, adhan and tracking': 'مواقيت الصلاة والأذان ومتابعة الصلوات',
+  'Promises to yourself, with streaks': 'وعود لنفسك مع أيام الالتزام',
+  'Bedtime, wake-up and how you slept': 'وقت النوم والاستيقاظ وجودة نومك',
+  'Learn new English words': 'تعلّم كلمات إنجليزية جديدة',
+  'Notebooks with note cards': 'دفاتر وبطاقات ملاحظات',
+  'Save videos and web links': 'احفظ الفيديوهات والروابط',
+  'Job applications (Trello)': 'طلبات الوظائف (Trello)',
+  'Phone notifications and sounds': 'إشعارات الهاتف والأصوات',
+  'Your week, month or year at a glance': 'أسبوعك أو شهرك أو سنتك في لمحة',
+
+  // home cards
+  'Add anything + Your day': 'أضف أي شيء + يومك',
+  'Microphone and the AI summary of your day': 'الميكروفون وملخص يومك بالذكاء الاصطناعي',
+  'Chart and open tasks': 'الرسم البياني والمهام المفتوحة',
+  'Today and coming up': 'اليوم والقادم',
+  'Next prayer and any not marked': 'الصلاة القادمة وما لم يُسجَّل',
+  'Today’s habits with +': 'عادات اليوم مع زر +',
+  'Today’s words': 'كلمات اليوم',
+  'Today, this month and budget': 'اليوم وهذا الشهر والميزانية',
+}
