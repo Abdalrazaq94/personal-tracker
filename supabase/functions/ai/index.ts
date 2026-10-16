@@ -122,10 +122,14 @@ async function overLimit(db: any, userId: string): Promise<string | null> {
     db.from('ai_usage').select('id', { count: 'exact', head: true }).gte('at', hourAgo),
     db.from('ai_usage').select('id', { count: 'exact', head: true }).gte('at', dayAgo),
   ])
-  if (hour.error || day.error) return null // table not there yet
-  if ((day.count ?? 0) >= PER_DAY) return 'You’ve used the AI a lot today. Please try again tomorrow.'
-  if ((hour.count ?? 0) >= PER_HOUR) return 'You’ve used the AI a lot in the last hour. Please try again a bit later.'
-  await db.from('ai_usage').insert({ user_id: userId })
+  // Fail closed when usage tracking is unavailable, to prevent unmetered AI calls.
+  if (hour.error || day.error || hour.count == null || day.count == null) {
+    return 'AI is temporarily unavailable. Please try again later.'
+  }
+  if (day.count >= PER_DAY) return 'You’ve used the AI a lot today. Please try again tomorrow.'
+  if (hour.count >= PER_HOUR) return 'You’ve used the AI a lot in the last hour. Please try again a bit later.'
+  const { error: usageError } = await db.from('ai_usage').insert({ user_id: userId })
+  if (usageError) return 'AI is temporarily unavailable. Please try again later.'
   return null
 }
 
